@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getRecentlyTrainedExercises } from '../db/dashboard';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+import { DashboardStackParamList } from '../navigation/TabNavigator';
+
+type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
 interface RecentExercise {
   exerciseId: number;
@@ -25,29 +28,41 @@ function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return diffMins + 'm ago';
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return diffHours + 'h ago';
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return diffDays + 'd ago';
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) { return 'just now'; }
+  if (diffMin < 60) { return diffMin + 'm ago'; }
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) { return diffHrs + 'h ago'; }
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) { return diffDays + 'd ago'; }
   const diffWeeks = Math.floor(diffDays / 7);
-  return diffWeeks + 'w ago';
+  if (diffWeeks < 5) { return diffWeeks + 'w ago'; }
+  const diffMonths = Math.floor(diffDays / 30);
+  return diffMonths + 'mo ago';
 }
 
 export function DashboardScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
   const [exercises, setExercises] = useState<RecentExercise[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      getRecentlyTrainedExercises().then(setExercises).catch(() => {});
+      let cancelled = false;
+      (async () => {
+        try {
+          const result = await getRecentlyTrainedExercises();
+          if (!cancelled) { setExercises(result); }
+        } catch {
+          // ignore
+        }
+      })();
+      return () => { cancelled = true; };
     }, []),
   );
 
   const handlePress = useCallback(
     (item: RecentExercise) => {
-      (navigation as any).navigate('ExerciseProgress', {
+      navigation.navigate('ExerciseProgress', {
         exerciseId: item.exerciseId,
         exerciseName: item.exerciseName,
       });
@@ -55,36 +70,26 @@ export function DashboardScreen() {
     [navigation],
   );
 
-  const handleSettingsPress = useCallback(() => {
-    (navigation as any).navigate('Settings');
-  }, [navigation]);
-
   const renderItem = useCallback(
     ({ item }: { item: RecentExercise }) => (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => handlePress(item)}
-        activeOpacity={0.7}>
-        <View style={styles.cardContent}>
+        activeOpacity={0.7}
+        onPress={() => handlePress(item)}>
+        <View style={styles.cardRow}>
           <Text style={styles.exerciseName}>{item.exerciseName}</Text>
-          <Text style={styles.category}>{item.category}</Text>
+          <Text style={styles.timeAgo}>{formatRelativeTime(item.lastTrainedAt)}</Text>
         </View>
-        <Text style={styles.lastTrained}>{formatRelativeTime(item.lastTrainedAt)}</Text>
+        <Text style={styles.category}>{item.category}</Text>
       </TouchableOpacity>
     ),
     [handlePress],
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <TouchableOpacity
-          onPress={handleSettingsPress}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.settingsIcon}>{String.fromCodePoint(0x2699)}</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.title}>Dashboard</Text>
+
       {exercises.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
@@ -94,8 +99,8 @@ export function DashboardScreen() {
       ) : (
         <FlatList
           data={exercises}
+          keyExtractor={item => String(item.exerciseId)}
           renderItem={renderItem}
-          keyExtractor={(item) => String(item.exerciseId)}
           contentContainerStyle={styles.list}
         />
       )}
@@ -104,68 +109,62 @@ export function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  title: {
+    color: colors.primary,
+    fontSize: fontSize.xl,
+    fontWeight: weightBold,
     paddingHorizontal: spacing.base,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  settingsIcon: {
-    fontSize: fontSize.xl,
-    color: colors.secondary,
-  },
   list: {
     paddingHorizontal: spacing.base,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
     padding: spacing.base,
     marginBottom: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  cardContent: {
-    flex: 1,
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   exerciseName: {
-    fontSize: fontSize.md,
-    fontWeight: weightSemiBold,
     color: colors.primary,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+    flex: 1,
+  },
+  timeAgo: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    marginLeft: spacing.sm,
   },
   category: {
-    fontSize: fontSize.sm,
     color: colors.secondary,
-    marginTop: 2,
-  },
-  lastTrained: {
     fontSize: fontSize.sm,
-    color: colors.secondary,
+    textTransform: 'capitalize',
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xxl,
   },
   emptyText: {
-    fontSize: fontSize.base,
     color: colors.secondary,
+    fontSize: fontSize.base,
     textAlign: 'center',
+    lineHeight: 22,
   },
 });
