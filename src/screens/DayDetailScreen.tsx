@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -9,12 +9,14 @@ import {
   View,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { EditTargetsModal } from '../components/EditTargetsModal';
 import { ExerciseTargetRow } from '../components/ExerciseTargetRow';
 import {
   addExerciseToProgramDay,
   getProgramDayExercises,
   removeExerciseFromProgramDay,
   reorderProgramDayExercises,
+  updateExerciseTargets,
 } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
@@ -128,6 +130,26 @@ export function DayDetailScreen() {
     [dayExercises, dayId, refresh],
   );
 
+
+  const handleSaveTargets = useCallback(
+    async (id: number, sets: number, reps: number, weight: number) => {
+      setDayExercises(prev =>
+        prev.map(pde =>
+          pde.id === id
+            ? { ...pde, targetSets: sets, targetReps: reps, targetWeightKg: weight }
+            : pde,
+        ),
+      );
+      setSelectedExercise(null);
+      try {
+        await updateExerciseTargets(id, sets, reps, weight);
+      } catch {
+        await refresh();
+      }
+    },
+    [refresh],
+  );
+
   const renderItem = useCallback(
     ({ item, index }: { item: ProgramDayExercise; index: number }) => {
       const exercise = exerciseMap.get(item.exerciseId);
@@ -149,6 +171,10 @@ export function DayDetailScreen() {
   );
 
   const keyExtractor = useCallback((item: ProgramDayExercise) => String(item.id), []);
+
+  const selectedExerciseName = selectedExercise
+    ? exerciseMap.get(selectedExercise.exerciseId)?.name ?? 'Exercise'
+    : '';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -194,6 +220,15 @@ export function DayDetailScreen() {
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
         onSelect={handleAddExercise}
+      />
+
+      {/* Edit targets modal */}
+      <EditTargetsModal
+        visible={selectedExercise !== null}
+        onClose={() => setSelectedExercise(null)}
+        dayExercise={selectedExercise}
+        exerciseName={selectedExerciseName}
+        onSave={handleSaveTargets}
       />
     </SafeAreaView>
   );
