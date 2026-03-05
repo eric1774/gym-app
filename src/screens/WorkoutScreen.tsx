@@ -16,13 +16,26 @@ import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
+import { Exercise, ExerciseSession, ProgramDayExercise, SessionTimeSummary, WorkoutSet } from '../types';
 import { getProgramDayExercises } from '../db/programs';
+import { getSessionTimeSummary } from '../db/dashboard';
 
 /** Format elapsed seconds as MM:SS */
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+
+/** Format seconds as HH:MM:SS or MM:SS */
+function formatTimeSummary(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
@@ -164,6 +177,8 @@ export function WorkoutScreen() {
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const [sessionSummary, setSessionSummary] = useState<SessionTimeSummary | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load program day exercises when session is a program workout
@@ -537,6 +552,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
+  },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.xl,
+    width: '90%',
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: weightBold,
+    color: colors.primary,
+    marginBottom: spacing.lg,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  summaryLabel: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
+  },
+  summaryValue: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  summaryDoneButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    marginTop: spacing.lg,
+    alignItems: 'center',
+  },
+  summaryDoneText: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.background,
   },
   fabText: {
     fontSize: fontSize.xl,
