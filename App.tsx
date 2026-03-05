@@ -1,9 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { SessionProvider } from './src/context/SessionContext';
 import { TimerProvider } from './src/context/TimerContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { initDatabase } from './src/db';
 
 export default function App() {
+  const [dbReady, setDbReady] = useState(false);
+
+  useEffect(() => {
+    initDatabase().then(() => setDbReady(true));
+  }, []);
+
+  if (!dbReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#181A20' }}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+      </View>
+    );
+  }
+
   return (
     <SessionProvider>
       <TimerProvider>

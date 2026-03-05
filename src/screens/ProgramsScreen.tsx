@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -6,9 +6,10 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  RefreshControl,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { deleteProgram, getPrograms } from '../db/programs';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -21,6 +22,7 @@ export function ProgramsScreen() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadPrograms = useCallback(async () => {
     try {
@@ -31,8 +33,16 @@ export function ProgramsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadPrograms();
+  useFocusEffect(
+    useCallback(() => {
+      loadPrograms();
+    }, [loadPrograms]),
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadPrograms();
+    setRefreshing(false);
   }, [loadPrograms]);
 
   const handleCreated = useCallback((program: Program) => {
@@ -120,6 +130,14 @@ export function ProgramsScreen() {
           renderItem={renderItem}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
         />
       )}
 

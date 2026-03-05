@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   Dimensions,
   SafeAreaView,
   ScrollView,
@@ -10,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
-import { getExerciseProgressData, getExerciseHistory } from '../db/dashboard';
+import { getExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
@@ -75,6 +76,32 @@ export function ExerciseProgressScreen() {
       })();
       return () => { cancelled = true; };
     }, [exerciseId]),
+  );
+
+  const handleDeleteHistory = useCallback(
+    (session: ExerciseHistorySession) => {
+      Alert.alert(
+        'Delete Entry',
+        'Delete session from ' + formatDateReadable(session.date) + '?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteExerciseHistorySession(session.sessionId, exerciseId);
+                setHistoryData(prev => prev.filter(s => s.sessionId !== session.sessionId));
+                setProgressData(prev => prev.filter(p => p.sessionId !== session.sessionId));
+              } catch {
+                // ignore
+              }
+            },
+          },
+        ],
+      );
+    },
+    [exerciseId],
   );
 
   const filteredProgress = useMemo(() => {
@@ -186,9 +213,17 @@ export function ExerciseProgressScreen() {
         ) : (
           historyData.map(session => (
             <View key={session.sessionId} style={styles.historyCard}>
-              <Text style={styles.historyDate}>
-                {formatDateReadable(session.date)}
-              </Text>
+              <View style={styles.historyCardHeader}>
+                <Text style={styles.historyDate}>
+                  {formatDateReadable(session.date)}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteHistory(session)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.7}>
+                  <Text style={styles.deleteButton}>{'✕'}</Text>
+                </TouchableOpacity>
+              </View>
               {session.sets.map(set => (
                 <Text
                   key={set.setNumber}
@@ -298,11 +333,21 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     marginBottom: spacing.sm,
   },
+  historyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
   historyDate: {
     color: colors.primary,
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
-    marginBottom: spacing.sm,
+  },
+  deleteButton: {
+    color: colors.secondary,
+    fontSize: fontSize.base,
+    padding: spacing.xs,
   },
   setText: {
     color: colors.primary,

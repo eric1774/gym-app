@@ -37,6 +37,7 @@ export {
 export {
   getExerciseProgressData,
   getExerciseHistory,
+  deleteExerciseHistorySession,
   getRecentlyTrainedExercises,
   getProgramWeekCompletion,
   getSessionTimeSummary,

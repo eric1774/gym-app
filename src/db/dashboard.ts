@@ -109,6 +109,18 @@ export async function getExerciseHistory(
   return sessionOrder.map((sid) => sessionsMap.get(sid)!);
 }
 
+/** Delete all sets for a specific exercise in a session. */
+export async function deleteExerciseHistorySession(
+  sessionId: number,
+  exerciseId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'DELETE FROM workout_sets WHERE session_id = ? AND exercise_id = ?',
+    [sessionId, exerciseId],
+  );
+}
 // ── Recently Trained Exercises ──────────────────────────────────────
 
 /**

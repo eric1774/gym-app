@@ -2,18 +2,21 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  RefreshControl,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
   activateProgram,
+  deleteProgram,
   advanceWeek,
   createProgramDay,
   deleteProgramDay,
+  decrementWeek,
   duplicateProgramDay,
   getProgram,
   getProgramDays,
@@ -37,19 +40,29 @@ export function ProgramDetailScreen() {
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [addDayVisible, setAddDayVisible] = useState(false);
   const [weekCompletion, setWeekCompletion] = useState<ProgramDayCompletionStatus[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const [p, d, wc] = await Promise.all([getProgram(programId), getProgramDays(programId), getProgramWeekCompletion(programId)]);
       setProgram(p);
       setDays(d);
+      setWeekCompletion(wc);
     } catch {
       // ignore
     }
   }, [programId]);
 
-  useEffect(() => {
-    refresh();
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
+
+  const handlePullRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
   }, [refresh]);
 
   const handleActivate = useCallback(async () => {
@@ -115,6 +128,37 @@ export function ProgramDetailScreen() {
     [refresh],
   );
 
+  const handleDeleteProgram = useCallback(() => {
+    Alert.alert(
+      'Delete Program',
+      `Delete "${program?.name}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteProgram(programId);
+              navigation.goBack();
+            } catch {
+              // ignore
+            }
+          },
+        },
+      ],
+    );
+  }, [programId, program?.name, navigation]);
+
+  const handleGoBack = useCallback(async () => {
+    try {
+      await decrementWeek(programId);
+      await refresh();
+    } catch {
+      // ignore
+    }
+  }, [programId, refresh]);
+
   const handleDayTap = useCallback(
     (day: ProgramDay) => {
       (navigation as any).navigate('DayDetail', { dayId: day.id, dayName: day.name });
@@ -171,6 +215,8 @@ export function ProgramDetailScreen() {
 
   const isActivated = program.startDate !== null;
   const canAdvance = isActivated && program.currentWeek < program.weeks;
+  const canGoBack = isActivated && program.currentWeek > 1;
+  const isComplete = isActivated && program.currentWeek >= program.weeks;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -189,7 +235,12 @@ export function ProgramDetailScreen() {
             Week {program.currentWeek}/{program.weeks}
           </Text>
         </View>
-        <View style={styles.headerRight} />
+        <TouchableOpacity
+          onPress={handleDeleteProgram}
+          style={styles.headerRight}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.deleteHeaderText}>Del</Text>
+        </TouchableOpacity>
       </View>
 
       {isComplete && (
@@ -258,6 +309,14 @@ export function ProgramDetailScreen() {
           renderItem={renderDay}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handlePullRefresh}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
+            />
+          }
         />
       )}
 
@@ -325,6 +384,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 44,
+  },
+  deleteHeaderText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    color: '#E53935',
+    textAlign: 'center',
   },
   actionRow: {
     paddingHorizontal: spacing.base,

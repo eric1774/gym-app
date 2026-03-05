@@ -8,6 +8,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
@@ -158,6 +159,7 @@ function ExerciseCard({
 }
 
 export function WorkoutScreen() {
+  const navigation = useNavigation();
   const {
     session,
     sessionExercises,
@@ -280,6 +282,7 @@ export function WorkoutScreen() {
           text: 'End Workout',
           style: 'destructive',
           onPress: async () => {
+            const wasProgramWorkout = !!programDayId;
             if (isRunning) {
               stopTimer();
             }
@@ -287,12 +290,16 @@ export function WorkoutScreen() {
             setActiveExerciseId(null);
             setSetCountsByExercise({});
             setPendingRestExerciseId(null);
-            showCompletionMessage('Workout complete!');
+            if (wasProgramWorkout) {
+              (navigation as any).navigate('ProgramsTab');
+            } else {
+              showCompletionMessage('Workout complete!');
+            }
           },
         },
       ],
     );
-  }, [endSession, isRunning, stopTimer, showCompletionMessage]);
+  }, [endSession, isRunning, stopTimer, showCompletionMessage, programDayId, navigation]);
 
   if (isLoading) {
     return (
