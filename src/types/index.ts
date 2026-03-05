@@ -49,3 +49,32 @@ export interface ExerciseSession {
   isComplete: boolean;
   restSeconds: number;
 }
+
+// ── Program domain types (Phase 2) ──────────────────────────────────
+
+export interface Program {
+  id: number;
+  name: string;
+  weeks: number;
+  startDate: string | null;
+  currentWeek: number;
+  createdAt: string;
+}
+
+export interface ProgramDay {
+  id: number;
+  programId: number;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ProgramDayExercise {
+  id: number;
+  programDayId: number;
+  exerciseId: number;
+  targetSets: number;
+  targetReps: number;
+  targetWeightKg: number;
+  sortOrder: number;
+}

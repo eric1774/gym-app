@@ -16,3 +16,21 @@ export {
 } from './sessions';
 export { logSet, getSetsForExerciseInSession, getLastSessionSets, deleteSet } from './sets';
 export { seedIfEmpty } from './seed';
+export {
+  createProgram,
+  getPrograms,
+  getProgram,
+  deleteProgram,
+  activateProgram,
+  advanceWeek,
+  getProgramDays,
+  createProgramDay,
+  duplicateProgramDay,
+  deleteProgramDay,
+  renameProgramDay,
+  getProgramDayExercises,
+  addExerciseToProgramDay,
+  removeExerciseFromProgramDay,
+  updateExerciseTargets,
+  reorderProgramDayExercises,
+} from './programs';

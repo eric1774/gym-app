@@ -45,3 +45,38 @@ export const CREATE_EXERCISE_SESSIONS_TABLE = `
     PRIMARY KEY (exercise_id, session_id)
   )
 `;
+
+// ── Program tables (Phase 2) ────────────────────────────────────────
+
+export const CREATE_PROGRAMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS programs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    weeks INTEGER NOT NULL,
+    start_date TEXT,
+    current_week INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_PROGRAM_DAYS_TABLE = `
+  CREATE TABLE IF NOT EXISTS program_days (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_PROGRAM_DAY_EXERCISES_TABLE = `
+  CREATE TABLE IF NOT EXISTS program_day_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_day_id INTEGER NOT NULL REFERENCES program_days(id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id),
+    target_sets INTEGER NOT NULL DEFAULT 3,
+    target_reps INTEGER NOT NULL DEFAULT 10,
+    target_weight_kg REAL NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
