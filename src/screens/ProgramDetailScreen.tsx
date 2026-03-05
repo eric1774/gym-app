@@ -125,15 +125,22 @@ export function ProgramDetailScreen() {
       <TouchableOpacity
         style={styles.dayCard}
         onPress={() => handleDayTap(item)}
-        onLongPress={() => handleDeleteDay(item)}
         activeOpacity={0.7}>
         <Text style={styles.dayName}>{item.name}</Text>
-        <TouchableOpacity
-          style={styles.dupButton}
-          onPress={() => handleDuplicateDay(item.id)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.dupText}>Dup</Text>
-        </TouchableOpacity>
+        <View style={styles.dayActions}>
+          <TouchableOpacity
+            style={styles.dupButton}
+            onPress={() => handleDuplicateDay(item.id)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.dupText}>Dup</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDeleteDay(item)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.deleteText}>Del</Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     ),
     [handleDayTap, handleDeleteDay, handleDuplicateDay],
@@ -319,10 +326,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: colors.surfaceElevated,
   },
+  dayActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   dupText: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
     color: colors.secondary,
+  },
+  deleteButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+  },
+  deleteText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    color: '#E53935',
   },
   emptyContainer: {
     flex: 1,
