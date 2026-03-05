@@ -1,1 +1,34 @@
+# Planning (local only)
 .planning/
+
+# React Native
+node_modules/
+.bundle/
+buck-out/
+build/
+.buckd/
+*.keystore
+!debug.keystore
+.gradle
+local.properties
+*.hmap
+*.ipa
+*.xcuserstate
+ios/.xcode.env.local
+
+# Generated
+android/app/build/
+android/build/
+android/local.properties
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# OS
+.DS_Store
+.env
