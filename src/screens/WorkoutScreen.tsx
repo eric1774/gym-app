@@ -15,7 +15,7 @@ import { SetLoggingPanel } from '../components/SetLoggingPanel';
 import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
+import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseSession, WorkoutSet } from '../types';
 
 /** Format elapsed seconds as MM:SS */
@@ -64,10 +64,10 @@ interface ExerciseCardProps {
   isActive: boolean;
   setCount: number;
   sessionId: number;
+  pendingRest: boolean;
   onPress: () => void;
-  onMarkComplete: () => void;
+  onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
-  showRestButton: boolean;
   onStartRest: () => void;
 }
 
@@ -77,10 +77,10 @@ function ExerciseCard({
   isActive,
   setCount,
   sessionId,
+  pendingRest,
   onPress,
-  onMarkComplete,
+  onToggleComplete,
   onSetLogged,
-  showRestButton,
   onStartRest,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
@@ -100,22 +100,22 @@ function ExerciseCard({
             {exerciseName}
           </Text>
           {!isActive && setCount > 0 && (
-            <Text style={styles.setCountLabel}>{setCount} set{setCount !== 1 ? 's' : ''} logged</Text>
+            <Text style={styles.setCountLabel}>
+              {setCount} set{setCount !== 1 ? 's' : ''} logged
+            </Text>
           )}
         </View>
+        {/* Circular checkmark toggle — outline when pending, filled accent when complete */}
         <TouchableOpacity
-          onPress={onMarkComplete}
+          onPress={onToggleComplete}
           style={[
-            styles.checkButton,
-            isComplete ? styles.checkButtonDone : styles.checkButtonPending,
-          ]}>
-          <Text
-            style={[
-              styles.checkText,
-              isComplete ? styles.checkTextDone : styles.checkTextPending,
-            ]}>
-            {isComplete ? 'Done' : 'Mark Done'}
-          </Text>
+            styles.checkCircle,
+            isComplete ? styles.checkCircleDone : styles.checkCirclePending,
+          ]}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          {isComplete && (
+            <Text style={styles.checkIcon}>{'\u2713'}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -126,14 +126,12 @@ function ExerciseCard({
             exerciseId={exerciseSession.exerciseId}
             onSetLogged={onSetLogged}
           />
-          {showRestButton && (
+          {pendingRest && (
             <TouchableOpacity
-              style={styles.restButton}
+              style={styles.startRestButton}
               onPress={onStartRest}
-              activeOpacity={0.8}>
-              <Text style={styles.restButtonText}>
-                Start Rest ({exerciseSession.restSeconds}s)
-              </Text>
+              activeOpacity={0.85}>
+              <Text style={styles.startRestText}>Start Rest Timer</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -151,7 +149,7 @@ export function WorkoutScreen() {
     startSession,
     endSession,
     addExercise,
-    markExerciseComplete,
+    toggleExerciseComplete,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
 
@@ -159,8 +157,9 @@ export function WorkoutScreen() {
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
-  // Track which exercise just had a set logged (for "Start Rest Timer" button)
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
+  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -177,20 +176,28 @@ export function WorkoutScreen() {
     }
   }, [sessionExercises, activeExerciseId]);
 
+  // Cleanup completion message timer on unmount
+  useEffect(() => {
+    return () => {
+      if (completionTimerRef.current) {
+        clearTimeout(completionTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
       await addExercise(exercise);
-      // Auto-expand the newly added exercise
       setActiveExerciseId(exercise.id);
     },
     [addExercise],
   );
 
-  const handleMarkComplete = useCallback(
+  const handleToggleComplete = useCallback(
     async (exerciseId: number) => {
-      await markExerciseComplete(exerciseId);
+      await toggleExerciseComplete(exerciseId);
     },
-    [markExerciseComplete],
+    [toggleExerciseComplete],
   );
 
   const handleSetLogged = useCallback((exerciseId: number, _set: WorkoutSet) => {
@@ -211,25 +218,40 @@ export function WorkoutScreen() {
     [exercises, startTimer],
   );
 
+  const showCompletionMessage = useCallback((message: string) => {
+    if (completionTimerRef.current) {
+      clearTimeout(completionTimerRef.current);
+    }
+    setCompletionMessage(message);
+    completionTimerRef.current = setTimeout(() => {
+      setCompletionMessage(null);
+      completionTimerRef.current = null;
+    }, 2000);
+  }, []);
+
   const handleEndWorkout = useCallback(() => {
     Alert.alert(
-      'End Workout',
-      'End workout? This marks the session complete.',
+      'End Workout?',
+      'This marks your session complete.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'End',
+          text: 'End Workout',
           style: 'destructive',
           onPress: async () => {
+            if (isRunning) {
+              stopTimer();
+            }
             await endSession();
             setActiveExerciseId(null);
             setSetCountsByExercise({});
             setPendingRestExerciseId(null);
+            showCompletionMessage('Workout complete!');
           },
         },
       ],
     );
-  }, [endSession]);
+  }, [endSession, isRunning, stopTimer, showCompletionMessage]);
 
   if (isLoading) {
     return (
@@ -242,7 +264,11 @@ export function WorkoutScreen() {
   if (!session) {
     return (
       <View style={styles.startContainer}>
-        <Text style={styles.readyLabel}>Ready to train?</Text>
+        {completionMessage ? (
+          <Text style={styles.completionMessage}>{completionMessage}</Text>
+        ) : (
+          <Text style={styles.readyLabel}>Ready to train?</Text>
+        )}
         <TouchableOpacity
           style={styles.startButton}
           onPress={startSession}
@@ -263,11 +289,11 @@ export function WorkoutScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Rest timer banner — shown while countdown is active */}
-      {isRunning && remainingSeconds !== null && totalSeconds !== null && (
+      {/* Rest timer banner */}
+      {isRunning && (
         <RestTimerBanner
-          remainingSeconds={remainingSeconds}
-          totalSeconds={totalSeconds}
+          remainingSeconds={remainingSeconds ?? 0}
+          totalSeconds={totalSeconds ?? 0}
           onStop={stopTimer}
         />
       )}
@@ -293,10 +319,10 @@ export function WorkoutScreen() {
               isActive={isActive}
               setCount={setCount}
               sessionId={session.id}
+              pendingRest={pendingRestExerciseId === se.exerciseId}
               onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
-              onMarkComplete={() => handleMarkComplete(se.exerciseId)}
+              onToggleComplete={() => handleToggleComplete(se.exerciseId)}
               onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-              showRestButton={pendingRestExerciseId === se.exerciseId && !isRunning}
               onStartRest={() => handleStartRest(se.exerciseId)}
             />
           );
@@ -320,6 +346,8 @@ export function WorkoutScreen() {
   );
 }
 
+const CHECK_CIRCLE_SIZE = 32;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -341,6 +369,12 @@ const styles = StyleSheet.create({
   readyLabel: {
     fontSize: fontSize.base,
     color: colors.secondary,
+    marginBottom: spacing.xl,
+  },
+  completionMessage: {
+    fontSize: fontSize.lg,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
     marginBottom: spacing.xl,
   },
   startButton: {
@@ -371,7 +405,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   endButton: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
     color: colors.danger,
   },
@@ -381,7 +415,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xxxl + spacing.xl, // room for FAB
+    paddingBottom: spacing.xxxl + spacing.xl,
   },
   emptyState: {
     textAlign: 'center',
@@ -421,42 +455,50 @@ const styles = StyleSheet.create({
   },
   cardNameComplete: {
     color: colors.secondary,
-    textDecorationLine: 'line-through',
   },
   setCountLabel: {
     fontSize: fontSize.sm,
     color: colors.secondary,
     marginTop: 2,
   },
-  checkButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 6,
-    borderWidth: 1,
+  checkCircle: {
+    width: CHECK_CIRCLE_SIZE,
+    height: CHECK_CIRCLE_SIZE,
+    borderRadius: CHECK_CIRCLE_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
   },
-  checkButtonDone: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentDim,
-  },
-  checkButtonPending: {
-    borderColor: colors.border,
+  checkCirclePending: {
+    borderColor: colors.secondary,
     backgroundColor: 'transparent',
   },
-  checkText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
+  checkCircleDone: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
   },
-  checkTextDone: {
-    color: colors.accent,
-  },
-  checkTextPending: {
-    color: colors.secondary,
+  checkIcon: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.background,
+    lineHeight: fontSize.base + 2,
   },
   cardExpanded: {
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
   },
-
+  startRestButton: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.timerActive,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  startRestText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.background,
+  },
   fab: {
     position: 'absolute',
     bottom: spacing.xl,
@@ -474,20 +516,5 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.background,
     lineHeight: fontSize.xl + 4,
-  },
-  restButton: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  restButtonText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.accent,
   },
 });

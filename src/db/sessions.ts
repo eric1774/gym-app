@@ -124,3 +124,30 @@ export async function markExerciseComplete(
     [sessionId, exerciseId],
   );
 }
+
+/**
+ * Toggle the is_complete flag for a specific exercise within a session.
+ * Returns the new isComplete value.
+ */
+export async function toggleExerciseComplete(
+  sessionId: number,
+  exerciseId: number,
+): Promise<boolean> {
+  const database = await db;
+  const current = await executeSql(
+    database,
+    'SELECT is_complete FROM exercise_sessions WHERE session_id = ? AND exercise_id = ?',
+    [sessionId, exerciseId],
+  );
+  if (current.rows.length === 0) {
+    return false;
+  }
+  const currentValue: number = current.rows.item(0).is_complete;
+  const newValue = currentValue === 1 ? 0 : 1;
+  await executeSql(
+    database,
+    'UPDATE exercise_sessions SET is_complete = ? WHERE session_id = ? AND exercise_id = ?',
+    [newValue, sessionId, exerciseId],
+  );
+  return newValue === 1;
+}

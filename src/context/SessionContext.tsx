@@ -14,6 +14,7 @@ import {
   getSessionExercises,
   addExerciseToSession,
   markExerciseComplete as dbMarkExerciseComplete,
+  toggleExerciseComplete as dbToggleExerciseComplete,
 } from '../db/sessions';
 import { getExercises } from '../db/exercises';
 import { Exercise, ExerciseSession, WorkoutSession } from '../types';
@@ -28,6 +29,7 @@ interface SessionContextValue {
   endSession: () => Promise<void>;
   addExercise: (exercise: Exercise) => Promise<void>;
   markExerciseComplete: (exerciseId: number) => Promise<void>;
+  toggleExerciseComplete: (exerciseId: number) => Promise<void>;
   refreshSession: () => Promise<void>;
 }
 
@@ -154,6 +156,23 @@ export function SessionProvider({ children }: Props) {
     [session, resolveExercises],
   );
 
+  const toggleExerciseComplete = useCallback(
+    async (exerciseId: number) => {
+      if (!session) {
+        return;
+      }
+      const newIsComplete = await dbToggleExerciseComplete(session.id, exerciseId);
+      setSessionExercises(prev => {
+        const next = prev.map(se =>
+          se.exerciseId === exerciseId ? { ...se, isComplete: newIsComplete } : se,
+        );
+        setExercises(resolveExercises(next));
+        return next;
+      });
+    },
+    [session, resolveExercises],
+  );
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
@@ -164,6 +183,7 @@ export function SessionProvider({ children }: Props) {
       endSession,
       addExercise,
       markExerciseComplete,
+      toggleExerciseComplete,
       refreshSession,
     }),
     [
@@ -175,6 +195,7 @@ export function SessionProvider({ children }: Props) {
       endSession,
       addExercise,
       markExerciseComplete,
+      toggleExerciseComplete,
       refreshSession,
     ],
   );
