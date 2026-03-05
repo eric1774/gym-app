@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSession } from '../context/SessionContext';
+import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
 import { SetLoggingPanel } from '../components/SetLoggingPanel';
+import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
@@ -65,6 +67,8 @@ interface ExerciseCardProps {
   onPress: () => void;
   onMarkComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
+  showRestButton: boolean;
+  onStartRest: () => void;
 }
 
 function ExerciseCard({
@@ -76,6 +80,8 @@ function ExerciseCard({
   onPress,
   onMarkComplete,
   onSetLogged,
+  showRestButton,
+  onStartRest,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
 
@@ -120,6 +126,16 @@ function ExerciseCard({
             exerciseId={exerciseSession.exerciseId}
             onSetLogged={onSetLogged}
           />
+          {showRestButton && (
+            <TouchableOpacity
+              style={styles.restButton}
+              onPress={onStartRest}
+              activeOpacity={0.8}>
+              <Text style={styles.restButtonText}>
+                Start Rest ({exerciseSession.restSeconds}s)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -137,11 +153,14 @@ export function WorkoutScreen() {
     addExercise,
     markExerciseComplete,
   } = useSession();
+  const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
+  // Track which exercise just had a set logged (for "Start Rest Timer" button)
+  const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -179,7 +198,18 @@ export function WorkoutScreen() {
       ...prev,
       [exerciseId]: (prev[exerciseId] ?? 0) + 1,
     }));
+    setPendingRestExerciseId(exerciseId);
   }, []);
+
+  const handleStartRest = useCallback(
+    (exerciseId: number) => {
+      const exercise = exercises.find(ex => ex.id === exerciseId);
+      const duration = exercise?.defaultRestSeconds ?? 90;
+      startTimer(duration);
+      setPendingRestExerciseId(null);
+    },
+    [exercises, startTimer],
+  );
 
   const handleEndWorkout = useCallback(() => {
     Alert.alert(
@@ -194,6 +224,7 @@ export function WorkoutScreen() {
             await endSession();
             setActiveExerciseId(null);
             setSetCountsByExercise({});
+            setPendingRestExerciseId(null);
           },
         },
       ],
@@ -232,6 +263,15 @@ export function WorkoutScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Rest timer banner — shown while countdown is active */}
+      {isRunning && remainingSeconds !== null && totalSeconds !== null && (
+        <RestTimerBanner
+          remainingSeconds={remainingSeconds}
+          totalSeconds={totalSeconds}
+          onStop={stopTimer}
+        />
+      )}
+
       {/* Exercise list */}
       <ScrollView
         style={styles.scroll}
@@ -256,6 +296,8 @@ export function WorkoutScreen() {
               onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
               onMarkComplete={() => handleMarkComplete(se.exerciseId)}
               onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
+              showRestButton={pendingRestExerciseId === se.exerciseId && !isRunning}
+              onStartRest={() => handleStartRest(se.exerciseId)}
             />
           );
         })}
@@ -432,5 +474,20 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.background,
     lineHeight: fontSize.xl + 4,
+  },
+  restButton: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  restButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
   },
 });
