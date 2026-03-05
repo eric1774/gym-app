@@ -25,7 +25,10 @@ interface SessionContextValue {
   /** Full Exercise objects keyed by exerciseId for each entry in sessionExercises */
   exercises: Exercise[];
   isLoading: boolean;
+  /** The program day id if this is a program workout, null otherwise */
+  programDayId: number | null;
   startSession: () => Promise<void>;
+  startSessionFromProgramDay: (programDayId: number, exercises: Exercise[]) => Promise<void>;
   endSession: () => Promise<void>;
   addExercise: (exercise: Exercise) => Promise<void>;
   markExerciseComplete: (exerciseId: number) => Promise<void>;
@@ -111,6 +114,19 @@ export function SessionProvider({ children }: Props) {
     await refreshSession();
   }, [refreshSession]);
 
+  const startSessionFromProgramDay = useCallback(
+    async (pdId: number, exs: Exercise[]) => {
+      const newSession = await createSession(pdId);
+      for (const ex of exs) {
+        await addExerciseToSession(newSession.id, ex.id, ex.defaultRestSeconds);
+        // Update cache in case this is a new custom exercise
+        allExercisesRef.current.set(ex.id, ex);
+      }
+      await refreshSession();
+    },
+    [refreshSession],
+  );
+
   const endSession = useCallback(async () => {
     if (!session) {
       return;
@@ -173,13 +189,17 @@ export function SessionProvider({ children }: Props) {
     [session, resolveExercises],
   );
 
+  const programDayId = session?.programDayId ?? null;
+
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
       sessionExercises,
       exercises,
       isLoading,
+      programDayId,
       startSession,
+      startSessionFromProgramDay,
       endSession,
       addExercise,
       markExerciseComplete,
@@ -191,7 +211,9 @@ export function SessionProvider({ children }: Props) {
       sessionExercises,
       exercises,
       isLoading,
+      programDayId,
       startSession,
+      startSessionFromProgramDay,
       endSession,
       addExercise,
       markExerciseComplete,

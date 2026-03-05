@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { ExerciseTargetRow } from '../components/ExerciseTargetRow';
 import {
@@ -25,6 +25,8 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ProgramDayExercise } from '../types';
 import { ProgramsStackParamList } from '../navigation/TabNavigator';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
+import { useSession } from '../context/SessionContext';
+import { TabParamList } from '../navigation/TabNavigator';
 
 type DayDetailRoute = RouteProp<ProgramsStackParamList, 'DayDetail'>;
 
@@ -32,6 +34,7 @@ export function DayDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<DayDetailRoute>();
   const { dayId, dayName } = route.params;
+  const { session, startSessionFromProgramDay } = useSession();
 
   const [dayExercises, setDayExercises] = useState<ProgramDayExercise[]>([]);
   const [exerciseMap, setExerciseMap] = useState<Map<number, Exercise>>(new Map());
@@ -150,6 +153,27 @@ export function DayDetailScreen() {
     [refresh],
   );
 
+  const handleStartWorkout = useCallback(async () => {
+    if (session) {
+      Alert.alert(
+        'Workout in Progress',
+        'A workout is already in progress. End it first before starting a new one.',
+      );
+      return;
+    }
+    // Build Exercise objects from exerciseMap in program day order
+    const exerciseObjects = dayExercises
+      .map(pde => exerciseMap.get(pde.exerciseId))
+      .filter((ex): ex is Exercise => ex !== undefined);
+    if (exerciseObjects.length === 0) { return; }
+    await startSessionFromProgramDay(dayId, exerciseObjects);
+    // Navigate to WorkoutTab
+    const parent = navigation.getParent<NavigationProp<TabParamList>>();
+    if (parent) {
+      parent.navigate('WorkoutTab');
+    }
+  }, [session, dayExercises, exerciseMap, dayId, startSessionFromProgramDay, navigation]);
+
   const renderItem = useCallback(
     ({ item, index }: { item: ProgramDayExercise; index: number }) => {
       const exercise = exerciseMap.get(item.exerciseId);
@@ -213,6 +237,18 @@ export function DayDetailScreen() {
           contentContainerStyle={styles.list}
           extraData={exerciseMap}
         />
+      )}
+
+      {/* Start Workout button */}
+      {dayExercises.length > 0 && (
+        <View style={styles.startWorkoutContainer}>
+          <TouchableOpacity
+            style={styles.startWorkoutButton}
+            onPress={handleStartWorkout}
+            activeOpacity={0.85}>
+            <Text style={styles.startWorkoutText}>Start Workout</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Exercise picker sheet (reused from Phase 1) */}
@@ -297,5 +333,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
+  },
+  startWorkoutContainer: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  startWorkoutButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    paddingVertical: spacing.base,
+    alignItems: 'center',
+  },
+  startWorkoutText: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.background,
   },
 });

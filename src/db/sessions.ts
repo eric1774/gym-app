@@ -35,13 +35,13 @@ function rowToExerciseSession(row: {
  * Create a new workout session with started_at = now.
  * Returns the inserted session row.
  */
-export async function createSession(): Promise<WorkoutSession> {
+export async function createSession(programDayId?: number | null): Promise<WorkoutSession> {
   const database = await db;
   const startedAt = new Date().toISOString();
   const result = await executeSql(
     database,
-    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id) VALUES (?, NULL, NULL)',
-    [startedAt],
+    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id) VALUES (?, NULL, ?)',
+    [startedAt, programDayId ?? null],
   );
   const row = await executeSql(database, 'SELECT * FROM workout_sessions WHERE id = ?', [
     result.insertId,
