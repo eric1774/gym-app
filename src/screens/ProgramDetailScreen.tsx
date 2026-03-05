@@ -21,7 +21,7 @@ import {
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
-import { Program, ProgramDay } from '../types';
+import { Program, ProgramDay, ProgramDayCompletionStatus } from '../types';
 import { ProgramsStackParamList } from '../navigation/TabNavigator';
 import { AddDayModal } from './AddDayModal';
 
@@ -35,6 +35,7 @@ export function ProgramDetailScreen() {
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [addDayVisible, setAddDayVisible] = useState(false);
+  const [weekCompletion, setWeekCompletion] = useState<ProgramDayCompletionStatus[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -193,6 +194,28 @@ export function ProgramDetailScreen() {
         ) : null}
       </View>
 
+      {isActivated && weekCompletion.length > 0 && (
+        <View style={styles.weekCard}>
+          <Text style={styles.weekTitle}>
+            Week {program.currentWeek} of {program.weeks}
+          </Text>
+          {weekCompletion.map((day) => (
+            <View key={day.dayId} style={styles.weekRow}>
+              <Text style={day.isCompletedThisWeek ? styles.checkDone : styles.checkPending}>
+                {day.isCompletedThisWeek ? '✓' : '○'}
+              </Text>
+              <Text
+                style={[
+                  styles.weekDayName,
+                  day.isCompletedThisWeek ? styles.weekDayDone : styles.weekDayPending,
+                ]}>
+                {day.dayName}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {days.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No workout days yet</Text>
@@ -299,6 +322,47 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
+  },
+  weekCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.base,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+  },
+  weekTitle: {
+    fontSize: fontSize.md,
+    fontWeight: weightBold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+  },
+  weekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  checkDone: {
+    fontSize: fontSize.base,
+    color: colors.accent,
+    marginRight: spacing.sm,
+    fontWeight: weightBold,
+  },
+  checkPending: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
+    marginRight: spacing.sm,
+  },
+  weekDayName: {
+    fontSize: fontSize.base,
+  },
+  weekDayDone: {
+    color: colors.primary,
+    fontWeight: weightSemiBold,
+  },
+  weekDayPending: {
+    color: colors.secondary,
   },
   list: {
     paddingHorizontal: spacing.base,
