@@ -11,12 +11,13 @@ import {
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
-import { SetLoggingPanel } from '../components/SetLoggingPanel';
+import { SetLoggingPanel, ProgramTarget } from '../components/SetLoggingPanel';
 import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseSession, WorkoutSet } from '../types';
+import { Exercise, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
+import { getProgramDayExercises } from '../db/programs';
 
 /** Format elapsed seconds as MM:SS */
 function formatElapsed(seconds: number): string {
@@ -65,6 +66,7 @@ interface ExerciseCardProps {
   setCount: number;
   sessionId: number;
   pendingRest: boolean;
+  programTarget: ProgramTarget | null;
   onPress: () => void;
   onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
@@ -78,6 +80,7 @@ function ExerciseCard({
   setCount,
   sessionId,
   pendingRest,
+  programTarget,
   onPress,
   onToggleComplete,
   onSetLogged,
@@ -125,6 +128,7 @@ function ExerciseCard({
             sessionId={sessionId}
             exerciseId={exerciseSession.exerciseId}
             onSetLogged={onSetLogged}
+            programTarget={programTarget}
           />
           {pendingRest && (
             <TouchableOpacity
@@ -146,6 +150,7 @@ export function WorkoutScreen() {
     sessionExercises,
     exercises,
     isLoading,
+    programDayId,
     startSession,
     endSession,
     addExercise,
@@ -160,6 +165,27 @@ export function WorkoutScreen() {
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load program day exercises when session is a program workout
+  const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
+
+  useEffect(() => {
+    if (programDayId) {
+      getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
+        const map = new Map<number, ProgramTarget>();
+        for (const pde of pdes) {
+          map.set(pde.exerciseId, {
+            targetSets: pde.targetSets,
+            targetReps: pde.targetReps,
+            targetWeightKg: pde.targetWeightKg,
+          });
+        }
+        setProgramTargetsMap(map);
+      });
+    } else {
+      setProgramTargetsMap(new Map());
+    }
+  }, [programDayId]);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -320,6 +346,7 @@ export function WorkoutScreen() {
               setCount={setCount}
               sessionId={session.id}
               pendingRest={pendingRestExerciseId === se.exerciseId}
+              programTarget={programTargetsMap.get(se.exerciseId) ?? null}
               onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
               onToggleComplete={() => handleToggleComplete(se.exerciseId)}
               onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}

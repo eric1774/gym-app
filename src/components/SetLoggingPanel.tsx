@@ -18,15 +18,23 @@ import { fontSize, weightBold, weightMedium } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { WorkoutSet } from '../types';
 import { GhostReference } from './GhostReference';
+import { ProgramTargetReference } from './ProgramTargetReference';
 import { SetListItem } from './SetListItem';
+
+export interface ProgramTarget {
+  targetSets: number;
+  targetReps: number;
+  targetWeightKg: number;
+}
 
 interface Props {
   sessionId: number;
   exerciseId: number;
   onSetLogged: (set: WorkoutSet) => void;
+  programTarget?: ProgramTarget | null;
 }
 
-export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged }: Props) {
+export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTarget }: Props) {
   const [weightInput, setWeightInput] = useState('');
   const [repsInput, setRepsInput] = useState('');
   const [completedSets, setCompletedSets] = useState<WorkoutSet[]>([]);
@@ -84,6 +92,15 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged }: Props) {
 
   return (
     <View style={styles.container}>
+      {/* Program target reference (shown during program workouts) */}
+      {programTarget && (
+        <ProgramTargetReference
+          targetSets={programTarget.targetSets}
+          targetReps={programTarget.targetReps}
+          targetWeightKg={programTarget.targetWeightKg}
+        />
+      )}
+
       {/* Ghost reference from last session */}
       <GhostReference sets={lastSessionSets} />
 
