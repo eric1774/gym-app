@@ -34,3 +34,11 @@ export {
   updateExerciseTargets,
   reorderProgramDayExercises,
 } from './programs';
+export {
+  getExerciseProgressData,
+  getExerciseHistory,
+  getRecentlyTrainedExercises,
+  getProgramWeekCompletion,
+  getSessionTimeSummary,
+  exportAllData,
+} from './dashboard';
