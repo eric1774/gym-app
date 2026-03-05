@@ -36,7 +36,7 @@ export function SetListItem({ set, onDelete }: Props) {
       activeOpacity={0.7}
       delayLongPress={400}>
       <Text style={styles.setText}>
-        Set {set.setNumber}: {set.weightKg}kg × {set.reps} reps
+        Set {set.setNumber}: {set.weightKg}lb × {set.reps} reps
         {set.isWarmup ? ' (warmup)' : ''}
       </Text>
       <Animated.View style={[styles.deleteWrapper, { opacity: animatedOpacity }]}>

@@ -18,6 +18,7 @@ import {
   getProgram,
   getProgramDays,
 } from '../db/programs';
+import { getProgramWeekCompletion } from '../db/dashboard';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
@@ -39,7 +40,7 @@ export function ProgramDetailScreen() {
 
   const refresh = useCallback(async () => {
     try {
-      const [p, d] = await Promise.all([getProgram(programId), getProgramDays(programId)]);
+      const [p, d, wc] = await Promise.all([getProgram(programId), getProgramDays(programId), getProgramWeekCompletion(programId)]);
       setProgram(p);
       setDays(d);
     } catch {
@@ -122,29 +123,38 @@ export function ProgramDetailScreen() {
   );
 
   const renderDay = useCallback(
-    ({ item }: { item: ProgramDay }) => (
-      <TouchableOpacity
-        style={styles.dayCard}
-        onPress={() => handleDayTap(item)}
-        activeOpacity={0.7}>
-        <Text style={styles.dayName}>{item.name}</Text>
-        <View style={styles.dayActions}>
-          <TouchableOpacity
-            style={styles.dupButton}
-            onPress={() => handleDuplicateDay(item.id)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.dupText}>Dup</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDeleteDay(item)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.deleteText}>Del</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    ),
-    [handleDayTap, handleDeleteDay, handleDuplicateDay],
+    ({ item }: { item: ProgramDay }) => {
+      const completion = weekCompletion.find(wc => wc.dayId === item.id);
+      const isDone = completion?.isCompletedThisWeek ?? false;
+      return (
+        <TouchableOpacity
+          style={[styles.dayCard, isDone && styles.dayCardDone]}
+          onPress={() => handleDayTap(item)}
+          activeOpacity={0.7}>
+          <View style={styles.dayLeft}>
+            <Text style={[styles.completionIcon, isDone && styles.completionIconDone]}>
+              {isDone ? '✓' : '○'}
+            </Text>
+          </View>
+          <Text style={[styles.dayName, isDone && styles.dayNameDone]}>{item.name}</Text>
+          <View style={styles.dayActions}>
+            <TouchableOpacity
+              style={styles.dupButton}
+              onPress={() => handleDuplicateDay(item.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.dupText}>Dup</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteDay(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.deleteText}>Del</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [handleDayTap, handleDeleteDay, handleDuplicateDay, weekCompletion],
   );
 
   const keyExtractor = useCallback((item: ProgramDay) => String(item.id), []);
@@ -182,16 +192,37 @@ export function ProgramDetailScreen() {
         <View style={styles.headerRight} />
       </View>
 
+      {isComplete && (
+        <View style={styles.completeBanner}>
+          <Text style={styles.completeBannerText}>Program Complete!</Text>
+        </View>
+      )}
+
       <View style={styles.actionRow}>
         {!isActivated ? (
           <TouchableOpacity style={styles.actionButton} onPress={handleActivate}>
             <Text style={styles.actionButtonText}>Start Program</Text>
           </TouchableOpacity>
-        ) : canAdvance ? (
-          <TouchableOpacity style={styles.actionButtonSecondary} onPress={handleAdvanceWeek}>
-            <Text style={styles.actionButtonSecondaryText}>Advance Week</Text>
-          </TouchableOpacity>
-        ) : null}
+        ) : (
+          <View style={styles.weekControls}>
+            <TouchableOpacity
+              style={[styles.weekNavButton, !canGoBack && styles.weekNavButtonDisabled]}
+              onPress={handleGoBack}
+              disabled={!canGoBack}>
+              <Text style={[styles.weekNavText, !canGoBack && styles.weekNavTextDisabled]}>
+                {'< Prev'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.weekNavButton, !canAdvance && styles.weekNavButtonDisabled]}
+              onPress={handleAdvanceWeek}
+              disabled={!canAdvance}>
+              <Text style={[styles.weekNavText, !canAdvance && styles.weekNavTextDisabled]}>
+                {'Next >'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {isActivated && weekCompletion.length > 0 && (
@@ -310,7 +341,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
   },
-  actionButtonSecondary: {
+  completeBanner: {
+    backgroundColor: colors.accent,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  completeBannerText: {
+    color: colors.background,
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+  },
+  weekControls: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  weekNavButton: {
+    flex: 1,
     backgroundColor: colors.surfaceElevated,
     borderRadius: 12,
     paddingVertical: spacing.md,
@@ -318,10 +367,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accent,
   },
-  actionButtonSecondaryText: {
+  weekNavButtonDisabled: {
+    borderColor: colors.border,
+  },
+  weekNavText: {
     color: colors.accent,
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
+  },
+  weekNavTextDisabled: {
+    color: colors.secondary,
   },
   weekCard: {
     backgroundColor: colors.surface,
@@ -377,6 +432,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 52,
+  },
+  dayCardDone: {
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  dayLeft: {
+    marginRight: spacing.sm,
+  },
+  completionIcon: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
+    width: 20,
+    textAlign: 'center',
+  },
+  completionIconDone: {
+    color: colors.accent,
+    fontWeight: weightBold,
   },
   dayName: {
     fontSize: fontSize.md,

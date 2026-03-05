@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function ProgramTargetReference({ targetSets, targetReps, targetWeightKg }: Props) {
-  const weightPart = targetWeightKg > 0 ? ` @ ${targetWeightKg}kg` : '';
+  const weightPart = targetWeightKg > 0 ? ` @ ${targetWeightKg}lb` : '';
 
   return (
     <View style={styles.container}>

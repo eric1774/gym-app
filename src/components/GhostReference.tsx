@@ -24,7 +24,7 @@ export function GhostReference({ sets }: Props) {
         <View style={styles.verticalList}>
           {sets.map(s => (
             <Text key={s.id} style={styles.setText}>
-              Set {s.setNumber}: {s.weightKg}kg × {s.reps} reps
+              Set {s.setNumber}: {s.weightKg}lb × {s.reps} reps
             </Text>
           ))}
         </View>
@@ -32,7 +32,7 @@ export function GhostReference({ sets }: Props) {
         <View style={styles.horizontalRow}>
           {sets.map((s, idx) => (
             <Text key={s.id} style={styles.setText}>
-              Set {s.setNumber}: {s.weightKg}kg × {s.reps}
+              Set {s.setNumber}: {s.weightKg}lb × {s.reps}
               {idx < sets.length - 1 ? '   ' : ''}
             </Text>
           ))}

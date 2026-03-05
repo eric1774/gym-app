@@ -124,7 +124,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
           style={styles.weightInput}
           value={weightInput}
           onChangeText={setWeightInput}
-          placeholder="kg"
+          placeholder="lb"
           placeholderTextColor={colors.secondary}
           keyboardType="decimal-pad"
           returnKeyType="next"

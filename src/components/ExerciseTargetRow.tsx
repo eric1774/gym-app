@@ -30,7 +30,7 @@ export function ExerciseTargetRow({
 
   const targetsText =
     dayExercise.targetWeightKg > 0
-      ? `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightKg}kg`
+      ? `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightKg}lb`
       : `${dayExercise.targetSets}x${dayExercise.targetReps}`;
 
   return (

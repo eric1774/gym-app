@@ -118,6 +118,19 @@ export async function advanceWeek(id: number): Promise<number> {
   return result.rows.item(0).current_week as number;
 }
 
+
+/** Decrease program current_week by 1, floored at 1. Returns new week value. */
+export async function decrementWeek(id: number): Promise<number> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE programs SET current_week = MAX(current_week - 1, 1) WHERE id = ?',
+    [id],
+  );
+  const result = await executeSql(database, 'SELECT current_week FROM programs WHERE id = ?', [id]);
+  return result.rows.item(0).current_week as number;
+}
+
 // ── Program Day CRUD ────────────────────────────────────────────────
 
 /** Return all days for a program, ordered by sort_order. */

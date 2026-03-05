@@ -110,7 +110,7 @@ export function EditTargetsModal({
             maxLength={3}
           />
 
-          <Text style={[styles.label, styles.fieldGap]}>Target Weight (kg)</Text>
+          <Text style={[styles.label, styles.fieldGap]}>Target Weight (lb)</Text>
           <TextInput
             style={styles.input}
             value={weight}

@@ -155,7 +155,7 @@ export function ExerciseProgressScreen() {
               data={chartData}
               width={CHART_WIDTH}
               height={220}
-              yAxisSuffix={' kg'}
+              yAxisSuffix={' lb'}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
               withOuterLines={false}
@@ -196,7 +196,7 @@ export function ExerciseProgressScreen() {
                     styles.setText,
                     set.isWarmup && styles.setTextWarmup,
                   ]}>
-                  {'Set ' + set.setNumber + ': ' + set.weightKg + 'kg x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
+                  {'Set ' + set.setNumber + ': ' + set.weightKg + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
                 </Text>
               ))}
             </View>
