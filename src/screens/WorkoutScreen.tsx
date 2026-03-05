@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +10,11 @@ import {
 } from 'react-native';
 import { useSession } from '../context/SessionContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
+import { SetLoggingPanel } from '../components/SetLoggingPanel';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
-import { Exercise, ExerciseSession } from '../types';
+import { Exercise, ExerciseSession, WorkoutSet } from '../types';
 
 /** Format elapsed seconds as MM:SS */
 function formatElapsed(seconds: number): string {
@@ -58,44 +60,66 @@ interface ExerciseCardProps {
   exerciseSession: ExerciseSession;
   exerciseName: string;
   isActive: boolean;
+  setCount: number;
+  sessionId: number;
   onPress: () => void;
   onMarkComplete: () => void;
+  onSetLogged: (set: WorkoutSet) => void;
 }
 
 function ExerciseCard({
   exerciseSession,
   exerciseName,
   isActive,
+  setCount,
+  sessionId,
   onPress,
   onMarkComplete,
+  onSetLogged,
 }: ExerciseCardProps) {
+  const isComplete = exerciseSession.isComplete;
+
   return (
     <TouchableOpacity
-      style={[styles.card, isActive ? styles.cardActive : styles.cardInactive]}
+      style={[
+        styles.card,
+        isActive ? styles.cardActive : styles.cardInactive,
+        isComplete && styles.cardComplete,
+      ]}
       onPress={onPress}
       activeOpacity={0.8}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardName}>{exerciseName}</Text>
+        <View style={styles.cardNameContainer}>
+          <Text style={[styles.cardName, isComplete && styles.cardNameComplete]}>
+            {exerciseName}
+          </Text>
+          {!isActive && setCount > 0 && (
+            <Text style={styles.setCountLabel}>{setCount} set{setCount !== 1 ? 's' : ''} logged</Text>
+          )}
+        </View>
         <TouchableOpacity
           onPress={onMarkComplete}
           style={[
             styles.checkButton,
-            exerciseSession.isComplete ? styles.checkButtonDone : styles.checkButtonPending,
+            isComplete ? styles.checkButtonDone : styles.checkButtonPending,
           ]}>
           <Text
             style={[
               styles.checkText,
-              exerciseSession.isComplete ? styles.checkTextDone : styles.checkTextPending,
+              isComplete ? styles.checkTextDone : styles.checkTextPending,
             ]}>
-            {exerciseSession.isComplete ? 'Done' : 'Mark Done'}
+            {isComplete ? 'Done' : 'Mark Done'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {isActive && (
         <View style={styles.cardExpanded}>
-          {/* Plan 05 will replace this placeholder with full set logging UI */}
-          <Text style={styles.setPlaceholder}>Set logging coming in Plan 05</Text>
+          <SetLoggingPanel
+            sessionId={sessionId}
+            exerciseId={exerciseSession.exerciseId}
+            onSetLogged={onSetLogged}
+          />
         </View>
       )}
     </TouchableOpacity>
@@ -117,6 +141,22 @@ export function WorkoutScreen() {
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
+
+  // Default to first non-complete exercise on session load
+  useEffect(() => {
+    if (sessionExercises.length > 0 && activeExerciseId === null) {
+      const firstIncomplete = sessionExercises.find(se => !se.isComplete);
+      if (firstIncomplete) {
+        setActiveExerciseId(firstIncomplete.exerciseId);
+      } else {
+        setActiveExerciseId(sessionExercises[0].exerciseId);
+      }
+    }
+    if (sessionExercises.length === 0) {
+      setActiveExerciseId(null);
+    }
+  }, [sessionExercises, activeExerciseId]);
 
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
@@ -133,6 +173,32 @@ export function WorkoutScreen() {
     },
     [markExerciseComplete],
   );
+
+  const handleSetLogged = useCallback((exerciseId: number, _set: WorkoutSet) => {
+    setSetCountsByExercise(prev => ({
+      ...prev,
+      [exerciseId]: (prev[exerciseId] ?? 0) + 1,
+    }));
+  }, []);
+
+  const handleEndWorkout = useCallback(() => {
+    Alert.alert(
+      'End Workout',
+      'End workout? This marks the session complete.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'End',
+          style: 'destructive',
+          onPress: async () => {
+            await endSession();
+            setActiveExerciseId(null);
+            setSetCountsByExercise({});
+          },
+        },
+      ],
+    );
+  }, [endSession]);
 
   if (isLoading) {
     return (
@@ -161,7 +227,7 @@ export function WorkoutScreen() {
       {/* Session header */}
       <View style={styles.header}>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
-        <TouchableOpacity onPress={endSession}>
+        <TouchableOpacity onPress={handleEndWorkout}>
           <Text style={styles.endButton}>End Workout</Text>
         </TouchableOpacity>
       </View>
@@ -174,18 +240,22 @@ export function WorkoutScreen() {
         {sessionExercises.length === 0 && (
           <Text style={styles.emptyState}>Tap + to add exercises</Text>
         )}
-        {sessionExercises.map((se, _idx) => {
+        {sessionExercises.map((se) => {
           const exercise = exercises.find(ex => ex.id === se.exerciseId);
           const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
           const isActive = activeExerciseId === se.exerciseId;
+          const setCount = setCountsByExercise[se.exerciseId] ?? 0;
           return (
             <ExerciseCard
               key={se.exerciseId}
               exerciseSession={se}
               exerciseName={name}
               isActive={isActive}
+              setCount={setCount}
+              sessionId={session.id}
               onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
               onMarkComplete={() => handleMarkComplete(se.exerciseId)}
+              onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
             />
           );
         })}
@@ -288,6 +358,9 @@ const styles = StyleSheet.create({
   cardInactive: {
     backgroundColor: colors.surface,
   },
+  cardComplete: {
+    backgroundColor: colors.accentDim,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,12 +368,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
-  cardName: {
+  cardNameContainer: {
     flex: 1,
+    marginRight: spacing.sm,
+  },
+  cardName: {
     fontSize: fontSize.md,
     fontWeight: weightSemiBold,
     color: colors.primary,
-    marginRight: spacing.sm,
+  },
+  cardNameComplete: {
+    color: colors.secondary,
+    textDecorationLine: 'line-through',
+  },
+  setCountLabel: {
+    fontSize: fontSize.sm,
+    color: colors.secondary,
+    marginTop: 2,
   },
   checkButton: {
     paddingHorizontal: spacing.md,
@@ -330,11 +414,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
   },
-  setPlaceholder: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
-    fontStyle: 'italic',
-  },
+
   fab: {
     position: 'absolute',
     bottom: spacing.xl,
