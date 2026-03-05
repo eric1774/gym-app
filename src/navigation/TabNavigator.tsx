@@ -2,10 +2,12 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { LibraryScreen } from '../screens/LibraryScreen';
+import { ProgramsScreen } from '../screens/ProgramsScreen';
 import { WorkoutScreen } from '../screens/WorkoutScreen';
 
 export type TabParamList = {
   LibraryTab: undefined;
+  ProgramsTab: undefined;
   WorkoutTab: undefined;
 };
 
@@ -32,6 +34,11 @@ export function TabNavigator() {
         name="LibraryTab"
         component={LibraryScreen}
         options={{ tabBarLabel: 'Library' }}
+      />
+      <Tab.Screen
+        name="ProgramsTab"
+        component={ProgramsScreen}
+        options={{ tabBarLabel: 'Programs' }}
       />
       <Tab.Screen
         name="WorkoutTab"
