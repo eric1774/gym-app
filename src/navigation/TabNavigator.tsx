@@ -5,8 +5,8 @@ import { colors } from '../theme/colors';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { ProgramsScreen } from '../screens/ProgramsScreen';
 import { ProgramDetailScreen } from '../screens/ProgramDetailScreen';
+import { DayDetailScreen } from '../screens/DayDetailScreen';
 import { WorkoutScreen } from '../screens/WorkoutScreen';
-import { Text, View, StyleSheet } from 'react-native';
 
 export type TabParamList = {
   LibraryTab: undefined;
@@ -23,33 +23,12 @@ export type ProgramsStackParamList = {
 const Tab = createBottomTabNavigator<TabParamList>();
 const ProgramsStack = createNativeStackNavigator<ProgramsStackParamList>();
 
-function DayDetailPlaceholder() {
-  return (
-    <View style={placeholderStyles.container}>
-      <Text style={placeholderStyles.text}>Day Detail (coming soon)</Text>
-    </View>
-  );
-}
-
-const placeholderStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: colors.secondary,
-    fontSize: 15,
-  },
-});
-
 function ProgramsStackNavigator() {
   return (
     <ProgramsStack.Navigator screenOptions={{ headerShown: false }}>
       <ProgramsStack.Screen name="ProgramsList" component={ProgramsScreen} />
       <ProgramsStack.Screen name="ProgramDetail" component={ProgramDetailScreen} />
-      <ProgramsStack.Screen name="DayDetail" component={DayDetailPlaceholder} />
+      <ProgramsStack.Screen name="DayDetail" component={DayDetailScreen} />
     </ProgramsStack.Navigator>
   );
 }
