@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { LibraryScreen } from '../screens/LibraryScreen';
+import { WorkoutScreen } from '../screens/WorkoutScreen';
 
 export type TabParamList = {
   LibraryTab: undefined;
@@ -10,10 +10,6 @@ export type TabParamList = {
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
-
-function WorkoutPlaceholder() {
-  return <View style={styles.placeholder} />;
-}
 
 export function TabNavigator() {
   return (
@@ -39,16 +35,9 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="WorkoutTab"
-        component={WorkoutPlaceholder}
+        component={WorkoutScreen}
         options={{ tabBarLabel: 'Workout' }}
       />
     </Tab.Navigator>
   );
 }
-
-const styles = StyleSheet.create({
-  placeholder: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-});
