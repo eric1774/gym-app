@@ -78,3 +78,45 @@ export interface ProgramDayExercise {
   targetWeightKg: number;
   sortOrder: number;
 }
+
+// ── Dashboard domain types (Phase 3) ──────────────────────────────
+
+export interface ExerciseProgressPoint {
+  sessionId: number;
+  date: string;
+  bestWeightKg: number;
+  bestReps: number;
+}
+
+export interface ExerciseHistorySession {
+  sessionId: number;
+  date: string;
+  sets: ExerciseHistorySet[];
+}
+
+export interface ExerciseHistorySet {
+  setNumber: number;
+  weightKg: number;
+  reps: number;
+  isWarmup: boolean;
+}
+
+export interface ProgramDayCompletionStatus {
+  dayId: number;
+  dayName: string;
+  isCompletedThisWeek: boolean;
+  sessionId: number | null;
+}
+
+export interface SessionTimeSummary {
+  totalSeconds: number;
+  activeSeconds: number;
+  restSeconds: number;
+}
+
+export interface FullDataExport {
+  exportedAt: string;
+  exercises: Exercise[];
+  sessions: (WorkoutSession & { sets: WorkoutSet[] })[];
+  programs: (Program & { days: (ProgramDay & { exercises: ProgramDayExercise[] })[] })[];
+}
