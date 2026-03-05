@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
+import { LibraryScreen } from '../screens/LibraryScreen';
 
 export type TabParamList = {
   LibraryTab: undefined;
@@ -9,10 +10,6 @@ export type TabParamList = {
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
-
-function LibraryPlaceholder() {
-  return <View style={styles.placeholder} />;
-}
 
 function WorkoutPlaceholder() {
   return <View style={styles.placeholder} />;
@@ -37,7 +34,7 @@ export function TabNavigator() {
       }}>
       <Tab.Screen
         name="LibraryTab"
-        component={LibraryPlaceholder}
+        component={LibraryScreen}
         options={{ tabBarLabel: 'Library' }}
       />
       <Tab.Screen
