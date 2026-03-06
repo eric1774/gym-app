@@ -8,6 +8,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
@@ -303,15 +304,15 @@ export function WorkoutScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView style={styles.centered} edges={["top"]}>
         <ActivityIndicator color={colors.accent} size="large" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!session) {
     return (
-      <View style={styles.startContainer}>
+      <SafeAreaView style={styles.startContainer} edges={["top"]}>
         {completionMessage ? (
           <Text style={styles.completionMessage}>{completionMessage}</Text>
         ) : (
@@ -323,12 +324,12 @@ export function WorkoutScreen() {
           activeOpacity={0.85}>
           <Text style={styles.startButtonText}>Start Workout</Text>
         </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Session header */}
       <View style={styles.header}>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
@@ -391,7 +392,7 @@ export function WorkoutScreen() {
         onClose={() => setPickerVisible(false)}
         onSelect={handleAddExercise}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

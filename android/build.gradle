@@ -19,3 +19,21 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Workaround: CMake creates hardlinks for .so files on Windows which Gradle 8.13 cannot snapshot.
+// After each CMake build task, replace hardlinked .so files with true copies.
+subprojects {
+    tasks.configureEach { task ->
+        if (task.name.contains("buildCMake")) {
+            task.doNotTrackState("CMake hardlinks on Windows")
+            task.doLast {
+                fileTree(project.layout.buildDirectory.asFile.get()).matching { include "**/obj/**/*.so" }.each { File f ->
+                    def tmp = new File(f.parentFile, f.name + ".tmp")
+                    java.nio.file.Files.copy(f.toPath(), tmp.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                    f.delete()
+                    tmp.renameTo(f)
+                }
+            }
+        }
+    }
+}

@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { ExerciseTargetRow } from '../components/ExerciseTargetRow';
@@ -201,7 +201,7 @@ export function DayDetailScreen() {
     : '';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity

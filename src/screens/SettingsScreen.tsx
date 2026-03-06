@@ -1,13 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { exportAllData } from '../db/dashboard';
 import { colors } from '../theme/colors';
@@ -36,7 +36,7 @@ export function SettingsScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}

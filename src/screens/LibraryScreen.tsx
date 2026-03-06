@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { deleteExercise, getExercisesByCategory, searchExercises } from '../db/exercises';
@@ -123,7 +123,7 @@ export function LibraryScreen() {
   const keyExtractor = useCallback((item: Exercise) => String(item.id), []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Exercise Library</Text>
       </View>

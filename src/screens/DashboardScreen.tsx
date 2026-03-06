@@ -1,12 +1,12 @@
 import React, { useCallback, useState } from 'react';
 import {
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getRecentlyTrainedExercises } from '../db/dashboard';
@@ -87,7 +87,7 @@ export function DashboardScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <Text style={styles.title}>Dashboard</Text>
 
       {exercises.length === 0 ? (

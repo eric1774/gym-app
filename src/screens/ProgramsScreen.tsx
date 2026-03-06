@@ -2,13 +2,13 @@ import React, { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   RefreshControl,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { deleteProgram, getPrograms } from '../db/programs';
 import { colors } from '../theme/colors';
@@ -108,7 +108,7 @@ export function ProgramsScreen() {
   const keyExtractor = useCallback((item: Program) => String(item.id), []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Programs</Text>
         <TouchableOpacity

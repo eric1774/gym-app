@@ -3,12 +3,12 @@ import {
   Alert,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
   activateProgram,
@@ -205,7 +205,7 @@ export function ProgramDetailScreen() {
 
   if (!program) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centered}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -219,7 +219,7 @@ export function ProgramDetailScreen() {
   const isComplete = isActivated && program.currentWeek >= program.weeks;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}

@@ -2,13 +2,13 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Dimensions,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { getExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
@@ -134,7 +134,7 @@ export function ExerciseProgressScreen() {
   }, [filteredProgress]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
