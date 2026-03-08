@@ -10,13 +10,15 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal } from '../db';
+import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal, addMeal, getStreakDays, get7DayAverage, getRecentDistinctMeals } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { Meal } from '../types';
+import { Meal, MealType } from '../types';
 import { GoalSetupForm } from '../components/GoalSetupForm';
 import { MealListItem } from '../components/MealListItem';
 import { ProteinChart } from '../components/ProteinChart';
 import { ProteinProgressBar } from '../components/ProteinProgressBar';
+import { StreakAverageRow } from '../components/StreakAverageRow';
+import { QuickAddButtons } from '../components/QuickAddButtons';
 import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -30,16 +32,26 @@ export function ProteinScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [average, setAverage] = useState<number | null>(null);
+  const [recentMeals, setRecentMeals] = useState<Array<{ description: string; proteinGrams: number; mealType: MealType }>>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
-    const [fetchedGoal, fetchedTotal, fetchedMeals] = await Promise.all([
+    const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
       getProteinGoal(),
       getTodayProteinTotal(),
       getMealsByDate(getLocalDateString()),
+      getStreakDays(),
+      get7DayAverage(),
+      getRecentDistinctMeals(),
     ]);
     setGoal(fetchedGoal);
     setTodayTotal(fetchedTotal);
     setMeals(fetchedMeals);
+    setStreak(fetchedStreak);
+    setAverage(fetchedAverage);
+    setRecentMeals(fetchedRecent);
   }, []);
 
   useFocusEffect(
@@ -47,15 +59,21 @@ export function ProteinScreen() {
       let cancelled = false;
 
       async function load() {
-        const [fetchedGoal, fetchedTotal, fetchedMeals] = await Promise.all([
+        const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
           getProteinGoal(),
           getTodayProteinTotal(),
           getMealsByDate(getLocalDateString()),
+          getStreakDays(),
+          get7DayAverage(),
+          getRecentDistinctMeals(),
         ]);
         if (!cancelled) {
           setGoal(fetchedGoal);
           setTodayTotal(fetchedTotal);
           setMeals(fetchedMeals);
+          setStreak(fetchedStreak);
+          setAverage(fetchedAverage);
+          setRecentMeals(fetchedRecent);
           setIsLoading(false);
         }
       }
@@ -123,6 +141,17 @@ export function ProteinScreen() {
     setGoal(g);
   }, []);
 
+  const handleQuickAdd = useCallback(async (meal: { description: string; proteinGrams: number; mealType: MealType }) => {
+    try {
+      await addMeal(meal.proteinGrams, meal.description, meal.mealType);
+      setToastMessage(`${meal.description} ${meal.proteinGrams}g logged`);
+      setTimeout(() => setToastMessage(null), 2000);
+      await refreshData();
+    } catch (_err) {
+      Alert.alert('Error', 'Failed to log meal');
+    }
+  }, [refreshData]);
+
   // Memoize as a JSX element (not a component function) so FlatList gets a
   // stable reference and never unmounts/remounts the header on parent re-renders.
   const listHeader = useMemo(() => {
@@ -135,16 +164,20 @@ export function ProteinScreen() {
           onGoalChanged={handleGoalChanged}
         />
 
+        <StreakAverageRow streak={streak} average={average} />
+
         <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
           <Text style={styles.addMealButtonText}>Add Meal</Text>
         </TouchableOpacity>
+
+        <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
 
         <ProteinChart goal={goal} />
 
         <Text style={styles.sectionTitle}>Today's Meals</Text>
       </View>
     );
-  }, [goal, todayTotal, handleAddMeal, handleGoalChanged]);
+  }, [goal, todayTotal, handleAddMeal, handleGoalChanged, streak, average, recentMeals, handleQuickAdd]);
 
   if (isLoading) {
     return (
@@ -187,6 +220,12 @@ export function ProteinScreen() {
         style={styles.mealList}
         contentContainerStyle={meals.length === 0 ? styles.emptyContainer : undefined}
       />
+
+      {toastMessage && (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      )}
 
       <AddMealModal
         visible={modalVisible}
@@ -251,5 +290,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toastText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
   },
 });
