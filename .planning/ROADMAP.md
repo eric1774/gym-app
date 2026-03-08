@@ -69,10 +69,10 @@ Plans:
   1. User can scroll down on the Protein screen and see a line chart showing daily protein totals over time
   2. User can tap filter pills (1W / 1M / 3M / All) to change the chart's time range, and the chart updates to show only data within that range
   3. Chart renders smoothly with 60+ days of data without visible lag or jank
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- ProteinChart component with filter pills, goal line, downsampling, and ProteinScreen integration
 
 ### Phase 7: Polish and Differentiators
 **Goal**: Protein tracking becomes faster and more motivating with quick-add shortcuts and streak/average feedback
@@ -96,5 +96,5 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 |-------|-----------|----------------|--------|-----------|
 | 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
 | 5. Protein Tab and Meal Logging | v1.1 | 0/2 | Not started | - |
-| 6. Protein Intake Chart | v1.1 | 0/? | Not started | - |
+| 6. Protein Intake Chart | v1.1 | 0/1 | Not started | - |
 | 7. Polish and Differentiators | v1.1 | 0/? | Not started | - |
