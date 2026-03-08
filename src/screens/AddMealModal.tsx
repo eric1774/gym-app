@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -190,7 +191,7 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
       transparent
       onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardAvoid}>
         <Pressable style={styles.overlay} onPress={handleClose} />
         <View style={styles.sheet}>
