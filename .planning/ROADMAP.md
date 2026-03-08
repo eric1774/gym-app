@@ -25,8 +25,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Add daily protein intake tracking with meal logging, configurable goals, progress visualization, and history charts to the existing gym tracking app.
 
 - [x] **Phase 4: Data Foundation** - Schema migration system, protein tables, repository, and local-date infrastructure
-- [ ] **Phase 5: Protein Tab and Meal Logging** - New bottom tab with goal progress bar, meal add/edit/delete, and today's meal history
-- [ ] **Phase 6: Protein Intake Chart** - Line chart of daily protein totals with day/week/month filtering
+- [x] **Phase 5: Protein Tab and Meal Logging** - New bottom tab with goal progress bar, meal add/edit/delete, and today's meal history
+- [x] **Phase 6: Protein Intake Chart** - Line chart of daily protein totals with day/week/month filtering
 - [ ] **Phase 7: Polish and Differentiators** - Quick-add buttons, goal streak indicator, and rolling weekly average
 
 ## Phase Details
@@ -58,8 +58,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Tab navigation with carrot icon, ProteinScreen with goal setup and progress bar
-- [ ] 05-02-PLAN.md -- Add/Edit Meal modal, swipeable meal list, and full CRUD integration
+- [x] 05-01-PLAN.md -- Tab navigation with carrot icon, ProteinScreen with goal setup and progress bar
+- [x] 05-02-PLAN.md -- Add/Edit Meal modal, swipeable meal list, and full CRUD integration
 
 ### Phase 6: Protein Intake Chart
 **Goal**: Users can visualize their protein intake history over time with filterable time ranges
@@ -72,7 +72,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 06-01-PLAN.md -- ProteinChart component with filter pills, goal line, downsampling, and ProteinScreen integration
+- [x] 06-01-PLAN.md -- ProteinChart component with filter pills, goal line, downsampling, and ProteinScreen integration
 
 ### Phase 7: Polish and Differentiators
 **Goal**: Protein tracking becomes faster and more motivating with quick-add shortcuts and streak/average feedback
@@ -82,10 +82,11 @@ Plans:
   1. User can re-log a frequent meal with one tap via quick-add buttons displayed on the Protein screen, without opening the Add Meal modal
   2. User can see a streak indicator showing how many consecutive days they have met their protein goal
   3. User can see a rolling 7-day average of their daily protein intake displayed on the Protein screen
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md -- Streak and 7-day average data queries plus StreakAverageRow component
+- [ ] 07-02-PLAN.md -- Quick-add buttons, getRecentDistinctMeals query, and full ProteinScreen integration
 
 ## Progress
 
@@ -95,6 +96,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
-| 5. Protein Tab and Meal Logging | v1.1 | 0/2 | Not started | - |
-| 6. Protein Intake Chart | v1.1 | 0/1 | Not started | - |
-| 7. Polish and Differentiators | v1.1 | 0/? | Not started | - |
+| 5. Protein Tab and Meal Logging | v1.1 | 2/2 | Complete | 2026-03-08 |
+| 6. Protein Intake Chart | v1.1 | 1/1 | Complete | 2026-03-08 |
+| 7. Polish and Differentiators | v1.1 | 0/2 | Not started | - |

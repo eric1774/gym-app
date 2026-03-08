@@ -232,3 +232,121 @@ export async function getTodayProteinTotal(): Promise<number> {
 
   return result.rows.item(0).total as number;
 }
+
+/**
+ * Get the number of consecutive days (counting backwards from today) where the
+ * user met or exceeded their protein goal.
+ *
+ * - If no goal is set, returns 0.
+ * - Today counts if today's total already meets the goal.
+ * - If today has meals but hasn't hit the goal, streak starts from yesterday.
+ * - If today has no meals, streak starts from yesterday.
+ * - Gap detection: a missing day between result rows means zero protein that day,
+ *   which breaks the streak.
+ *
+ * @returns Number of consecutive goal-met days (0 if no streak)
+ */
+export async function getStreakDays(): Promise<number> {
+  const goal = await getProteinGoal();
+  if (goal === null) {
+    return 0;
+  }
+
+  const database = await db;
+  const today = getLocalDateString();
+
+  const result = await executeSql(
+    database,
+    'SELECT local_date, SUM(protein_grams) as total FROM meals WHERE local_date <= ? GROUP BY local_date ORDER BY local_date DESC',
+    [today],
+  );
+
+  if (result.rows.length === 0) {
+    return 0;
+  }
+
+  let streak = 0;
+
+  // Determine the starting expected date.
+  // If the first row is today and it meets the goal, start from today.
+  // Otherwise start from yesterday.
+  const firstRow = result.rows.item(0);
+  let startIndex = 0;
+  let expectedDate: Date;
+
+  if (firstRow.local_date === today) {
+    if ((firstRow.total as number) >= goal) {
+      // Today meets goal — count it and expect yesterday next
+      streak = 1;
+      startIndex = 1;
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      expectedDate = d;
+    } else {
+      // Today has meals but hasn't hit goal — skip today, start from yesterday
+      startIndex = 1;
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      expectedDate = d;
+    }
+  } else {
+    // Today has no meals — start from yesterday
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    expectedDate = d;
+  }
+
+  for (let i = startIndex; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const rowDate = row.local_date as string;
+    const expectedDateStr = getLocalDateString(expectedDate);
+
+    if (rowDate !== expectedDateStr) {
+      // Gap detected — streak is broken
+      break;
+    }
+
+    if ((row.total as number) >= goal) {
+      streak++;
+      expectedDate.setDate(expectedDate.getDate() - 1);
+    } else {
+      // Day didn't meet goal — streak broken
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Get the average daily protein intake across the last 7 days, only counting
+ * days that have at least one logged meal.
+ *
+ * @returns Rounded average in grams, or null if no meals in the last 7 days
+ */
+export async function get7DayAverage(): Promise<number | null> {
+  const database = await db;
+  const today = getLocalDateString();
+
+  // 7 days inclusive of today: today minus 6 days
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - 6);
+  const startDateStr = getLocalDateString(startDate);
+
+  const result = await executeSql(
+    database,
+    'SELECT AVG(daily_total) as avg_protein FROM (SELECT SUM(protein_grams) as daily_total FROM meals WHERE local_date >= ? AND local_date <= ? GROUP BY local_date)',
+    [startDateStr, today],
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const avgProtein = result.rows.item(0).avg_protein;
+  if (avgProtein === null || avgProtein === undefined) {
+    return null;
+  }
+
+  return Math.round(avgProtein as number);
+}

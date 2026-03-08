@@ -52,4 +52,6 @@ export {
   setProteinGoal,
   getDailyProteinTotals,
   getTodayProteinTotal,
+  getStreakDays,
+  get7DayAverage,
 } from './protein';
