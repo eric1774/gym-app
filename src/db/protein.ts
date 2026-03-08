@@ -350,3 +350,38 @@ export async function get7DayAverage(): Promise<number | null> {
 
   return Math.round(avgProtein as number);
 }
+
+/**
+ * Get the most recent distinct meals, deduplicated by (description, protein_grams) pair.
+ * Useful for quick-add buttons — shows the user's most frequently logged recent meals.
+ *
+ * @param limit - Maximum number of distinct meals to return (default 3)
+ * @returns Array of distinct meal objects with description, proteinGrams, and mealType
+ */
+export async function getRecentDistinctMeals(
+  limit: number = 3,
+): Promise<Array<{ description: string; proteinGrams: number; mealType: MealType }>> {
+  const database = await db;
+
+  const result = await executeSql(
+    database,
+    `SELECT description, protein_grams, meal_type, MAX(logged_at) as latest
+     FROM meals
+     WHERE description != ''
+     GROUP BY description, protein_grams
+     ORDER BY latest DESC
+     LIMIT ?`,
+    [limit],
+  );
+
+  const meals: Array<{ description: string; proteinGrams: number; mealType: MealType }> = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    meals.push({
+      description: row.description as string,
+      proteinGrams: row.protein_grams as number,
+      mealType: row.meal_type as MealType,
+    });
+  }
+  return meals;
+}

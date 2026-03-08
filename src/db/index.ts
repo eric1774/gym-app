@@ -54,4 +54,5 @@ export {
   getTodayProteinTotal,
   getStreakDays,
   get7DayAverage,
+  getRecentDistinctMeals,
 } from './protein';
