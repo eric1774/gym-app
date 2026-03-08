@@ -19,10 +19,10 @@ Requirements for protein tracking milestone. Each maps to roadmap phases.
 
 ### Meal Logging
 
-- [ ] **MEAL-01**: User can tap "Add Meal" to open a modal with protein amount (grams) and description fields
-- [ ] **MEAL-02**: User can view today's logged meals below the Add Meal button
-- [ ] **MEAL-03**: User can edit a meal's description, amount, or date from the history view
-- [ ] **MEAL-04**: User can delete a meal entry from the history view
+- [x] **MEAL-01**: User can tap "Add Meal" to open a modal with protein amount (grams) and description fields
+- [x] **MEAL-02**: User can view today's logged meals below the Add Meal button
+- [x] **MEAL-03**: User can edit a meal's description, amount, or date from the history view
+- [x] **MEAL-04**: User can delete a meal entry from the history view
 - [ ] **MEAL-05**: User can re-log a frequent meal with one tap via quick-add buttons
 
 ### Visualization
@@ -66,10 +66,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GOAL-01 | Phase 5 | Complete |
 | GOAL-02 | Phase 5 | Complete |
 | GOAL-03 | Phase 5 | Complete |
-| MEAL-01 | Phase 5 | Pending |
-| MEAL-02 | Phase 5 | Pending |
-| MEAL-03 | Phase 5 | Pending |
-| MEAL-04 | Phase 5 | Pending |
+| MEAL-01 | Phase 5 | Complete |
+| MEAL-02 | Phase 5 | Complete |
+| MEAL-03 | Phase 5 | Complete |
+| MEAL-04 | Phase 5 | Complete |
 | VIS-01 | Phase 6 | Pending |
 | VIS-02 | Phase 6 | Pending |
 | MEAL-05 | Phase 7 | Pending |
