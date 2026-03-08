@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -8,11 +10,13 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProteinGoal, getTodayProteinTotal, getMealsByDate } from '../db';
+import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal } from '../db';
 import { getLocalDateString } from '../utils/dates';
 import { Meal } from '../types';
 import { GoalSetupForm } from '../components/GoalSetupForm';
+import { MealListItem } from '../components/MealListItem';
 import { ProteinProgressBar } from '../components/ProteinProgressBar';
+import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -23,6 +27,8 @@ export function ProteinScreen() {
   const [todayTotal, setTodayTotal] = useState(0);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
 
   const refreshData = useCallback(async () => {
     const [fetchedGoal, fetchedTotal, fetchedMeals] = await Promise.all([
@@ -59,6 +65,54 @@ export function ProteinScreen() {
       };
     }, []),
   );
+
+  const handleAddMeal = useCallback(() => {
+    setEditingMeal(null);
+    setModalVisible(true);
+  }, []);
+
+  const handleEdit = useCallback((meal: Meal) => {
+    setEditingMeal(meal);
+    setModalVisible(true);
+  }, []);
+
+  const handleDelete = useCallback(
+    (meal: Meal) => {
+      Alert.alert(
+        'Delete Meal',
+        `Delete this ${meal.mealType} entry (${meal.proteinGrams}g)?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await deleteMeal(meal.id);
+                await refreshData();
+              } catch (_err) {
+                Alert.alert('Error', 'Failed to delete meal');
+              }
+            },
+          },
+        ],
+      );
+    },
+    [refreshData],
+  );
+
+  const handleMealSaved = useCallback(() => {
+    refreshData();
+  }, [refreshData]);
+
+  const renderMealItem = useCallback(
+    ({ item }: { item: Meal }) => (
+      <MealListItem meal={item} onEdit={handleEdit} onDelete={handleDelete} />
+    ),
+    [handleEdit, handleDelete],
+  );
+
+  const keyExtractor = useCallback((item: Meal) => String(item.id), []);
 
   if (isLoading) {
     return (
@@ -98,22 +152,27 @@ export function ProteinScreen() {
         }}
       />
 
-      <TouchableOpacity style={styles.addMealButton} onPress={() => {}}>
+      <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
         <Text style={styles.addMealButtonText}>Add Meal</Text>
       </TouchableOpacity>
 
-      <View style={styles.mealListArea}>
-        {meals.length === 0 ? (
+      <FlatList
+        data={meals}
+        renderItem={renderMealItem}
+        keyExtractor={keyExtractor}
+        ListEmptyComponent={
           <Text style={styles.emptyText}>No meals logged today</Text>
-        ) : (
-          meals.map((meal) => (
-            <View key={meal.id} style={styles.mealRow}>
-              <Text style={styles.mealDescription}>{meal.description}</Text>
-              <Text style={styles.mealGrams}>{meal.proteinGrams}g</Text>
-            </View>
-          ))
-        )}
-      </View>
+        }
+        style={styles.mealList}
+        contentContainerStyle={meals.length === 0 ? styles.emptyContainer : undefined}
+      />
+
+      <AddMealModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSaved={handleMealSaved}
+        editMeal={editingMeal}
+      />
     </View>
   );
 }
@@ -152,34 +211,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
   },
-  mealListArea: {
+  mealList: {
     marginTop: spacing.lg,
-    paddingHorizontal: spacing.base,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: spacing.xl,
   },
   emptyText: {
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
-    marginTop: spacing.xl,
-  },
-  mealRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  mealDescription: {
-    fontSize: fontSize.base,
-    color: colors.primary,
-    flex: 1,
-  },
-  mealGrams: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.accent,
-    marginLeft: spacing.sm,
   },
 });
