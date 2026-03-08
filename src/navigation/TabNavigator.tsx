@@ -1,6 +1,8 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { LibraryScreen } from '../screens/LibraryScreen';
@@ -11,12 +13,19 @@ import { WorkoutScreen } from '../screens/WorkoutScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { ExerciseProgressScreen } from '../screens/ExerciseProgressScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { ProteinScreen } from '../screens/ProteinScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
   LibraryTab: undefined;
   ProgramsTab: undefined;
   WorkoutTab: undefined;
+  ProteinTab: undefined;
+};
+
+export type WorkoutStackParamList = {
+  WorkoutHome: undefined;
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
 };
 
 export type ProgramsStackParamList = {
@@ -27,13 +36,19 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
   Settings: undefined;
+};
+
+export type ProteinStackParamList = {
+  ProteinHome: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const ProgramsStack = createNativeStackNavigator<ProgramsStackParamList>();
 const DashboardStack = createNativeStackNavigator<DashboardStackParamList>();
+const WorkoutStack = createNativeStackNavigator<WorkoutStackParamList>();
+const ProteinStack = createNativeStackNavigator<ProteinStackParamList>();
 
 const ICON_SIZE = 22;
 
@@ -74,6 +89,15 @@ function DumbbellIcon({ color }: { color: string }) {
   );
 }
 
+function CarrotIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M16 3C14.5 3 13 4 12 5.5C11 4 9.5 3 8 3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 5.5C12 5.5 15 10 15 15C15 18 13.5 21 12 21C10.5 21 9 18 9 15C9 10 12 5.5 12 5.5Z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 function ProgramsStackNavigator() {
   return (
     <ProgramsStack.Navigator screenOptions={{ headerShown: false }}>
@@ -81,6 +105,15 @@ function ProgramsStackNavigator() {
       <ProgramsStack.Screen name="ProgramDetail" component={ProgramDetailScreen} />
       <ProgramsStack.Screen name="DayDetail" component={DayDetailScreen} />
     </ProgramsStack.Navigator>
+  );
+}
+
+function WorkoutStackNavigator() {
+  return (
+    <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
+      <WorkoutStack.Screen name="WorkoutHome" component={WorkoutScreen} />
+      <WorkoutStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
+    </WorkoutStack.Navigator>
   );
 }
 
@@ -94,7 +127,18 @@ function DashboardStackNavigator() {
   );
 }
 
+function ProteinStackNavigator() {
+  return (
+    <ProteinStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProteinStack.Screen name="ProteinHome" component={ProteinScreen} />
+    </ProteinStack.Navigator>
+  );
+}
+
 export function TabNavigator() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -103,9 +147,9 @@ export function TabNavigator() {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 100,
-          paddingTop: 10,
-          paddingBottom: 40,
+          height: 60 + bottomInset,
+          paddingTop: 8,
+          paddingBottom: bottomInset,
         },
         tabBarActiveTintColor: colors.tabIconActive,
         tabBarInactiveTintColor: colors.tabIconInactive,
@@ -141,10 +185,18 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="WorkoutTab"
-        component={WorkoutScreen}
+        component={WorkoutStackNavigator}
         options={{
           tabBarLabel: 'Workout',
           tabBarIcon: ({ color }) => <DumbbellIcon color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="ProteinTab"
+        component={ProteinStackNavigator}
+        options={{
+          tabBarLabel: 'Protein',
+          tabBarIcon: ({ color }) => <CarrotIcon color={color} />,
         }}
       />
     </Tab.Navigator>
