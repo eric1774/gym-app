@@ -29,7 +29,6 @@ const MIGRATIONS: Migration[] = [
           category TEXT NOT NULL,
           default_rest_seconds INTEGER NOT NULL DEFAULT 90,
           is_custom INTEGER NOT NULL DEFAULT 0,
-          measurement_type TEXT NOT NULL DEFAULT 'reps',
           created_at TEXT NOT NULL
         )
       `);
