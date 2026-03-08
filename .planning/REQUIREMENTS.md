@@ -29,8 +29,8 @@ Requirements for protein tracking milestone. Each maps to roadmap phases.
 
 - [x] **VIS-01**: User can view a line chart of daily protein totals
 - [x] **VIS-02**: User can filter the chart by day, week, or month
-- [ ] **VIS-03**: User can see a streak indicator showing consecutive days meeting their goal
-- [ ] **VIS-04**: User can see a rolling 7-day average of protein intake
+- [x] **VIS-03**: User can see a streak indicator showing consecutive days meeting their goal
+- [x] **VIS-04**: User can see a rolling 7-day average of protein intake
 
 ### Data Infrastructure
 
@@ -73,8 +73,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIS-01 | Phase 6 | Complete |
 | VIS-02 | Phase 6 | Complete |
 | MEAL-05 | Phase 7 | Pending |
-| VIS-03 | Phase 7 | Pending |
-| VIS-04 | Phase 7 | Pending |
+| VIS-03 | Phase 7 | Complete |
+| VIS-04 | Phase 7 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 15 total
