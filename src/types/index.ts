@@ -4,7 +4,8 @@ export type ExerciseCategory =
   | 'legs'
   | 'shoulders'
   | 'arms'
-  | 'core';
+  | 'core'
+  | 'conditioning';
 
 export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'chest',
@@ -13,7 +14,10 @@ export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'shoulders',
   'arms',
   'core',
+  'conditioning',
 ];
+
+export type ExerciseMeasurementType = 'reps' | 'timed';
 
 export interface Exercise {
   id: number;
@@ -21,6 +25,7 @@ export interface Exercise {
   category: ExerciseCategory;
   defaultRestSeconds: number;
   isCustom: boolean;
+  measurementType: ExerciseMeasurementType;
   createdAt: string;
 }
 
@@ -119,4 +124,41 @@ export interface FullDataExport {
   exercises: Exercise[];
   sessions: (WorkoutSession & { sets: WorkoutSet[] })[];
   programs: (Program & { days: (ProgramDay & { exercises: ProgramDayExercise[] })[] })[];
+}
+
+// ── Protein domain types (Phase 4) ──────────────────────────────────
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export const MEAL_TYPES: MealType[] = [
+  'breakfast',
+  'lunch',
+  'dinner',
+  'snack',
+];
+
+export interface Meal {
+  id: number;
+  proteinGrams: number;
+  description: string;
+  mealType: MealType;
+  /** Local datetime string in YYYY-MM-DDTHH:MM:SS format (no Z suffix) */
+  loggedAt: string;
+  /** Local date string in YYYY-MM-DD format for day-boundary queries */
+  localDate: string;
+  createdAt: string;
+}
+
+export interface ProteinSettings {
+  id: number;
+  dailyGoalGrams: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProteinChartPoint {
+  /** YYYY-MM-DD */
+  date: string;
+  totalProteinGrams: number;
+  goalGrams: number | null;
 }
