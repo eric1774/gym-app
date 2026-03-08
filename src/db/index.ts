@@ -43,3 +43,13 @@ export {
   getSessionTimeSummary,
   exportAllData,
 } from './dashboard';
+export {
+  addMeal,
+  updateMeal,
+  deleteMeal,
+  getMealsByDate,
+  getProteinGoal,
+  setProteinGoal,
+  getDailyProteinTotals,
+  getTodayProteinTotal,
+} from './protein';
