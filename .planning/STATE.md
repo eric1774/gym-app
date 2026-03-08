@@ -2,30 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Protein Tracking
-status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-08T14:27:57.629Z"
-last_activity: 2026-03-08 -- Completed 05-02 meal CRUD and ProteinScreen wiring
+status: in-progress
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-08T15:05:00Z"
+last_activity: 2026-03-08 -- Completed 06-01 protein intake chart
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
----
-
----
-gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Protein Tracking
-status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-08T14:23:30Z"
-last_activity: 2026-03-08 -- Completed 05-02 meal CRUD and ProteinScreen wiring
-progress:
-  total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -36,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** v1.1 Protein Tracking -- Phase 5 complete (all plans done)
+**Current focus:** v1.1 Protein Tracking -- Phase 6 complete (protein intake chart)
 
 ## Current Position
 
-Phase: 5 of 7 (Protein Tab & Meal Logging) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans complete)
+Phase: 6 of 7 (Protein Intake Chart) -- COMPLETE
+Plan: 1 of 1 in current phase (all plans complete)
 Status: Phase Complete
-Last activity: 2026-03-08 -- Completed 05-02 meal CRUD and ProteinScreen wiring
+Last activity: 2026-03-08 -- Completed 06-01 protein intake chart
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4 (v1.1)
-- Average duration: 2.8min
-- Total execution time: 11min
+- Total plans completed: 5 (v1.1)
+- Average duration: 4.6min
+- Total execution time: 23min
 
 **By Phase:**
 
@@ -60,9 +45,10 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 04-data-foundation | 2 | 5min | 2.5min |
 | 05-protein-tab-and-meal-logging | 2 | 6min | 3min |
+| 06-protein-intake-chart | 1 | 12min | 12min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (3min), 04-02 (2min), 05-01 (3min), 05-02 (3min)
+- Last 5 plans: 04-01 (3min), 04-02 (2min), 05-01 (3min), 05-02 (3min), 06-01 (12min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -90,6 +76,9 @@ Recent decisions affecting current work:
 - (05-02) PanResponder swipe (not react-native-gesture-handler) for swipe-to-delete -- zero new deps
 - (05-02) Backdate via text inputs (YYYY-MM-DD + HH:MM) rather than native DateTimePicker
 - (05-02) MealTypePills uses flex row (not ScrollView) since only 4 items
+- (06-01) Goal line rendered as second dataset (not SVG decorator) for simplicity and reliability
+- (06-01) FlatList ListHeaderComponent used to unify scroll (no nested ScrollView)
+- (06-01) Downsampling to 50 points max using evenly-spaced index sampling (always keep first and last)
 
 ### Pending Todos
 
@@ -99,10 +88,10 @@ None yet.
 
 - Research flags Android-specific issue with PRAGMA user_version reads -- use schema_version table instead
 - 5-tab navigator may need font/icon adjustment on small screens (verify in Phase 5)
-- react-native-chart-kit Math.random() key bug requires data downsampling (address in Phase 6)
+- react-native-chart-kit Math.random() key bug requires data downsampling (RESOLVED in Phase 6 -- downsample to 50 points max)
 
 ## Session Continuity
 
-Last session: 2026-03-08T14:23:30.439Z
-Stopped at: Completed 05-02-PLAN.md
-Resume file: .planning/phases/05-protein-tab-and-meal-logging/05-02-SUMMARY.md
+Last session: 2026-03-08T15:05:00Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: .planning/phases/06-protein-intake-chart/06-01-SUMMARY.md
