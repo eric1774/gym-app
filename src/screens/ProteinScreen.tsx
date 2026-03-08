@@ -15,6 +15,7 @@ import { getLocalDateString } from '../utils/dates';
 import { Meal } from '../types';
 import { GoalSetupForm } from '../components/GoalSetupForm';
 import { MealListItem } from '../components/MealListItem';
+import { ProteinChart } from '../components/ProteinChart';
 import { ProteinProgressBar } from '../components/ProteinProgressBar';
 import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
@@ -138,14 +139,10 @@ export function ProteinScreen() {
     );
   }
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Protein</Text>
-      </View>
-
+  const ListHeader = useCallback(() => (
+    <View>
       <ProteinProgressBar
-        goal={goal}
+        goal={goal!}
         current={todayTotal}
         onGoalChanged={(g) => {
           setGoal(g);
@@ -156,10 +153,23 @@ export function ProteinScreen() {
         <Text style={styles.addMealButtonText}>Add Meal</Text>
       </TouchableOpacity>
 
+      <ProteinChart goal={goal!} />
+
+      <Text style={styles.sectionTitle}>Today's Meals</Text>
+    </View>
+  ), [goal, todayTotal, handleAddMeal]);
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Protein</Text>
+      </View>
+
       <FlatList
         data={meals}
         renderItem={renderMealItem}
         keyExtractor={keyExtractor}
+        ListHeaderComponent={ListHeader}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No meals logged today</Text>
         }
@@ -212,7 +222,15 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
   },
   mealList: {
+    flex: 1,
+  },
+  sectionTitle: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: weightBold,
+    marginHorizontal: spacing.base,
     marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   emptyContainer: {
     alignItems: 'center',
