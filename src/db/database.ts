@@ -1,13 +1,4 @@
 import SQLite, { SQLiteDatabase, Transaction, ResultSet } from 'react-native-sqlite-storage';
-import {
-  CREATE_EXERCISES_TABLE,
-  CREATE_WORKOUT_SESSIONS_TABLE,
-  CREATE_WORKOUT_SETS_TABLE,
-  CREATE_EXERCISE_SESSIONS_TABLE,
-  CREATE_PROGRAMS_TABLE,
-  CREATE_PROGRAM_DAYS_TABLE,
-  CREATE_PROGRAM_DAY_EXERCISES_TABLE,
-} from './schema';
 
 // Enable promise-based API
 SQLite.enablePromise(true);
@@ -57,15 +48,9 @@ export async function initDatabase(): Promise<void> {
   // Enable foreign key enforcement (required for ON DELETE CASCADE)
   await executeSql(database, 'PRAGMA foreign_keys = ON');
 
-  await database.transaction((tx: Transaction) => {
-    tx.executeSql(CREATE_EXERCISES_TABLE);
-    tx.executeSql(CREATE_WORKOUT_SESSIONS_TABLE);
-    tx.executeSql(CREATE_WORKOUT_SETS_TABLE);
-    tx.executeSql(CREATE_EXERCISE_SESSIONS_TABLE);
-    tx.executeSql(CREATE_PROGRAMS_TABLE);
-    tx.executeSql(CREATE_PROGRAM_DAYS_TABLE);
-    tx.executeSql(CREATE_PROGRAM_DAY_EXERCISES_TABLE);
-  });
+  // Lazy import to avoid circular dependency at module load time
+  const { runMigrations } = await import('./migrations');
+  await runMigrations(database);
 
   // Lazy import to avoid circular dependency at module load time
   const { seedIfEmpty } = await import('./seed');
