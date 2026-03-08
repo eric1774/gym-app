@@ -24,7 +24,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Add daily protein intake tracking with meal logging, configurable goals, progress visualization, and history charts to the existing gym tracking app.
 
-- [ ] **Phase 4: Data Foundation** - Schema migration system, protein tables, repository, and local-date infrastructure
+- [x] **Phase 4: Data Foundation** - Schema migration system, protein tables, repository, and local-date infrastructure
 - [ ] **Phase 5: Protein Tab and Meal Logging** - New bottom tab with goal progress bar, meal add/edit/delete, and today's meal history
 - [ ] **Phase 6: Protein Intake Chart** - Line chart of daily protein totals with day/week/month filtering
 - [ ] **Phase 7: Polish and Differentiators** - Quick-add buttons, goal streak indicator, and rolling weekly average
@@ -43,7 +43,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 Plans:
 - [x] 04-01-PLAN.md -- Types, date utility, migration system, and initDatabase refactor
-- [ ] 04-02-PLAN.md -- Protein repository (meals CRUD, goal management, aggregation queries)
+- [x] 04-02-PLAN.md -- Protein repository (meals CRUD, goal management, aggregation queries)
 
 ### Phase 5: Protein Tab and Meal Logging
 **Goal**: Users can track daily protein intake through a dedicated tab with goal progress and meal management
@@ -94,7 +94,7 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 4. Data Foundation | v1.1 | 1/2 | In progress | - |
+| 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
 | 5. Protein Tab and Meal Logging | v1.1 | 0/? | Not started | - |
 | 6. Protein Intake Chart | v1.1 | 0/? | Not started | - |
 | 7. Polish and Differentiators | v1.1 | 0/? | Not started | - |
