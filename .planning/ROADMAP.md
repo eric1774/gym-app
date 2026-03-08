@@ -55,11 +55,11 @@ Plans:
   3. User can tap "Add Meal", enter protein grams and an optional description, and see the meal appear in today's list within one second
   4. User can tap a meal to edit its description, amount, or date, and can swipe or tap to delete a meal with confirmation
   5. Progress bar resets to zero when the user opens the app on a new calendar day (midnight boundary)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Tab navigation with carrot icon, ProteinScreen with goal setup and progress bar
+- [ ] 05-02-PLAN.md -- Add/Edit Meal modal, swipeable meal list, and full CRUD integration
 
 ### Phase 6: Protein Intake Chart
 **Goal**: Users can visualize their protein intake history over time with filterable time ranges
@@ -95,6 +95,6 @@ Phases execute in numeric order: 4 -> 5 -> 6 -> 7
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
-| 5. Protein Tab and Meal Logging | v1.1 | 0/? | Not started | - |
+| 5. Protein Tab and Meal Logging | v1.1 | 0/2 | Not started | - |
 | 6. Protein Intake Chart | v1.1 | 0/? | Not started | - |
 | 7. Polish and Differentiators | v1.1 | 0/? | Not started | - |
