@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -115,6 +115,37 @@ export function ProteinScreen() {
 
   const keyExtractor = useCallback((item: Meal) => String(item.id), []);
 
+  const handleCloseModal = useCallback(() => {
+    setModalVisible(false);
+  }, []);
+
+  const handleGoalChanged = useCallback((g: number) => {
+    setGoal(g);
+  }, []);
+
+  // Memoize as a JSX element (not a component function) so FlatList gets a
+  // stable reference and never unmounts/remounts the header on parent re-renders.
+  const listHeader = useMemo(() => {
+    if (goal === null) { return null; }
+    return (
+      <View>
+        <ProteinProgressBar
+          goal={goal}
+          current={todayTotal}
+          onGoalChanged={handleGoalChanged}
+        />
+
+        <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
+          <Text style={styles.addMealButtonText}>Add Meal</Text>
+        </TouchableOpacity>
+
+        <ProteinChart goal={goal} />
+
+        <Text style={styles.sectionTitle}>Today's Meals</Text>
+      </View>
+    );
+  }, [goal, todayTotal, handleAddMeal, handleGoalChanged]);
+
   if (isLoading) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
@@ -139,26 +170,6 @@ export function ProteinScreen() {
     );
   }
 
-  const ListHeader = () => (
-    <View>
-      <ProteinProgressBar
-        goal={goal!}
-        current={todayTotal}
-        onGoalChanged={(g) => {
-          setGoal(g);
-        }}
-      />
-
-      <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
-        <Text style={styles.addMealButtonText}>Add Meal</Text>
-      </TouchableOpacity>
-
-      <ProteinChart goal={goal!} />
-
-      <Text style={styles.sectionTitle}>Today's Meals</Text>
-    </View>
-  );
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -169,7 +180,7 @@ export function ProteinScreen() {
         data={meals}
         renderItem={renderMealItem}
         keyExtractor={keyExtractor}
-        ListHeaderComponent={ListHeader}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No meals logged today</Text>
         }
@@ -179,7 +190,7 @@ export function ProteinScreen() {
 
       <AddMealModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={handleCloseModal}
         onSaved={handleMealSaved}
         editMeal={editingMeal}
       />
