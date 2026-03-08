@@ -139,7 +139,7 @@ export function ProteinScreen() {
     );
   }
 
-  const ListHeader = useCallback(() => (
+  const ListHeader = () => (
     <View>
       <ProteinProgressBar
         goal={goal!}
@@ -157,7 +157,7 @@ export function ProteinScreen() {
 
       <Text style={styles.sectionTitle}>Today's Meals</Text>
     </View>
-  ), [goal, todayTotal, handleAddMeal]);
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
