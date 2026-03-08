@@ -9,13 +9,13 @@ Requirements for protein tracking milestone. Each maps to roadmap phases.
 
 ### Navigation
 
-- [ ] **NAV-01**: User can see a "Protein" tab with carrot icon in bottom navigation
+- [x] **NAV-01**: User can see a "Protein" tab with carrot icon in bottom navigation
 
 ### Daily Goal
 
-- [ ] **GOAL-01**: User can set a daily protein goal (e.g., 200g)
-- [ ] **GOAL-02**: User can see a progress bar that fills as meals are logged throughout the day
-- [ ] **GOAL-03**: Progress bar resets at midnight for each new day
+- [x] **GOAL-01**: User can set a daily protein goal (e.g., 200g)
+- [x] **GOAL-02**: User can see a progress bar that fills as meals are logged throughout the day
+- [x] **GOAL-03**: Progress bar resets at midnight for each new day
 
 ### Meal Logging
 
@@ -62,10 +62,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | DATA-01 | Phase 4 | Complete |
 | DATA-02 | Phase 4 | Complete |
-| NAV-01 | Phase 5 | Pending |
-| GOAL-01 | Phase 5 | Pending |
-| GOAL-02 | Phase 5 | Pending |
-| GOAL-03 | Phase 5 | Pending |
+| NAV-01 | Phase 5 | Complete |
+| GOAL-01 | Phase 5 | Complete |
+| GOAL-02 | Phase 5 | Complete |
+| GOAL-03 | Phase 5 | Complete |
 | MEAL-01 | Phase 5 | Pending |
 | MEAL-02 | Phase 5 | Pending |
 | MEAL-03 | Phase 5 | Pending |
