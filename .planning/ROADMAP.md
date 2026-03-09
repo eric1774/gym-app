@@ -4,7 +4,7 @@
 
 - **v1.0 MVP** - Phases 1-3 (shipped)
 - **v1.1 Protein Tracking** - Phases 4-7 (shipped)
-- **v1.2 Meal Library** - Phase 8
+- **v1.2 Meal Library** - Phase 8 (shipped)
 
 ## Phases
 
@@ -37,7 +37,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Add a Meal Library screen for managing saved meals and one-tap logging to today's protein tracking.
 
-- [ ] **Phase 8: Meal Library** - Library screen with meal management by type and one-tap protein logging
+- [x] **Phase 8: Meal Library** - Library screen with meal management by type and one-tap protein logging (completed 2026-03-09)
 
 ## Phase Details
 
@@ -54,8 +54,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Data foundation: LibraryMeal type, migration, repository, navigation wiring, ProteinScreen button
-- [ ] 08-02-PLAN.md -- Meal Library screen with SectionList, add-to-library modal, swipe-to-delete, one-tap logging
+- [x] 08-01-PLAN.md -- Data foundation: LibraryMeal type, migration, repository, navigation wiring, ProteinScreen button
+- [x] 08-02-PLAN.md -- Meal Library screen with SectionList, add-to-library modal, swipe-to-delete, one-tap logging
 
 ## Progress
 
@@ -68,4 +68,4 @@ Phase 8
 | 5. Protein Tab and Meal Logging | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 6. Protein Intake Chart | v1.1 | 1/1 | Complete | 2026-03-08 |
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
-| 8. Meal Library | v1.2 | 0/2 | Not started | - |
+| 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |

@@ -14,12 +14,12 @@ Requirements for Meal Library milestone. Each maps to roadmap phases.
 ### Meal Library Management
 
 - [x] **LIB-01**: User can view a list of saved meals organized by meal type (Breakfast / Lunch / Dinner / Snack)
-- [ ] **LIB-02**: User can add a new meal to the library with name, protein grams, and meal type
-- [ ] **LIB-03**: User can swipe to delete a meal from the library
+- [x] **LIB-02**: User can add a new meal to the library with name, protein grams, and meal type
+- [x] **LIB-03**: User can swipe to delete a meal from the library
 
 ### Quick Logging
 
-- [ ] **LOG-01**: User can tap a meal in the library to instantly add it to today's protein tracking (one-tap, no confirmation)
+- [x] **LOG-01**: User can tap a meal in the library to instantly add it to today's protein tracking (one-tap, no confirmation)
 
 ## v1.1 Requirements (Shipped)
 
@@ -87,9 +87,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | NAV-02 | Phase 8 | Complete |
 | LIB-01 | Phase 8 | Complete |
-| LIB-02 | Phase 8 | Pending |
-| LIB-03 | Phase 8 | Pending |
-| LOG-01 | Phase 8 | Pending |
+| LIB-02 | Phase 8 | Complete |
+| LIB-03 | Phase 8 | Complete |
+| LOG-01 | Phase 8 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 5 total
