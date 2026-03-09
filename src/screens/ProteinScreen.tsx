@@ -1,14 +1,19 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ProteinStackParamList } from '../navigation/TabNavigator';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal, addMeal, getStreakDays, get7DayAverage, getRecentDistinctMeals } from '../db';
 import { getLocalDateString } from '../utils/dates';
@@ -26,6 +31,7 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 
 export function ProteinScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<ProteinStackParamList>>();
   const [goal, setGoal] = useState<number | null>(null);
   const [todayTotal, setTodayTotal] = useState(0);
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -36,12 +42,24 @@ export function ProteinScreen() {
   const [average, setAverage] = useState<number | null>(null);
   const [recentMeals, setRecentMeals] = useState<Array<{ description: string; proteinGrams: number; mealType: MealType }>>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [chartRefreshKey, setChartRefreshKey] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const isToday = selectedDate === getLocalDateString();
+
+  const dateLabel = useMemo(() => {
+    if (isToday) return 'Today';
+    const d = new Date(selectedDate + 'T12:00:00');
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+  }, [selectedDate, isToday]);
 
   const refreshData = useCallback(async () => {
     const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
       getProteinGoal(),
       getTodayProteinTotal(),
-      getMealsByDate(getLocalDateString()),
+      getMealsByDate(selectedDate),
       getStreakDays(),
       get7DayAverage(),
       getRecentDistinctMeals(),
@@ -52,11 +70,19 @@ export function ProteinScreen() {
     setStreak(fetchedStreak);
     setAverage(fetchedAverage);
     setRecentMeals(fetchedRecent);
-  }, []);
+    setChartRefreshKey(k => k + 1);
+  }, [selectedDate]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshData();
+    setRefreshing(false);
+  }, [refreshData]);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
+      setSelectedDate(getLocalDateString());
 
       async function load() {
         const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
@@ -152,6 +178,27 @@ export function ProteinScreen() {
     }
   }, [refreshData]);
 
+  const handleOpenLibrary = useCallback(() => {
+    navigation.navigate('MealLibrary');
+  }, [navigation]);
+
+  const handlePrevDay = useCallback(() => {
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    const newDate = getLocalDateString(d);
+    setSelectedDate(newDate);
+    getMealsByDate(newDate).then(setMeals);
+  }, [selectedDate]);
+
+  const handleNextDay = useCallback(() => {
+    if (isToday) return;
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    const newDate = getLocalDateString(d);
+    setSelectedDate(newDate);
+    getMealsByDate(newDate).then(setMeals);
+  }, [selectedDate, isToday]);
+
   // Memoize as a JSX element (not a component function) so FlatList gets a
   // stable reference and never unmounts/remounts the header on parent re-renders.
   const listHeader = useMemo(() => {
@@ -172,12 +219,24 @@ export function ProteinScreen() {
 
         <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
 
-        <ProteinChart goal={goal} />
+        <TouchableOpacity style={styles.libraryButton} onPress={handleOpenLibrary}>
+          <Text style={styles.libraryButtonText}>Meal Library</Text>
+        </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Today's Meals</Text>
+        <ProteinChart goal={goal} refreshKey={chartRefreshKey} />
+
+        <View style={styles.dateNav}>
+          <TouchableOpacity onPress={handlePrevDay} style={styles.dateNavArrow} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={styles.dateNavArrowText}>‹</Text>
+          </TouchableOpacity>
+          <Text style={styles.dateNavLabel}>{dateLabel}</Text>
+          <TouchableOpacity onPress={handleNextDay} style={styles.dateNavArrow} disabled={isToday} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={[styles.dateNavArrowText, isToday && styles.dateNavArrowDisabled]}>›</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
-  }, [goal, todayTotal, handleAddMeal, handleGoalChanged, streak, average, recentMeals, handleQuickAdd]);
+  }, [goal, todayTotal, handleAddMeal, handleGoalChanged, streak, average, recentMeals, handleQuickAdd, handleOpenLibrary, chartRefreshKey, dateLabel, isToday, handlePrevDay, handleNextDay]);
 
   if (isLoading) {
     return (
@@ -215,10 +274,13 @@ export function ProteinScreen() {
         keyExtractor={keyExtractor}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No meals logged today</Text>
+          <Text style={styles.emptyText}>{isToday ? 'No meals logged today' : 'No meals logged'}</Text>
         }
         style={styles.mealList}
         contentContainerStyle={meals.length === 0 ? styles.emptyContainer : undefined}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} colors={[colors.accent]} />
+        }
       />
 
       {toastMessage && (
@@ -271,16 +333,50 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
   },
+  libraryButton: {
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.base,
+    alignItems: 'center' as const,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.sm,
+  },
+  libraryButtonText: {
+    color: colors.accent,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
   mealList: {
     flex: 1,
   },
-  sectionTitle: {
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.base,
+  },
+  dateNavArrow: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateNavArrowText: {
+    fontSize: fontSize.xl,
+    color: colors.accent,
+    fontWeight: weightBold,
+  },
+  dateNavArrowDisabled: {
+    color: colors.border,
+  },
+  dateNavLabel: {
+    flex: 1,
     color: colors.primary,
     fontSize: fontSize.md,
     fontWeight: weightBold,
-    marginHorizontal: spacing.base,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+    textAlign: 'center',
   },
   emptyContainer: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,6 +42,7 @@ export type DashboardStackParamList = {
 
 export type ProteinStackParamList = {
   ProteinHome: undefined;
+  MealLibrary: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -127,10 +128,20 @@ function DashboardStackNavigator() {
   );
 }
 
+// Temporary placeholder -- replaced by MealLibraryScreen in Plan 02
+function MealLibraryPlaceholder() {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F0F0F' }}>
+      <Text style={{ color: '#FFFFFF', fontSize: 17 }}>Meal Library</Text>
+    </View>
+  );
+}
+
 function ProteinStackNavigator() {
   return (
     <ProteinStack.Navigator screenOptions={{ headerShown: false }}>
       <ProteinStack.Screen name="ProteinHome" component={ProteinScreen} />
+      <ProteinStack.Screen name="MealLibrary" component={MealLibraryPlaceholder} />
     </ProteinStack.Navigator>
   );
 }
