@@ -3,9 +3,28 @@
 **Defined:** 2026-03-07
 **Core Value:** Fast, frictionless set logging mid-workout
 
-## v1.1 Requirements
+## v1.2 Requirements
 
-Requirements for protein tracking milestone. Each maps to roadmap phases.
+Requirements for Meal Library milestone. Each maps to roadmap phases.
+
+### Navigation
+
+- [x] **NAV-02**: User can tap a "Meals" button on the Protein screen (below Add Meal) to navigate to the Meal Library screen
+
+### Meal Library Management
+
+- [x] **LIB-01**: User can view a list of saved meals organized by meal type (Breakfast / Lunch / Dinner / Snack)
+- [ ] **LIB-02**: User can add a new meal to the library with name, protein grams, and meal type
+- [ ] **LIB-03**: User can swipe to delete a meal from the library
+
+### Quick Logging
+
+- [ ] **LOG-01**: User can tap a meal in the library to instantly add it to today's protein tracking (one-tap, no confirmation)
+
+## v1.1 Requirements (Shipped)
+
+<details>
+<summary>All 15 requirements complete</summary>
 
 ### Navigation
 
@@ -37,6 +56,8 @@ Requirements for protein tracking milestone. Each maps to roadmap phases.
 - [x] **DATA-01**: Protein data persists in local SQLite with proper schema migration
 - [x] **DATA-02**: Daily aggregation uses local date (not UTC) for correct day boundaries
 
+</details>
+
 ## v2 Requirements
 
 ### Nutrition Expansion
@@ -48,11 +69,15 @@ Requirements for protein tracking milestone. Each maps to roadmap phases.
 
 | Feature | Reason |
 |---------|--------|
+| Meal editing in library | Keep simple — delete and re-add if wrong |
 | Food database / barcode scanning | Violates local-only constraint, 10x scope increase |
-| Full macro tracking (carbs, fats, calories) | Deferred to v2 -- protein-only keeps scope tight |
+| Full macro tracking (carbs, fats, calories) | Deferred to v2 — protein-only keeps scope tight |
 | AI photo meal logging | Requires cloud services, violates offline constraint |
-| Meal planning / recipes | Out of domain -- this is tracking, not planning |
+| Meal planning / recipes | Out of domain — this is tracking, not planning |
 | Social sharing of protein stats | Solo personal use only (project constraint) |
+| Calorie tracking beyond protein | Protein-only focus per v1.1 scope |
+| Meal photos | Adds complexity without core value |
+| Import/export meal library | Future consideration |
 
 ## Traceability
 
@@ -60,27 +85,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 4 | Complete |
-| DATA-02 | Phase 4 | Complete |
-| NAV-01 | Phase 5 | Complete |
-| GOAL-01 | Phase 5 | Complete |
-| GOAL-02 | Phase 5 | Complete |
-| GOAL-03 | Phase 5 | Complete |
-| MEAL-01 | Phase 5 | Complete |
-| MEAL-02 | Phase 5 | Complete |
-| MEAL-03 | Phase 5 | Complete |
-| MEAL-04 | Phase 5 | Complete |
-| VIS-01 | Phase 6 | Complete |
-| VIS-02 | Phase 6 | Complete |
-| MEAL-05 | Phase 7 | Complete |
-| VIS-03 | Phase 7 | Complete |
-| VIS-04 | Phase 7 | Complete |
+| NAV-02 | Phase 8 | Complete |
+| LIB-01 | Phase 8 | Complete |
+| LIB-02 | Phase 8 | Pending |
+| LIB-03 | Phase 8 | Pending |
+| LOG-01 | Phase 8 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 15 total
-- Mapped to phases: 15
+- v1.2 requirements: 5 total
+- Mapped to phases: 5
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after roadmap creation*
+*Last updated: 2026-03-09 after v1.2 roadmap created*
