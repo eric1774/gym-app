@@ -14,6 +14,7 @@ import { DashboardScreen } from '../screens/DashboardScreen';
 import { ExerciseProgressScreen } from '../screens/ExerciseProgressScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ProteinScreen } from '../screens/ProteinScreen';
+import { MealLibraryScreen } from '../screens/MealLibraryScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -128,20 +129,11 @@ function DashboardStackNavigator() {
   );
 }
 
-// Temporary placeholder -- replaced by MealLibraryScreen in Plan 02
-function MealLibraryPlaceholder() {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F0F0F' }}>
-      <Text style={{ color: '#FFFFFF', fontSize: 17 }}>Meal Library</Text>
-    </View>
-  );
-}
-
 function ProteinStackNavigator() {
   return (
     <ProteinStack.Navigator screenOptions={{ headerShown: false }}>
       <ProteinStack.Screen name="ProteinHome" component={ProteinScreen} />
-      <ProteinStack.Screen name="MealLibrary" component={MealLibraryPlaceholder} />
+      <ProteinStack.Screen name="MealLibrary" component={MealLibraryScreen} />
     </ProteinStack.Navigator>
   );
 }
