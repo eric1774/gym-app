@@ -3,7 +3,8 @@
 ## Milestones
 
 - **v1.0 MVP** - Phases 1-3 (shipped)
-- **v1.1 Protein Tracking** - Phases 4-7 (in progress)
+- **v1.1 Protein Tracking** - Phases 4-7 (shipped)
+- **v1.2 Meal Library** - Phase 8
 
 ## Phases
 
@@ -20,82 +21,51 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 </details>
 
-### v1.1 Protein Tracking (In Progress)
+<details>
+<summary>v1.1 Protein Tracking (Phases 4-7) - SHIPPED</summary>
 
 **Milestone Goal:** Add daily protein intake tracking with meal logging, configurable goals, progress visualization, and history charts to the existing gym tracking app.
 
 - [x] **Phase 4: Data Foundation** - Schema migration system, protein tables, repository, and local-date infrastructure
 - [x] **Phase 5: Protein Tab and Meal Logging** - New bottom tab with goal progress bar, meal add/edit/delete, and today's meal history
 - [x] **Phase 6: Protein Intake Chart** - Line chart of daily protein totals with day/week/month filtering
-- [ ] **Phase 7: Polish and Differentiators** - Quick-add buttons, goal streak indicator, and rolling weekly average
+- [x] **Phase 7: Polish and Differentiators** - Quick-add buttons, goal streak indicator, and rolling weekly average
+
+</details>
+
+### v1.2 Meal Library
+
+**Milestone Goal:** Add a Meal Library screen for managing saved meals and one-tap logging to today's protein tracking.
+
+- [ ] **Phase 8: Meal Library** - Library screen with meal management by type and one-tap protein logging
 
 ## Phase Details
 
-### Phase 4: Data Foundation
-**Goal**: Protein data layer exists and handles local-date boundaries correctly
-**Depends on**: Nothing (first phase of v1.1; v1.0 infrastructure is complete)
-**Requirements**: DATA-01, DATA-02
+### Phase 8: Meal Library
+**Goal**: Users can manage a personal library of saved meals and log any meal to today's protein tracking with one tap
+**Depends on**: Phase 7 (v1.1 Protein Tracking complete -- Protein screen, meal data layer, and quick-add infrastructure exist)
+**Requirements**: NAV-02, LIB-01, LIB-02, LIB-03, LOG-01
 **Success Criteria** (what must be TRUE):
-  1. App launches with protein tables (meals, protein_settings) created via a versioned migration system that will not break on future schema changes
-  2. A meal inserted at 11:30 PM local time appears under "today" (not tomorrow), confirming local-date aggregation works correctly
-  3. All protein repository functions (add, update, delete, query meals; get/set goal; get chart data) return correct results when called directly
+  1. User can tap a "Meals" button on the Protein screen and land on a dedicated Meal Library screen
+  2. User can see saved meals organized into sections by meal type (Breakfast / Lunch / Dinner / Snack)
+  3. User can add a new meal to the library by entering a name, protein grams, and selecting a meal type
+  4. User can swipe a meal row to delete it from the library
+  5. User can tap any meal in the library to instantly add it to today's protein tracking without any confirmation dialog
 **Plans**: 2 plans
 
 Plans:
-- [x] 04-01-PLAN.md -- Types, date utility, migration system, and initDatabase refactor
-- [x] 04-02-PLAN.md -- Protein repository (meals CRUD, goal management, aggregation queries)
-
-### Phase 5: Protein Tab and Meal Logging
-**Goal**: Users can track daily protein intake through a dedicated tab with goal progress and meal management
-**Depends on**: Phase 4
-**Requirements**: NAV-01, GOAL-01, GOAL-02, GOAL-03, MEAL-01, MEAL-02, MEAL-03, MEAL-04
-**Success Criteria** (what must be TRUE):
-  1. User can tap a "Protein" tab with carrot icon in the bottom navigation bar and land on the Protein screen
-  2. User can set a daily protein goal and see a progress bar that fills proportionally as meals are logged throughout the day
-  3. User can tap "Add Meal", enter protein grams and an optional description, and see the meal appear in today's list within one second
-  4. User can tap a meal to edit its description, amount, or date, and can swipe or tap to delete a meal with confirmation
-  5. Progress bar resets to zero when the user opens the app on a new calendar day (midnight boundary)
-**Plans**: 2 plans
-
-Plans:
-- [x] 05-01-PLAN.md -- Tab navigation with carrot icon, ProteinScreen with goal setup and progress bar
-- [x] 05-02-PLAN.md -- Add/Edit Meal modal, swipeable meal list, and full CRUD integration
-
-### Phase 6: Protein Intake Chart
-**Goal**: Users can visualize their protein intake history over time with filterable time ranges
-**Depends on**: Phase 5
-**Requirements**: VIS-01, VIS-02
-**Success Criteria** (what must be TRUE):
-  1. User can scroll down on the Protein screen and see a line chart showing daily protein totals over time
-  2. User can tap filter pills (1W / 1M / 3M / All) to change the chart's time range, and the chart updates to show only data within that range
-  3. Chart renders smoothly with 60+ days of data without visible lag or jank
-**Plans**: 1 plan
-
-Plans:
-- [x] 06-01-PLAN.md -- ProteinChart component with filter pills, goal line, downsampling, and ProteinScreen integration
-
-### Phase 7: Polish and Differentiators
-**Goal**: Protein tracking becomes faster and more motivating with quick-add shortcuts and streak/average feedback
-**Depends on**: Phase 6
-**Requirements**: MEAL-05, VIS-03, VIS-04
-**Success Criteria** (what must be TRUE):
-  1. User can re-log a frequent meal with one tap via quick-add buttons displayed on the Protein screen, without opening the Add Meal modal
-  2. User can see a streak indicator showing how many consecutive days they have met their protein goal
-  3. User can see a rolling 7-day average of their daily protein intake displayed on the Protein screen
-**Plans**: 2 plans
-
-Plans:
-- [ ] 07-01-PLAN.md -- Streak and 7-day average data queries plus StreakAverageRow component
-- [ ] 07-02-PLAN.md -- Quick-add buttons, getRecentDistinctMeals query, and full ProteinScreen integration
+- [ ] 08-01-PLAN.md -- Data foundation: LibraryMeal type, migration, repository, navigation wiring, ProteinScreen button
+- [ ] 08-02-PLAN.md -- Meal Library screen with SectionList, add-to-library modal, swipe-to-delete, one-tap logging
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 4 -> 5 -> 6 -> 7
+Phase 8
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
 | 5. Protein Tab and Meal Logging | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 6. Protein Intake Chart | v1.1 | 1/1 | Complete | 2026-03-08 |
-| 7. Polish and Differentiators | v1.1 | 0/2 | Not started | - |
+| 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
+| 8. Meal Library | v1.2 | 0/2 | Not started | - |
