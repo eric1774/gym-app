@@ -62,11 +62,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   skipButton: {
-    width: 40,
-    alignItems: 'flex-end',
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   skipText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.base,
     fontWeight: weightSemiBold,
     color: colors.background,
   },

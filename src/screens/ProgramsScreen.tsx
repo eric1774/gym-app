@@ -169,9 +169,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',

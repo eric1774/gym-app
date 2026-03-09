@@ -23,6 +23,7 @@ const MAX_POINTS = 50;
 
 interface ProteinChartProps {
   goal: number;
+  refreshKey?: number;
 }
 
 function getStartDate(range: TimeRange): string {
@@ -60,7 +61,7 @@ function downsample(data: ProteinChartPoint[]): ProteinChartPoint[] {
   return result;
 }
 
-export function ProteinChart({ goal }: ProteinChartProps) {
+export function ProteinChart({ goal, refreshKey }: ProteinChartProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1W');
   const [data, setData] = useState<ProteinChartPoint[]>([]);
 
@@ -82,7 +83,7 @@ export function ProteinChart({ goal }: ProteinChartProps) {
       return () => {
         cancelled = true;
       };
-    }, [selectedRange]),
+    }, [selectedRange, refreshKey]),
   );
 
   const handleRangePress = useCallback((range: TimeRange) => {

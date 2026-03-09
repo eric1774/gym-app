@@ -15,6 +15,8 @@ import {
   addExerciseToSession,
   markExerciseComplete as dbMarkExerciseComplete,
   toggleExerciseComplete as dbToggleExerciseComplete,
+  hasSessionActivity,
+  deleteSession,
 } from '../db/sessions';
 import { getExercises } from '../db/exercises';
 import { Exercise, ExerciseSession, WorkoutSession } from '../types';
@@ -29,7 +31,8 @@ interface SessionContextValue {
   programDayId: number | null;
   startSession: () => Promise<void>;
   startSessionFromProgramDay: (programDayId: number, exercises: Exercise[]) => Promise<void>;
-  endSession: () => Promise<void>;
+  /** End the session. Returns true if completed (had activity), false if discarded. */
+  endSession: () => Promise<boolean>;
   addExercise: (exercise: Exercise) => Promise<void>;
   markExerciseComplete: (exerciseId: number) => Promise<void>;
   toggleExerciseComplete: (exerciseId: number) => Promise<void>;
@@ -127,14 +130,20 @@ export function SessionProvider({ children }: Props) {
     [refreshSession],
   );
 
-  const endSession = useCallback(async () => {
+  const endSession = useCallback(async (): Promise<boolean> => {
     if (!session) {
-      return;
+      return false;
     }
-    await completeSession(session.id);
+    const hadActivity = await hasSessionActivity(session.id);
+    if (hadActivity) {
+      await completeSession(session.id);
+    } else {
+      await deleteSession(session.id);
+    }
     setSession(null);
     setSessionExercises([]);
     setExercises([]);
+    return hadActivity;
   }, [session]);
 
   const addExercise = useCallback(

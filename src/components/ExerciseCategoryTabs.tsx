@@ -6,7 +6,7 @@ import { fontSize, weightSemiBold } from '../theme/typography';
 import { ExerciseCategory, EXERCISE_CATEGORIES } from '../types';
 
 interface ExerciseCategoryTabsProps {
-  selected: ExerciseCategory;
+  selected: ExerciseCategory | null;
   onSelect: (c: ExerciseCategory) => void;
 }
 
@@ -52,9 +52,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pill: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: 24,
+    minHeight: 40,
+    justifyContent: 'center' as const,
   },
   pillSelected: {
     backgroundColor: colors.accent,

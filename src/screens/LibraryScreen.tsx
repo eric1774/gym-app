@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { deleteExercise, getExercisesByCategory, searchExercises } from '../db/exercises';
@@ -19,11 +19,13 @@ import { Exercise, ExerciseCategory } from '../types';
 import { AddExerciseModal } from './AddExerciseModal';
 
 export function LibraryScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
   const [searchQuery, setSearchQuery] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadByCategory = useCallback(async (category: ExerciseCategory) => {
@@ -94,6 +96,16 @@ export function LibraryScreen() {
 
   const handleExerciseAdded = useCallback(
     (exercise: Exercise) => {
+      if (editingExercise) {
+        // Was an update — refresh the full list so moved exercises disappear/appear correctly
+        if (searchQuery.trim() !== '') {
+          loadBySearch(searchQuery.trim());
+        } else {
+          loadByCategory(selectedCategory);
+        }
+        setEditingExercise(null);
+        return;
+      }
       // Append new exercise to list so library updates immediately
       setExercises(prev => {
         // If searching, add only if it matches search
@@ -110,14 +122,23 @@ export function LibraryScreen() {
         return prev;
       });
     },
-    [searchQuery, selectedCategory],
+    [editingExercise, searchQuery, selectedCategory, loadBySearch, loadByCategory],
   );
+
+  const handleLongPress = useCallback((exercise: Exercise) => {
+    setEditingExercise(exercise);
+    setModalVisible(true);
+  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: Exercise }) => (
-      <ExerciseListItem exercise={item} onDelete={() => handleDelete(item.id)} />
+      <ExerciseListItem
+        exercise={item}
+        onDelete={() => handleDelete(item.id)}
+        onLongPress={() => handleLongPress(item)}
+      />
     ),
-    [handleDelete],
+    [handleDelete, handleLongPress],
   );
 
   const keyExtractor = useCallback((item: Exercise) => String(item.id), []);
@@ -162,14 +183,20 @@ export function LibraryScreen() {
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+      <TouchableOpacity
+        style={[styles.fab, { bottom: spacing.xl + insets.bottom }]}
+        onPress={() => setModalVisible(true)}>
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
       <AddExerciseModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingExercise(null);
+        }}
         onAdded={handleExerciseAdded}
+        editExercise={editingExercise}
       />
     </SafeAreaView>
   );
@@ -196,10 +223,12 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
+    borderRadius: 12,
+    paddingHorizontal: spacing.base,
+    paddingVertical: 14,
     color: colors.primary,
     fontSize: fontSize.base,
+    minHeight: 48,
   },
   list: {
     flex: 1,
@@ -227,15 +256,18 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
+    right: spacing.base,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   fabText: {
     fontSize: fontSize.xl,

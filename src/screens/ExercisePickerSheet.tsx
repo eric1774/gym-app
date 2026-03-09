@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { useSession } from '../context/SessionContext';
@@ -29,6 +30,7 @@ export interface ExercisePickerSheetProps {
 }
 
 export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePickerSheetProps) {
+  const insets = useSafeAreaInsets();
   const { sessionExercises } = useSession();
   const [category, setCategory] = useState<ExerciseCategory>('chest');
   const [query, setQuery] = useState('');
@@ -150,6 +152,7 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
                 onSelect={() => handleSelect(item)}
               />
             )}
+            style={styles.list}
             contentContainerStyle={styles.listContent}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
@@ -162,7 +165,7 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
 
         {/* Create New link */}
         <TouchableOpacity
-          style={styles.createNewRow}
+          style={[styles.createNewRow, { paddingBottom: spacing.md + insets.bottom }]}
           onPress={() => setAddModalVisible(true)}>
           <Text style={styles.createNewText}>+ Create New Exercise</Text>
         </TouchableOpacity>
@@ -233,6 +236,9 @@ const styles = StyleSheet.create({
     color: colors.primary,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  list: {
+    flex: 1,
   },
   listContent: {
     paddingBottom: spacing.base,

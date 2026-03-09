@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  FlatList,
+  Platform,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,8 +13,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getRecentlyTrainedExercises } from '../db/dashboard';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { DashboardStackParamList } from '../navigation/TabNavigator';
+import { ExerciseCategory } from '../types';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
@@ -22,6 +24,40 @@ interface RecentExercise {
   exerciseName: string;
   category: string;
   lastTrainedAt: string;
+  measurementType: string;
+}
+
+interface SubCategorySection {
+  groupTitle: string;
+  subCategory: string;
+  isFirstInGroup: boolean;
+  data: RecentExercise[];
+}
+
+const CATEGORY_GROUP_ORDER: { title: string; categories: ExerciseCategory[] }[] = [
+  { title: 'STRENGTH TRAINING', categories: ['chest', 'back', 'legs', 'shoulders', 'arms'] },
+  { title: 'CORE & STABILITY', categories: ['core'] },
+  { title: 'CARDIO & CONDITIONING', categories: ['conditioning'] },
+];
+
+function groupBySubCategory(exercises: RecentExercise[]): SubCategorySection[] {
+  const sections: SubCategorySection[] = [];
+  for (const group of CATEGORY_GROUP_ORDER) {
+    let isFirst = true;
+    for (const cat of group.categories) {
+      const data = exercises.filter(ex => ex.category === cat);
+      if (data.length > 0) {
+        sections.push({
+          groupTitle: group.title,
+          subCategory: cat.charAt(0).toUpperCase() + cat.slice(1),
+          isFirstInGroup: isFirst,
+          data,
+        });
+        isFirst = false;
+      }
+    }
+  }
+  return sections;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -60,11 +96,14 @@ export function DashboardScreen() {
     }, []),
   );
 
+  const sections = useMemo(() => groupBySubCategory(exercises), [exercises]);
+
   const handlePress = useCallback(
     (item: RecentExercise) => {
       navigation.navigate('ExerciseProgress', {
         exerciseId: item.exerciseId,
         exerciseName: item.exerciseName,
+        measurementType: item.measurementType as 'reps' | 'timed',
       });
     },
     [navigation],
@@ -86,6 +125,18 @@ export function DashboardScreen() {
     [handlePress],
   );
 
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: SubCategorySection }) => (
+      <View>
+        {section.isFirstInGroup && (
+          <Text style={styles.groupHeader}>{section.groupTitle}</Text>
+        )}
+        <Text style={styles.subCategoryHeader}>{section.subCategory}</Text>
+      </View>
+    ),
+    [],
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Text style={styles.title}>Dashboard</Text>
@@ -97,11 +148,13 @@ export function DashboardScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={exercises}
+        <SectionList
+          sections={sections}
           keyExtractor={item => String(item.exerciseId)}
           renderItem={renderItem}
+          renderSectionHeader={renderSectionHeader}
           contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
         />
       )}
     </SafeAreaView>
@@ -125,13 +178,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.xxl,
   },
+  groupHeader: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    letterSpacing: 1.2,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xs,
+  },
+  subCategoryHeader: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+  },
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     padding: spacing.base,
     marginBottom: spacing.sm,
+    minHeight: 48,
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+      },
+    }),
   },
   cardRow: {
     flexDirection: 'row',

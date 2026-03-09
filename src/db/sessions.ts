@@ -151,3 +151,59 @@ export async function toggleExerciseComplete(
   );
   return newValue === 1;
 }
+
+/**
+ * Check if a session has any activity: at least one set logged OR one exercise marked complete.
+ */
+export async function hasSessionActivity(sessionId: number): Promise<boolean> {
+  const database = await db;
+  const setsResult = await executeSql(
+    database,
+    'SELECT COUNT(*) as cnt FROM workout_sets WHERE session_id = ?',
+    [sessionId],
+  );
+  if ((setsResult.rows.item(0).cnt as number) > 0) {
+    return true;
+  }
+  const exResult = await executeSql(
+    database,
+    'SELECT COUNT(*) as cnt FROM exercise_sessions WHERE session_id = ? AND is_complete = 1',
+    [sessionId],
+  );
+  return (exResult.rows.item(0).cnt as number) > 0;
+}
+
+/**
+ * Delete a session and all related data (sets, exercise_sessions).
+ */
+export async function deleteSession(sessionId: number): Promise<void> {
+  const database = await db;
+  await executeSql(database, 'DELETE FROM workout_sets WHERE session_id = ?', [sessionId]);
+  await executeSql(database, 'DELETE FROM exercise_sessions WHERE session_id = ?', [sessionId]);
+  await executeSql(database, 'DELETE FROM workout_sessions WHERE id = ?', [sessionId]);
+}
+
+/**
+ * Set completed_at back to NULL on a session (uncomplete it).
+ */
+export async function uncompleteSession(sessionId: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE workout_sessions SET completed_at = NULL WHERE id = ?',
+    [sessionId],
+  );
+}
+
+/**
+ * Create an already-completed session for a program day (manual day completion).
+ */
+export async function createCompletedSession(programDayId: number): Promise<void> {
+  const database = await db;
+  const now = new Date().toISOString();
+  await executeSql(
+    database,
+    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id) VALUES (?, ?, ?)',
+    [now, now, programDayId],
+  );
+}

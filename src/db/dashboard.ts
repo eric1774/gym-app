@@ -59,6 +59,47 @@ export async function getExerciseProgressData(
   return points;
 }
 
+/**
+ * For timed exercises: return the set with the longest duration (highest reps)
+ * per completed session. Ordered oldest-first for charting.
+ */
+export async function getTimedExerciseProgressData(
+  exerciseId: number,
+): Promise<ExerciseProgressPoint[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT ws.session_id, wss.completed_at AS date,
+            ws.weight_kg AS best_weight_kg, ws.reps AS best_reps
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND wss.completed_at IS NOT NULL
+       AND ws.id = (
+         SELECT ws2.id FROM workout_sets ws2
+         WHERE ws2.session_id = ws.session_id
+           AND ws2.exercise_id = ws.exercise_id
+         ORDER BY ws2.reps DESC
+         LIMIT 1
+       )
+     GROUP BY ws.session_id
+     ORDER BY wss.completed_at ASC`,
+    [exerciseId],
+  );
+
+  const points: ExerciseProgressPoint[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    points.push({
+      sessionId: row.session_id,
+      date: row.date,
+      bestWeightKg: row.best_weight_kg,
+      bestReps: row.best_reps,
+    });
+  }
+  return points;
+}
+
 // ── Exercise History ────────────────────────────────────────────────
 
 /**
@@ -127,12 +168,13 @@ export async function deleteExerciseHistorySession(
  * Exercises with logged sets, ordered by most recently trained.
  */
 export async function getRecentlyTrainedExercises(): Promise<
-  { exerciseId: number; exerciseName: string; category: string; lastTrainedAt: string }[]
+  { exerciseId: number; exerciseName: string; category: string; lastTrainedAt: string; measurementType: string }[]
 > {
   const database = await db;
   const result = await executeSql(
     database,
     `SELECT e.id AS exercise_id, e.name AS exercise_name, e.category,
+            e.measurement_type,
             MAX(ws.logged_at) AS last_trained_at
      FROM exercises e
      INNER JOIN workout_sets ws ON ws.exercise_id = e.id
@@ -140,7 +182,7 @@ export async function getRecentlyTrainedExercises(): Promise<
      ORDER BY last_trained_at DESC`,
   );
 
-  const items: { exerciseId: number; exerciseName: string; category: string; lastTrainedAt: string }[] = [];
+  const items: { exerciseId: number; exerciseName: string; category: string; lastTrainedAt: string; measurementType: string }[] = [];
   for (let i = 0; i < result.rows.length; i++) {
     const row = result.rows.item(i);
     items.push({
@@ -148,6 +190,7 @@ export async function getRecentlyTrainedExercises(): Promise<
       exerciseName: row.exercise_name,
       category: row.category,
       lastTrainedAt: row.last_trained_at,
+      measurementType: row.measurement_type ?? 'reps',
     });
   }
   return items;
@@ -226,6 +269,53 @@ export async function getProgramWeekCompletion(
     });
   }
   return statuses;
+}
+
+/**
+ * Unmark a program day as complete by removing all completed sessions for
+ * that day within the current week window. Does a fresh DB query so it is
+ * not dependent on any cached session IDs.
+ */
+export async function unmarkDayCompletion(
+  programId: number,
+  programDayId: number,
+): Promise<void> {
+  const database = await db;
+
+  const progResult = await executeSql(
+    database,
+    'SELECT start_date, current_week FROM programs WHERE id = ?',
+    [programId],
+  );
+  if (progResult.rows.length === 0) { return; }
+  const prog = progResult.rows.item(0);
+  const startDate: string | null = prog.start_date;
+  if (!startDate) { return; }
+
+  const currentWeek: number = prog.current_week;
+  const startMs = new Date(startDate).getTime();
+  const weekStartMs = startMs + (currentWeek - 1) * 7 * 24 * 60 * 60 * 1000;
+  const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
+  const weekStartISO = new Date(weekStartMs).toISOString();
+  const weekEndISO = new Date(weekEndMs).toISOString();
+
+  // Find all completed sessions for this day within the current week
+  const sessions = await executeSql(
+    database,
+    `SELECT id FROM workout_sessions
+     WHERE program_day_id = ?
+       AND completed_at IS NOT NULL
+       AND completed_at >= ?
+       AND completed_at < ?`,
+    [programDayId, weekStartISO, weekEndISO],
+  );
+
+  for (let i = 0; i < sessions.rows.length; i++) {
+    const sid = sessions.rows.item(i).id;
+    await executeSql(database, 'DELETE FROM workout_sets WHERE session_id = ?', [sid]);
+    await executeSql(database, 'DELETE FROM exercise_sessions WHERE session_id = ?', [sid]);
+    await executeSql(database, 'DELETE FROM workout_sessions WHERE id = ?', [sid]);
+  }
 }
 
 // ── Session Time Summary ────────────────────────────────────────────

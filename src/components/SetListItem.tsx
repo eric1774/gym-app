@@ -14,9 +14,16 @@ import { WorkoutSet } from '../types';
 interface Props {
   set: WorkoutSet;
   onDelete: (id: number) => void;
+  isTimed?: boolean;
 }
 
-export function SetListItem({ set, onDelete }: Props) {
+function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export const SetListItem = React.memo(function SetListItem({ set, onDelete, isTimed = false }: Props) {
   const deleteVisible = useRef(false);
   const animatedOpacity = useRef(new Animated.Value(0)).current;
 
@@ -36,8 +43,9 @@ export function SetListItem({ set, onDelete }: Props) {
       activeOpacity={0.7}
       delayLongPress={400}>
       <Text style={styles.setText}>
-        Set {set.setNumber}: {set.weightKg}lb × {set.reps} reps
-        {set.isWarmup ? ' (warmup)' : ''}
+        {isTimed
+          ? `Set ${set.setNumber}: ${formatDuration(set.reps)}`
+          : `Set ${set.setNumber}: ${set.weightKg}lb × ${set.reps} reps${set.isWarmup ? ' (warmup)' : ''}`}
       </Text>
       <Animated.View style={[styles.deleteWrapper, { opacity: animatedOpacity }]}>
         <TouchableOpacity
@@ -52,7 +60,7 @@ export function SetListItem({ set, onDelete }: Props) {
       </Animated.View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: {
@@ -60,9 +68,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    minHeight: 48,
   },
   setText: {
     flex: 1,
@@ -75,9 +84,11 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: colors.danger,
-    borderRadius: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    borderRadius: 8,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    minHeight: 36,
+    justifyContent: 'center' as const,
   },
   deleteText: {
     fontSize: fontSize.sm,

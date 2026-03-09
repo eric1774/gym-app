@@ -1,9 +1,10 @@
 import { db, executeSql, runTransaction } from './database';
-import { ExerciseCategory } from '../types';
+import { ExerciseCategory, ExerciseMeasurementType } from '../types';
 
 interface PresetExercise {
   name: string;
   category: ExerciseCategory;
+  measurementType?: ExerciseMeasurementType;
 }
 
 const PRESET_EXERCISES: PresetExercise[] = [
@@ -54,6 +55,14 @@ const PRESET_EXERCISES: PresetExercise[] = [
   { name: 'Cable Crunch', category: 'core' },
   { name: 'Ab Wheel', category: 'core' },
   { name: 'Russian Twist', category: 'core' },
+
+  // Conditioning
+  { name: 'Burpees', category: 'conditioning' },
+  { name: 'Rowing', category: 'conditioning', measurementType: 'timed' },
+  { name: 'Jump Rope', category: 'conditioning', measurementType: 'timed' },
+  { name: 'Box Jumps', category: 'conditioning' },
+  { name: 'Battle Ropes', category: 'conditioning', measurementType: 'timed' },
+  { name: 'Mountain Climbers', category: 'conditioning' },
 ];
 
 /**
@@ -74,8 +83,8 @@ export async function seedIfEmpty(): Promise<void> {
   await runTransaction(database, tx => {
     for (const exercise of PRESET_EXERCISES) {
       tx.executeSql(
-        'INSERT INTO exercises (name, category, default_rest_seconds, is_custom, created_at) VALUES (?, ?, 90, 0, ?)',
-        [exercise.name, exercise.category, createdAt],
+        'INSERT INTO exercises (name, category, default_rest_seconds, is_custom, measurement_type, created_at) VALUES (?, ?, 90, 0, ?, ?)',
+        [exercise.name, exercise.category, exercise.measurementType ?? 'reps', createdAt],
       );
     }
   });

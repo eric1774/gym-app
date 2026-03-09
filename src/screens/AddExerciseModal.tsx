@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,46 +11,66 @@ import {
   View,
 } from 'react-native';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
-import { addExercise } from '../db/exercises';
+import { addExercise, updateExercise } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseCategory } from '../types';
+import { Exercise, ExerciseCategory, ExerciseMeasurementType } from '../types';
 
 interface AddExerciseModalProps {
   visible: boolean;
   onClose: () => void;
   onAdded: (exercise: Exercise) => void;
+  /** When set, the modal operates in edit mode. */
+  editExercise?: Exercise | null;
 }
 
-export function AddExerciseModal({ visible, onClose, onAdded }: AddExerciseModalProps) {
+export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: AddExerciseModalProps) {
+  const isEditMode = !!editExercise;
   const [name, setName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
+  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | null>(null);
+  const [measurementType, setMeasurementType] = useState<ExerciseMeasurementType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isDisabled = name.trim() === '' || isSubmitting;
+  // Pre-fill fields when editing
+  React.useEffect(() => {
+    if (editExercise && visible) {
+      setName(editExercise.name);
+      setSelectedCategory(editExercise.category);
+      setMeasurementType(editExercise.measurementType);
+    }
+  }, [editExercise, visible]);
+
+  const isDisabled = name.trim() === '' || selectedCategory === null || measurementType === null || isSubmitting;
 
   const handleClose = () => {
     setName('');
-    setSelectedCategory('chest');
+    setSelectedCategory(null);
+    setMeasurementType(null);
     setError(null);
     setIsSubmitting(false);
     onClose();
   };
 
   const handleSubmit = async () => {
-    if (isDisabled) {
+    if (isDisabled || !selectedCategory || !measurementType) {
       return;
     }
     setIsSubmitting(true);
     setError(null);
     try {
-      const exercise = await addExercise(name.trim(), selectedCategory, 90);
-      onAdded(exercise);
+      if (isEditMode && editExercise) {
+        const updated = await updateExercise(editExercise.id, selectedCategory, measurementType);
+        onAdded(updated);
+      } else {
+        const exercise = await addExercise(name.trim(), selectedCategory, 90, measurementType);
+        onAdded(exercise);
+      }
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add exercise. Please try again.');
+      const action = isEditMode ? 'update' : 'add';
+      setError(err instanceof Error ? err.message : `Failed to ${action} exercise. Please try again.`);
       setIsSubmitting(false);
     }
   };
@@ -61,40 +81,82 @@ export function AddExerciseModal({ visible, onClose, onAdded }: AddExerciseModal
       animationType="slide"
       transparent
       onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={styles.keyboardAvoid}>
+        <Pressable style={styles.overlay} onPress={handleClose} />
         <View style={styles.sheet}>
-          <Text style={styles.title}>Add Exercise</Text>
+          <ScrollView
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            <Text style={styles.title}>{isEditMode ? 'Edit Exercise' : 'Add Exercise'}</Text>
 
-          <Text style={styles.label}>Exercise Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Bulgarian Split Squat"
-            placeholderTextColor={colors.secondary}
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            maxLength={50}
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <Text style={styles.label}>Exercise Name</Text>
+            <TextInput
+              style={[styles.input, isEditMode && styles.inputDisabled]}
+              placeholder="e.g. Bulgarian Split Squat"
+              placeholderTextColor={colors.secondary}
+              value={name}
+              onChangeText={setName}
+              autoFocus={!isEditMode}
+              editable={!isEditMode}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+              maxLength={50}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <Text style={[styles.label, styles.categoryLabel]}>Category</Text>
-          <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
+            <Text style={[styles.label, styles.categoryLabel]}>Category</Text>
+            <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
 
-          <TouchableOpacity
-            style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={isDisabled}>
-            <Text style={styles.submitButtonText}>Add Exercise</Text>
-          </TouchableOpacity>
+            <Text style={[styles.label, styles.categoryLabel]}>Measurement</Text>
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  measurementType === 'reps' ? styles.toggleActive : styles.toggleInactive,
+                ]}
+                onPress={() => setMeasurementType('reps')}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    measurementType === 'reps'
+                      ? styles.toggleTextActive
+                      : styles.toggleTextInactive,
+                  ]}>
+                  Reps
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  measurementType === 'timed' ? styles.toggleActive : styles.toggleInactive,
+                ]}
+                onPress={() => setMeasurementType('timed')}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    measurementType === 'timed'
+                      ? styles.toggleTextActive
+                      : styles.toggleTextInactive,
+                  ]}>
+                  Timed
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.submitButton, isDisabled && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={isDisabled}>
+              <Text style={styles.submitButtonText}>{isEditMode ? 'Update Exercise' : 'Add Exercise'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -107,10 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   keyboardAvoid: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,
@@ -119,6 +179,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl,
     paddingHorizontal: spacing.base,
+    maxHeight: '80%',
   },
   title: {
     fontSize: fontSize.lg,
@@ -143,10 +204,40 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.primary,
   },
+  inputDisabled: {
+    opacity: 0.5,
+  },
   errorText: {
     fontSize: fontSize.sm,
     color: colors.danger,
     marginTop: spacing.xs,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  toggleActive: {
+    backgroundColor: colors.accent,
+  },
+  toggleInactive: {
+    backgroundColor: colors.surfaceElevated,
+  },
+  toggleText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+  },
+  toggleTextActive: {
+    color: colors.background,
+  },
+  toggleTextInactive: {
+    color: colors.secondary,
   },
   submitButton: {
     backgroundColor: colors.accent,

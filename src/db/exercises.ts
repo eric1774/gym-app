@@ -1,5 +1,5 @@
 import { db, executeSql } from './database';
-import { Exercise, ExerciseCategory } from '../types';
+import { Exercise, ExerciseCategory, ExerciseMeasurementType } from '../types';
 
 /** Map a raw SQLite result row to the Exercise domain type. */
 function rowToExercise(row: {
@@ -8,6 +8,7 @@ function rowToExercise(row: {
   category: string;
   default_rest_seconds: number;
   is_custom: number;
+  measurement_type: string;
   created_at: string;
 }): Exercise {
   return {
@@ -16,6 +17,7 @@ function rowToExercise(row: {
     category: row.category as ExerciseCategory,
     defaultRestSeconds: row.default_rest_seconds,
     isCustom: row.is_custom === 1,
+    measurementType: (row.measurement_type as ExerciseMeasurementType) || 'reps',
     createdAt: row.created_at,
   };
 }
@@ -54,13 +56,14 @@ export async function addExercise(
   name: string,
   category: ExerciseCategory,
   defaultRestSeconds: number = 90,
+  measurementType: ExerciseMeasurementType = 'reps',
 ): Promise<Exercise> {
   const database = await db;
   const createdAt = new Date().toISOString();
   const result = await executeSql(
     database,
-    'INSERT INTO exercises (name, category, default_rest_seconds, is_custom, created_at) VALUES (?, ?, ?, 1, ?)',
-    [name, category, defaultRestSeconds, createdAt],
+    'INSERT INTO exercises (name, category, default_rest_seconds, is_custom, measurement_type, created_at) VALUES (?, ?, ?, 1, ?, ?)',
+    [name, category, defaultRestSeconds, measurementType, createdAt],
   );
   const insertedId = result.insertId;
   const row = await executeSql(database, 'SELECT * FROM exercises WHERE id = ?', [insertedId]);
@@ -82,6 +85,22 @@ export async function deleteExercise(id: number): Promise<void> {
     throw new Error(`Cannot delete preset exercise ${id}. Only custom exercises can be deleted.`);
   }
   await executeSql(database, 'DELETE FROM exercises WHERE id = ?', [id]);
+}
+
+/** Update an exercise's category and/or measurement type. */
+export async function updateExercise(
+  id: number,
+  category: ExerciseCategory,
+  measurementType: ExerciseMeasurementType,
+): Promise<Exercise> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE exercises SET category = ?, measurement_type = ? WHERE id = ?',
+    [category, measurementType, id],
+  );
+  const row = await executeSql(database, 'SELECT * FROM exercises WHERE id = ?', [id]);
+  return rowToExercise(row.rows.item(0));
 }
 
 /** Case-insensitive name search across all categories. */

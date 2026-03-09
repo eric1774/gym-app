@@ -227,6 +227,12 @@ export async function renameProgramDay(dayId: number, name: string): Promise<voi
   await executeSql(database, 'UPDATE program_days SET name = ? WHERE id = ?', [name, dayId]);
 }
 
+/** Rename a program. */
+export async function renameProgram(id: number, name: string): Promise<void> {
+  const database = await db;
+  await executeSql(database, 'UPDATE programs SET name = ? WHERE id = ?', [name, id]);
+}
+
 // ── Program Day Exercise CRUD ───────────────────────────────────────
 
 /** Return all exercises for a program day, ordered by sort_order. */

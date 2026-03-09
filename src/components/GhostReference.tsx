@@ -7,9 +7,16 @@ import { WorkoutSet } from '../types';
 
 interface Props {
   sets: WorkoutSet[];
+  isTimed?: boolean;
 }
 
-export function GhostReference({ sets }: Props) {
+function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function GhostReference({ sets, isTimed = false }: Props) {
   if (!sets || sets.length === 0) {
     return null;
   }
@@ -24,7 +31,9 @@ export function GhostReference({ sets }: Props) {
         <View style={styles.verticalList}>
           {sets.map(s => (
             <Text key={s.id} style={styles.setText}>
-              Set {s.setNumber}: {s.weightKg}lb × {s.reps} reps
+              {isTimed
+                ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
+                : `Set ${s.setNumber}: ${s.weightKg}lb × ${s.reps} reps`}
             </Text>
           ))}
         </View>
@@ -32,7 +41,9 @@ export function GhostReference({ sets }: Props) {
         <View style={styles.horizontalRow}>
           {sets.map((s, idx) => (
             <Text key={s.id} style={styles.setText}>
-              Set {s.setNumber}: {s.weightKg}lb × {s.reps}
+              {isTimed
+                ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
+                : `Set ${s.setNumber}: ${s.weightKg}lb × ${s.reps}`}
               {idx < sets.length - 1 ? '   ' : ''}
             </Text>
           ))}

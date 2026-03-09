@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -8,8 +10,11 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Svg, { Path } from 'react-native-svg';
+import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
@@ -18,9 +23,32 @@ import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseSession, ProgramDayExercise, SessionTimeSummary, WorkoutSet } from '../types';
+import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, SessionTimeSummary, WorkoutSet } from '../types';
 import { getProgramDayExercises } from '../db/programs';
-import { getSessionTimeSummary } from '../db/dashboard';
+import { getSessionTimeSummary, getExerciseHistory } from '../db/dashboard';
+import { hasSessionActivity } from '../db/sessions';
+
+/** Group session exercises by their exercise category, preserving first-seen order */
+function groupByCategory(
+  sessionExercises: ExerciseSession[],
+  exerciseLookup: Exercise[],
+): { category: ExerciseCategory; items: ExerciseSession[] }[] {
+  const categoryMap = new Map<ExerciseCategory, ExerciseSession[]>();
+  const categoryOrder: ExerciseCategory[] = [];
+
+  for (const se of sessionExercises) {
+    const exercise = exerciseLookup.find(ex => ex.id === se.exerciseId);
+    const category: ExerciseCategory = exercise?.category ?? 'conditioning';
+
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, []);
+      categoryOrder.push(category);
+    }
+    categoryMap.get(category)!.push(se);
+  }
+
+  return categoryOrder.map(cat => ({ category: cat, items: categoryMap.get(cat)! }));
+}
 
 /** Format elapsed seconds as MM:SS */
 function formatElapsed(seconds: number): string {
@@ -74,6 +102,18 @@ function useElapsedSeconds(startedAt: string | null): number {
   return elapsed;
 }
 
+const HISTORY_ICON_SIZE = 18;
+
+function HistoryIcon({ color }: { color: string }) {
+  return (
+    <Svg width={HISTORY_ICON_SIZE} height={HISTORY_ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 8V12L15 15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M3.05 11A9 9 0 1 1 3.05 13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M3 4V11H10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 interface ExerciseCardProps {
   exerciseSession: ExerciseSession;
   exerciseName: string;
@@ -82,10 +122,12 @@ interface ExerciseCardProps {
   sessionId: number;
   pendingRest: boolean;
   programTarget: ProgramTarget | null;
+  measurementType: ExerciseMeasurementType;
   onPress: () => void;
   onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
   onStartRest: () => void;
+  onViewHistory: () => void;
 }
 
 function ExerciseCard({
@@ -96,10 +138,12 @@ function ExerciseCard({
   sessionId,
   pendingRest,
   programTarget,
+  measurementType,
   onPress,
   onToggleComplete,
   onSetLogged,
   onStartRest,
+  onViewHistory,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
 
@@ -144,6 +188,7 @@ function ExerciseCard({
             exerciseId={exerciseSession.exerciseId}
             onSetLogged={onSetLogged}
             programTarget={programTarget}
+            measurementType={measurementType}
           />
           {pendingRest && (
             <TouchableOpacity
@@ -155,12 +200,24 @@ function ExerciseCard({
           )}
         </View>
       )}
+
+      {/* History icon — bottom right */}
+      <View style={styles.cardFooter}>
+        <TouchableOpacity
+          onPress={onViewHistory}
+          style={styles.historyButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}>
+          <HistoryIcon color={colors.secondary} />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
 
 export function WorkoutScreen() {
-  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<WorkoutStackParamList>>();
   const {
     session,
     sessionExercises,
@@ -262,6 +319,26 @@ export function WorkoutScreen() {
     [exercises, startTimer],
   );
 
+  const handleViewHistory = useCallback(
+    async (exerciseId: number) => {
+      const exercise = exercises.find(ex => ex.id === exerciseId);
+      if (!exercise) { return; }
+
+      const history = await getExerciseHistory(exerciseId);
+      if (history.length === 0) {
+        Alert.alert('No History', 'No History for this Exercise Exists');
+        return;
+      }
+
+      navigation.navigate('ExerciseProgress', {
+        exerciseId,
+        exerciseName: exercise.name,
+        measurementType: exercise.measurementType,
+      });
+    },
+    [exercises, navigation],
+  );
+
   const showCompletionMessage = useCallback((message: string) => {
     if (completionTimerRef.current) {
       clearTimeout(completionTimerRef.current);
@@ -273,34 +350,60 @@ export function WorkoutScreen() {
     }, 2000);
   }, []);
 
-  const handleEndWorkout = useCallback(() => {
-    Alert.alert(
-      'End Workout?',
-      'This marks your session complete.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End Workout',
-          style: 'destructive',
-          onPress: async () => {
-            const wasProgramWorkout = !!programDayId;
-            if (isRunning) {
-              stopTimer();
-            }
-            await endSession();
-            setActiveExerciseId(null);
-            setSetCountsByExercise({});
-            setPendingRestExerciseId(null);
-            if (wasProgramWorkout) {
-              (navigation as any).navigate('ProgramsTab');
-            } else {
-              showCompletionMessage('Workout complete!');
-            }
+  const handleEndWorkout = useCallback(async () => {
+    if (!session) { return; }
+    const hadActivity = await hasSessionActivity(session.id);
+
+    if (!hadActivity) {
+      Alert.alert(
+        'No Exercises Logged',
+        'No exercises were logged or completed. Discard this workout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: async () => {
+              const wasProgramWorkout = !!programDayId;
+              if (isRunning) { stopTimer(); }
+              await endSession();
+              setActiveExerciseId(null);
+              setSetCountsByExercise({});
+              setPendingRestExerciseId(null);
+              if (wasProgramWorkout) {
+                (navigation as any).navigate('ProgramsTab');
+              }
+            },
           },
-        },
-      ],
-    );
-  }, [endSession, isRunning, stopTimer, showCompletionMessage, programDayId, navigation]);
+        ],
+      );
+    } else {
+      Alert.alert(
+        'End Workout?',
+        'This marks your session complete.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'End Workout',
+            style: 'destructive',
+            onPress: async () => {
+              const wasProgramWorkout = !!programDayId;
+              if (isRunning) { stopTimer(); }
+              await endSession();
+              setActiveExerciseId(null);
+              setSetCountsByExercise({});
+              setPendingRestExerciseId(null);
+              if (wasProgramWorkout) {
+                (navigation as any).navigate('ProgramsTab');
+              } else {
+                showCompletionMessage('Workout complete!');
+              }
+            },
+          },
+        ],
+      );
+    }
+  }, [session, endSession, isRunning, stopTimer, showCompletionMessage, programDayId, navigation]);
 
   if (isLoading) {
     return (
@@ -333,7 +436,10 @@ export function WorkoutScreen() {
       {/* Session header */}
       <View style={styles.header}>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
-        <TouchableOpacity onPress={handleEndWorkout}>
+        <TouchableOpacity
+          onPress={handleEndWorkout}
+          style={styles.endButtonTouchable}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.endButton}>End Workout</Text>
         </TouchableOpacity>
       </View>
@@ -348,40 +454,55 @@ export function WorkoutScreen() {
       )}
 
       {/* Exercise list */}
-      <ScrollView
+      <KeyboardAvoidingView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
-        {sessionExercises.length === 0 && (
-          <Text style={styles.emptyState}>Tap + to add exercises</Text>
-        )}
-        {sessionExercises.map((se) => {
-          const exercise = exercises.find(ex => ex.id === se.exerciseId);
-          const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
-          const isActive = activeExerciseId === se.exerciseId;
-          const setCount = setCountsByExercise[se.exerciseId] ?? 0;
-          return (
-            <ExerciseCard
-              key={se.exerciseId}
-              exerciseSession={se}
-              exerciseName={name}
-              isActive={isActive}
-              setCount={setCount}
-              sessionId={session.id}
-              pendingRest={pendingRestExerciseId === se.exerciseId}
-              programTarget={programTargetsMap.get(se.exerciseId) ?? null}
-              onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
-              onToggleComplete={() => handleToggleComplete(se.exerciseId)}
-              onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-              onStartRest={() => handleStartRest(se.exerciseId)}
-            />
-          );
-        })}
-      </ScrollView>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled">
+          {sessionExercises.length === 0 && (
+            <Text style={styles.emptyState}>Tap + to add exercises</Text>
+          )}
+          {groupByCategory(sessionExercises, exercises).map((group, groupIdx) => (
+            <View key={group.category}>
+              <View style={[styles.categoryHeader, groupIdx > 0 && styles.categoryHeaderSpaced]}>
+                <Text style={styles.categoryLabel}>{group.category.toUpperCase()}</Text>
+                <View style={styles.categoryLine} />
+              </View>
+              {group.items.map((se) => {
+                const exercise = exercises.find(ex => ex.id === se.exerciseId);
+                const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
+                const isActive = activeExerciseId === se.exerciseId;
+                const setCount = setCountsByExercise[se.exerciseId] ?? 0;
+                return (
+                  <ExerciseCard
+                    key={se.exerciseId}
+                    exerciseSession={se}
+                    exerciseName={name}
+                    isActive={isActive}
+                    setCount={setCount}
+                    sessionId={session.id}
+                    pendingRest={pendingRestExerciseId === se.exerciseId}
+                    programTarget={programTargetsMap.get(se.exerciseId) ?? null}
+                    measurementType={exercise?.measurementType ?? 'reps'}
+                    onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
+                    onToggleComplete={() => handleToggleComplete(se.exerciseId)}
+                    onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
+                    onStartRest={() => handleStartRest(se.exerciseId)}
+                    onViewHistory={() => handleViewHistory(se.exerciseId)}
+                  />
+                );
+              })}
+            </View>
+          ))}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Add Exercise FAB */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { bottom: spacing.xl + insets.bottom }]}
         onPress={() => setPickerVisible(true)}
         activeOpacity={0.85}>
         <Text style={styles.fabText}>+</Text>
@@ -429,10 +550,12 @@ const styles = StyleSheet.create({
   },
   startButton: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: spacing.base,
     alignSelf: 'stretch',
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center' as const,
   },
   startButtonText: {
     fontSize: fontSize.lg,
@@ -454,6 +577,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
     letterSpacing: 2,
   },
+  endButtonTouchable: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    minHeight: 40,
+    justifyContent: 'center' as const,
+  },
   endButton: {
     fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
@@ -473,8 +603,29 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     marginTop: spacing.xxl,
   },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    paddingLeft: spacing.xs,
+  },
+  categoryHeaderSpaced: {
+    marginTop: spacing.base,
+  },
+  categoryLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+    color: colors.secondary,
+    letterSpacing: 1.5,
+  },
+  categoryLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: spacing.sm,
+  },
   card: {
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: spacing.sm,
     overflow: 'hidden',
   },
@@ -533,6 +684,15 @@ const styles = StyleSheet.create({
     color: colors.background,
     lineHeight: fontSize.base + 2,
   },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.sm,
+  },
+  historyButton: {
+    padding: spacing.xs,
+  },
   cardExpanded: {
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
@@ -551,19 +711,22 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: spacing.xl,
-    right: spacing.xl,
+    right: spacing.base,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   summaryCard: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: spacing.xl,
     width: '90%',
     alignItems: 'center',
@@ -593,11 +756,13 @@ const styles = StyleSheet.create({
   },
   summaryDoneButton: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xxl,
     marginTop: spacing.lg,
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center' as const,
   },
   summaryDoneText: {
     fontSize: fontSize.base,

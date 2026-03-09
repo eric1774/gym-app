@@ -11,14 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
-import { getExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
+import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession } from '../types';
-import { DashboardStackParamList } from '../navigation/TabNavigator';
-
-type RouteParams = RouteProp<DashboardStackParamList, 'ExerciseProgress'>;
+type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
+type RouteParams = RouteProp<{ ExerciseProgress: ExerciseProgressParams }, 'ExerciseProgress'>;
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
@@ -48,10 +47,17 @@ function formatDateReadable(dateStr: string): string {
   return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
 }
 
+function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
-  const { exerciseId, exerciseName } = route.params;
+  const { exerciseId, exerciseName, measurementType } = route.params;
+  const isTimed = measurementType === 'timed';
 
   const [progressData, setProgressData] = useState<ExerciseProgressPoint[]>([]);
   const [historyData, setHistoryData] = useState<ExerciseHistorySession[]>([]);
@@ -62,8 +68,9 @@ export function ExerciseProgressScreen() {
       let cancelled = false;
       (async () => {
         try {
+          const progressFn = isTimed ? getTimedExerciseProgressData : getExerciseProgressData;
           const [progress, history] = await Promise.all([
-            getExerciseProgressData(exerciseId),
+            progressFn(exerciseId),
             getExerciseHistory(exerciseId),
           ]);
           if (!cancelled) {
@@ -125,13 +132,15 @@ export function ExerciseProgressScreen() {
       labels,
       datasets: [
         {
-          data: filteredProgress.map(p => p.bestWeightKg),
+          data: isTimed
+            ? filteredProgress.map(p => p.bestReps)
+            : filteredProgress.map(p => p.bestWeightKg),
           color: () => colors.accent,
           strokeWidth: 2,
         },
       ],
     };
-  }, [filteredProgress]);
+  }, [filteredProgress, isTimed]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -182,7 +191,7 @@ export function ExerciseProgressScreen() {
               data={chartData}
               width={CHART_WIDTH}
               height={220}
-              yAxisSuffix={' lb'}
+              yAxisSuffix={isTimed ? 's' : ' lb'}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
               withOuterLines={false}
@@ -190,7 +199,7 @@ export function ExerciseProgressScreen() {
                 backgroundColor: colors.surface,
                 backgroundGradientFrom: colors.surface,
                 backgroundGradientTo: colors.surface,
-                decimalPlaces: 1,
+                decimalPlaces: isTimed ? 0 : 1,
                 color: () => colors.accent,
                 labelColor: () => colors.secondary,
                 propsForDots: {
@@ -231,7 +240,9 @@ export function ExerciseProgressScreen() {
                     styles.setText,
                     set.isWarmup && styles.setTextWarmup,
                   ]}>
-                  {'Set ' + set.setNumber + ': ' + set.weightKg + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
+                  {isTimed
+                    ? 'Set ' + set.setNumber + ': ' + formatDuration(set.reps)
+                    : 'Set ' + set.setNumber + ': ' + set.weightKg + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
                 </Text>
               ))}
             </View>

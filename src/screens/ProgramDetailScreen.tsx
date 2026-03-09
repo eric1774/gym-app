@@ -20,14 +20,18 @@ import {
   duplicateProgramDay,
   getProgram,
   getProgramDays,
+  renameProgram,
+  renameProgramDay,
 } from '../db/programs';
-import { getProgramWeekCompletion } from '../db/dashboard';
+import { getProgramWeekCompletion, unmarkDayCompletion } from '../db/dashboard';
+import { createCompletedSession } from '../db/sessions';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
 import { Program, ProgramDay, ProgramDayCompletionStatus } from '../types';
 import { ProgramsStackParamList } from '../navigation/TabNavigator';
 import { AddDayModal } from './AddDayModal';
+import { RenameModal } from '../components/RenameModal';
 
 type DetailRoute = RouteProp<ProgramsStackParamList, 'ProgramDetail'>;
 
@@ -41,6 +45,9 @@ export function ProgramDetailScreen() {
   const [addDayVisible, setAddDayVisible] = useState(false);
   const [weekCompletion, setWeekCompletion] = useState<ProgramDayCompletionStatus[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [renameProgramVisible, setRenameProgramVisible] = useState(false);
+  const [renameDayTarget, setRenameDayTarget] = useState<ProgramDay | null>(null);
+  const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -159,6 +166,31 @@ export function ProgramDetailScreen() {
     }
   }, [programId, refresh]);
 
+  const handleRenameProgram = useCallback(
+    async (newName: string) => {
+      try {
+        await renameProgram(programId, newName);
+        await refresh();
+      } catch {
+        // ignore
+      }
+    },
+    [programId, refresh],
+  );
+
+  const handleRenameDay = useCallback(
+    async (newName: string) => {
+      if (!renameDayTarget) { return; }
+      try {
+        await renameProgramDay(renameDayTarget.id, newName);
+        await refresh();
+      } catch {
+        // ignore
+      }
+    },
+    [renameDayTarget, refresh],
+  );
+
   const handleDayTap = useCallback(
     (day: ProgramDay) => {
       (navigation as any).navigate('DayDetail', { dayId: day.id, dayName: day.name });
@@ -166,39 +198,103 @@ export function ProgramDetailScreen() {
     [navigation],
   );
 
+  const handleDayLongPress = useCallback(
+    async (day: ProgramDay) => {
+      const completion = weekCompletion.find(wc => wc.dayId === day.id);
+      const isDone = completion?.isCompletedThisWeek ?? false;
+
+      if (isDone) {
+        Alert.alert(
+          'Unmark Day Complete',
+          `Mark "${day.name}" as incomplete?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Unmark',
+              onPress: async () => {
+                try {
+                  await unmarkDayCompletion(programId, day.id);
+                } catch {
+                  // ignore
+                }
+                await refresh();
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'Mark Day Complete',
+          `Manually mark "${day.name}" as complete?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Complete',
+              onPress: async () => {
+                await createCompletedSession(day.id);
+                await refresh();
+              },
+            },
+          ],
+        );
+      }
+    },
+    [programId, weekCompletion, refresh],
+  );
+
+  const toggleDayMenu = useCallback((dayId: number) => {
+    setExpandedDayId(prev => (prev === dayId ? null : dayId));
+  }, []);
+
   const renderDay = useCallback(
     ({ item }: { item: ProgramDay }) => {
       const completion = weekCompletion.find(wc => wc.dayId === item.id);
       const isDone = completion?.isCompletedThisWeek ?? false;
+      const isExpanded = expandedDayId === item.id;
       return (
-        <TouchableOpacity
-          style={[styles.dayCard, isDone && styles.dayCardDone]}
-          onPress={() => handleDayTap(item)}
-          activeOpacity={0.7}>
-          <View style={styles.dayLeft}>
-            <Text style={[styles.completionIcon, isDone && styles.completionIconDone]}>
-              {isDone ? '✓' : '○'}
-            </Text>
-          </View>
-          <Text style={[styles.dayName, isDone && styles.dayNameDone]}>{item.name}</Text>
-          <View style={styles.dayActions}>
-            <TouchableOpacity
-              style={styles.dupButton}
-              onPress={() => handleDuplicateDay(item.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.dupText}>Dup</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDeleteDay(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.deleteText}>Del</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+        <View style={[styles.dayCard, isDone && styles.dayCardDone]}>
+          <TouchableOpacity
+            style={styles.dayRow}
+            onPress={() => handleDayTap(item)}
+            onLongPress={() => handleDayLongPress(item)}
+            delayLongPress={1000}
+            activeOpacity={0.7}>
+            <View style={styles.dayLeft}>
+              <Text style={[styles.completionIcon, isDone && styles.completionIconDone]}>
+                {isDone ? '✓' : '○'}
+              </Text>
+            </View>
+            <Text style={styles.dayName}>{item.name}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => toggleDayMenu(item.id)}
+            style={styles.caretButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={styles.caretText}>{isExpanded ? '▴' : '▾'}</Text>
+          </TouchableOpacity>
+          {isExpanded && (
+            <View style={styles.dayActions}>
+              <TouchableOpacity
+                style={styles.actionChip}
+                onPress={() => { setExpandedDayId(null); setRenameDayTarget(item); }}>
+                <Text style={styles.actionChipText}>Rename</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionChip}
+                onPress={() => { setExpandedDayId(null); handleDuplicateDay(item.id); }}>
+                <Text style={styles.actionChipText}>Duplicate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionChip, styles.actionChipDanger]}
+                onPress={() => { setExpandedDayId(null); handleDeleteDay(item); }}>
+                <Text style={styles.actionChipTextDanger}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       );
     },
-    [handleDayTap, handleDeleteDay, handleDuplicateDay, weekCompletion],
+    [handleDayTap, handleDayLongPress, handleDeleteDay, handleDuplicateDay, weekCompletion, expandedDayId, toggleDayMenu],
   );
 
   const keyExtractor = useCallback((item: ProgramDay) => String(item.id), []);
@@ -227,14 +323,17 @@ export function ProgramDetailScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.backText}>{'<'}</Text>
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <TouchableOpacity
+          style={styles.headerCenter}
+          onPress={() => setRenameProgramVisible(true)}
+          activeOpacity={0.7}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {program.name}
           </Text>
           <Text style={styles.headerSubtitle}>
             Week {program.currentWeek}/{program.weeks}
           </Text>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={handleDeleteProgram}
           style={styles.headerRight}
@@ -282,7 +381,15 @@ export function ProgramDetailScreen() {
             Week {program.currentWeek} of {program.weeks}
           </Text>
           {weekCompletion.map((day) => (
-            <View key={day.dayId} style={styles.weekRow}>
+            <TouchableOpacity
+              key={day.dayId}
+              style={styles.weekRow}
+              onLongPress={() => {
+                const d = days.find(dd => dd.id === day.dayId);
+                if (d) { handleDayLongPress(d); }
+              }}
+              delayLongPress={1000}
+              activeOpacity={0.7}>
               <Text style={day.isCompletedThisWeek ? styles.checkDone : styles.checkPending}>
                 {day.isCompletedThisWeek ? '✓' : '○'}
               </Text>
@@ -293,7 +400,7 @@ export function ProgramDetailScreen() {
                 ]}>
                 {day.dayName}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -308,6 +415,7 @@ export function ProgramDetailScreen() {
           data={days}
           renderItem={renderDay}
           keyExtractor={keyExtractor}
+          extraData={weekCompletion}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -331,6 +439,22 @@ export function ProgramDetailScreen() {
         onClose={() => setAddDayVisible(false)}
         onAdd={handleAddDay}
         defaultName={`Day ${days.length + 1}`}
+      />
+
+      <RenameModal
+        visible={renameProgramVisible}
+        title="Rename Program"
+        currentName={program.name}
+        onClose={() => setRenameProgramVisible(false)}
+        onSave={handleRenameProgram}
+      />
+
+      <RenameModal
+        visible={renameDayTarget !== null}
+        title="Rename Day"
+        currentName={renameDayTarget?.name ?? ''}
+        onClose={() => setRenameDayTarget(null)}
+        onSave={handleRenameDay}
       />
     </SafeAreaView>
   );
@@ -493,14 +617,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: spacing.base,
     marginBottom: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 52,
   },
   dayCardDone: {
     borderWidth: 1,
     borderColor: colors.accent,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   dayLeft: {
     marginRight: spacing.sm,
@@ -521,29 +646,44 @@ const styles = StyleSheet.create({
     color: colors.primary,
     flex: 1,
   },
-  dupButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceElevated,
+  caretButton: {
+    position: 'absolute',
+    top: spacing.base,
+    right: spacing.base,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  caretText: {
+    fontSize: 14,
+    color: colors.secondary,
   },
   dayActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  dupText: {
+  actionChip: {
+    flex: 1,
+    paddingVertical: spacing.xs,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+  },
+  actionChipDanger: {
+    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+  },
+  actionChipText: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
     color: colors.secondary,
   },
-  deleteButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceElevated,
-  },
-  deleteText: {
+  actionChipTextDanger: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
     color: '#E53935',

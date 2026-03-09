@@ -191,7 +191,7 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
       transparent
       onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardAvoid}>
         <Pressable style={styles.overlay} onPress={handleClose} />
         <View style={styles.sheet}>

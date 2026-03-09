@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -62,10 +61,10 @@ export function CreateProgramModal({ visible, onClose, onCreated }: CreateProgra
       animationType="slide"
       transparent
       onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="padding"
         style={styles.keyboardAvoid}>
+        <Pressable style={styles.overlay} onPress={handleClose} />
         <View style={styles.sheet}>
           <Text style={styles.title}>Create Program</Text>
 
@@ -118,10 +117,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   keyboardAvoid: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: colors.surface,

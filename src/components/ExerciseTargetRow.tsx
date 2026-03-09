@@ -28,8 +28,10 @@ export function ExerciseTargetRow({
 }: ExerciseTargetRowProps) {
   const [showActions, setShowActions] = useState(false);
 
-  const targetsText =
-    dayExercise.targetWeightKg > 0
+  const isTimed = exercise.measurementType === 'timed';
+  const targetsText = isTimed
+    ? 'Timed'
+    : dayExercise.targetWeightKg > 0
       ? `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightKg}lb`
       : `${dayExercise.targetSets}x${dayExercise.targetReps}`;
 
