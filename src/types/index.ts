@@ -162,3 +162,12 @@ export interface ProteinChartPoint {
   totalProteinGrams: number;
   goalGrams: number | null;
 }
+
+// -- Meal Library domain types (Phase 8) --
+export interface LibraryMeal {
+  id: number;
+  name: string;
+  proteinGrams: number;
+  mealType: MealType;
+  createdAt: string;
+}

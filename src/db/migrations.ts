@@ -16,6 +16,7 @@ interface Migration {
  * - Version 1: Create all 7 base tables (v1.0 schema)
  * - Version 2: Add measurement_type column to exercises
  * - Version 3: Create protein domain tables (meals, protein_settings)
+ * - Version 4: Create meal_library table
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -123,6 +124,21 @@ const MIGRATIONS: Migration[] = [
           daily_goal_grams REAL NOT NULL,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
+        )
+      `);
+    },
+  },
+  {
+    version: 4,
+    description: 'Create meal_library table for saved meal templates',
+    up: (tx: Transaction) => {
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS meal_library (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          protein_grams REAL NOT NULL,
+          meal_type TEXT NOT NULL,
+          created_at TEXT NOT NULL
         )
       `);
     },

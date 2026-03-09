@@ -1,5 +1,5 @@
 import { db, executeSql } from './database';
-import { Meal, MealType, ProteinSettings, ProteinChartPoint } from '../types';
+import { Meal, MealType, ProteinSettings, ProteinChartPoint, LibraryMeal, MEAL_TYPES } from '../types';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
 
 /** Map a raw SQLite result row to the Meal domain type. */
@@ -351,6 +351,25 @@ export async function get7DayAverage(): Promise<number | null> {
   return Math.round(avgProtein as number);
 }
 
+// -- Meal Library functions (Phase 8) --
+
+/** Map a raw SQLite result row to the LibraryMeal domain type. */
+function rowToLibraryMeal(row: {
+  id: number;
+  name: string;
+  protein_grams: number;
+  meal_type: string;
+  created_at: string;
+}): LibraryMeal {
+  return {
+    id: row.id,
+    name: row.name,
+    proteinGrams: row.protein_grams,
+    mealType: row.meal_type as MealType,
+    createdAt: row.created_at,
+  };
+}
+
 /**
  * Get the most recent distinct meals, deduplicated by (description, protein_grams) pair.
  * Useful for quick-add buttons — shows the user's most frequently logged recent meals.
@@ -384,4 +403,73 @@ export async function getRecentDistinctMeals(
     });
   }
   return meals;
+}
+
+/**
+ * Add a new meal to the library as a reusable template.
+ *
+ * @param name - Display name for this library meal
+ * @param proteinGrams - Protein amount in grams
+ * @param mealType - One of: breakfast, lunch, dinner, snack
+ * @returns The inserted LibraryMeal record
+ */
+export async function addLibraryMeal(
+  name: string,
+  proteinGrams: number,
+  mealType: MealType,
+): Promise<LibraryMeal> {
+  const database = await db;
+  const createdAt = getLocalDateTimeString(new Date());
+
+  const result = await executeSql(
+    database,
+    'INSERT INTO meal_library (name, protein_grams, meal_type, created_at) VALUES (?, ?, ?, ?)',
+    [name, proteinGrams, mealType, createdAt],
+  );
+
+  const row = await executeSql(database, 'SELECT * FROM meal_library WHERE id = ?', [
+    result.insertId,
+  ]);
+  return rowToLibraryMeal(row.rows.item(0));
+}
+
+/**
+ * Get all library meals grouped by meal type.
+ * Each group is sorted alphabetically by name.
+ *
+ * @returns Record keyed by MealType with arrays of LibraryMeal
+ */
+export async function getLibraryMealsByType(): Promise<Record<MealType, LibraryMeal[]>> {
+  const database = await db;
+
+  const result = await executeSql(
+    database,
+    'SELECT * FROM meal_library ORDER BY meal_type, name ASC',
+  );
+
+  const grouped: Record<MealType, LibraryMeal[]> = {
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snack: [],
+  };
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const meal = rowToLibraryMeal(result.rows.item(i));
+    if (MEAL_TYPES.includes(meal.mealType)) {
+      grouped[meal.mealType].push(meal);
+    }
+  }
+
+  return grouped;
+}
+
+/**
+ * Delete a library meal by ID.
+ *
+ * @param id - The library meal ID to delete
+ */
+export async function deleteLibraryMeal(id: number): Promise<void> {
+  const database = await db;
+  await executeSql(database, 'DELETE FROM meal_library WHERE id = ?', [id]);
 }

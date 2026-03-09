@@ -55,4 +55,7 @@ export {
   getStreakDays,
   get7DayAverage,
   getRecentDistinctMeals,
+  addLibraryMeal,
+  getLibraryMealsByType,
+  deleteLibraryMeal,
 } from './protein';
