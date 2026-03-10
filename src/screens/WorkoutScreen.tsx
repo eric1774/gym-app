@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
+import HapticFeedback from 'react-native-haptic-feedback';
 import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
@@ -23,9 +24,9 @@ import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, SessionTimeSummary, WorkoutSet } from '../types';
+import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
 import { getProgramDayExercises } from '../db/programs';
-import { getSessionTimeSummary, getExerciseHistory } from '../db/dashboard';
+import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity } from '../db/sessions';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
@@ -54,18 +55,6 @@ function groupByCategory(
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-
-/** Format seconds as HH:MM:SS or MM:SS */
-function formatTimeSummary(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) {
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
@@ -113,6 +102,8 @@ function HistoryIcon({ color }: { color: string }) {
     </Svg>
   );
 }
+
+const CHECK_CIRCLE_SIZE = 28;
 
 interface ExerciseCardProps {
   exerciseSession: ExerciseSession;
@@ -167,18 +158,26 @@ function ExerciseCard({
             </Text>
           )}
         </View>
-        {/* Circular checkmark toggle — outline when pending, filled accent when complete */}
-        <TouchableOpacity
-          onPress={onToggleComplete}
-          style={[
-            styles.checkCircle,
-            isComplete ? styles.checkCircleDone : styles.checkCirclePending,
-          ]}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          {isComplete && (
-            <Text style={styles.checkIcon}>{'\u2713'}</Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.cardHeaderRight}>
+          <TouchableOpacity
+            onPress={onViewHistory}
+            style={styles.historyButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}>
+            <HistoryIcon color={colors.secondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onToggleComplete}
+            style={[
+              styles.checkCircle,
+              isComplete ? styles.checkCircleDone : styles.checkCirclePending,
+            ]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            {isComplete && (
+              <Text style={styles.checkIcon}>{'\u2713'}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isActive && (
@@ -200,17 +199,6 @@ function ExerciseCard({
           )}
         </View>
       )}
-
-      {/* History icon — bottom right */}
-      <View style={styles.cardFooter}>
-        <TouchableOpacity
-          onPress={onViewHistory}
-          style={styles.historyButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.7}>
-          <HistoryIcon color={colors.secondary} />
-        </TouchableOpacity>
-      </View>
     </TouchableOpacity>
   );
 }
@@ -237,12 +225,11 @@ export function WorkoutScreen() {
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
-  const [sessionSummary, setSessionSummary] = useState<SessionTimeSummary | null>(null);
-  const [showSummary, setShowSummary] = useState(false);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
+  const [programDayName, setProgramDayName] = useState<string | null>(null);
 
   useEffect(() => {
     if (programDayId) {
@@ -297,6 +284,7 @@ export function WorkoutScreen() {
   const handleToggleComplete = useCallback(
     async (exerciseId: number) => {
       await toggleExerciseComplete(exerciseId);
+      HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
     },
     [toggleExerciseComplete],
   );
@@ -364,6 +352,7 @@ export function WorkoutScreen() {
             text: 'Discard',
             style: 'destructive',
             onPress: async () => {
+              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
               const wasProgramWorkout = !!programDayId;
               if (isRunning) { stopTimer(); }
               await endSession();
@@ -387,6 +376,7 @@ export function WorkoutScreen() {
             text: 'End Workout',
             style: 'destructive',
             onPress: async () => {
+              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
               const wasProgramWorkout = !!programDayId;
               if (isRunning) { stopTimer(); }
               await endSession();
@@ -407,7 +397,7 @@ export function WorkoutScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centered} edges={["top"]}>
+      <SafeAreaView style={styles.centered} edges={['top']}>
         <ActivityIndicator color={colors.accent} size="large" />
       </SafeAreaView>
     );
@@ -415,7 +405,7 @@ export function WorkoutScreen() {
 
   if (!session) {
     return (
-      <SafeAreaView style={styles.startContainer} edges={["top"]}>
+      <SafeAreaView style={styles.startContainer} edges={['top']}>
         {completionMessage ? (
           <Text style={styles.completionMessage}>{completionMessage}</Text>
         ) : (
@@ -431,8 +421,14 @@ export function WorkoutScreen() {
     );
   }
 
+  // Build a session title from exercise categories
+  const categories = groupByCategory(sessionExercises, exercises);
+  const sessionTitle = programDayId
+    ? categories.map(g => g.category.toUpperCase()).join(' & ')
+    : null;
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Session header */}
       <View style={styles.header}>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
@@ -443,6 +439,15 @@ export function WorkoutScreen() {
           <Text style={styles.endButton}>End Workout</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Session title banner for program workouts */}
+      {sessionTitle && sessionExercises.length > 0 && (
+        <View style={styles.sessionBanner}>
+          <Text style={styles.sessionBannerText} numberOfLines={2}>
+            ACTIVE WORKOUT SESSION: {sessionTitle}
+          </Text>
+        </View>
+      )}
 
       {/* Rest timer banner */}
       {isRunning && (
@@ -465,36 +470,38 @@ export function WorkoutScreen() {
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
-          {groupByCategory(sessionExercises, exercises).map((group, groupIdx) => (
+          {categories.map((group, groupIdx) => (
             <View key={group.category}>
               <View style={[styles.categoryHeader, groupIdx > 0 && styles.categoryHeaderSpaced]}>
                 <Text style={styles.categoryLabel}>{group.category.toUpperCase()}</Text>
                 <View style={styles.categoryLine} />
               </View>
-              {group.items.map((se) => {
-                const exercise = exercises.find(ex => ex.id === se.exerciseId);
-                const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
-                const isActive = activeExerciseId === se.exerciseId;
-                const setCount = setCountsByExercise[se.exerciseId] ?? 0;
-                return (
-                  <ExerciseCard
-                    key={se.exerciseId}
-                    exerciseSession={se}
-                    exerciseName={name}
-                    isActive={isActive}
-                    setCount={setCount}
-                    sessionId={session.id}
-                    pendingRest={pendingRestExerciseId === se.exerciseId}
-                    programTarget={programTargetsMap.get(se.exerciseId) ?? null}
-                    measurementType={exercise?.measurementType ?? 'reps'}
-                    onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
-                    onToggleComplete={() => handleToggleComplete(se.exerciseId)}
-                    onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-                    onStartRest={() => handleStartRest(se.exerciseId)}
-                    onViewHistory={() => handleViewHistory(se.exerciseId)}
-                  />
-                );
-              })}
+              <View style={styles.categoryContainer}>
+                {group.items.map((se) => {
+                  const exercise = exercises.find(ex => ex.id === se.exerciseId);
+                  const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
+                  const isActive = activeExerciseId === se.exerciseId;
+                  const setCount = setCountsByExercise[se.exerciseId] ?? 0;
+                  return (
+                    <ExerciseCard
+                      key={se.exerciseId}
+                      exerciseSession={se}
+                      exerciseName={name}
+                      isActive={isActive}
+                      setCount={setCount}
+                      sessionId={session.id}
+                      pendingRest={pendingRestExerciseId === se.exerciseId}
+                      programTarget={programTargetsMap.get(se.exerciseId) ?? null}
+                      measurementType={exercise?.measurementType ?? 'reps'}
+                      onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
+                      onToggleComplete={() => handleToggleComplete(se.exerciseId)}
+                      onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
+                      onStartRest={() => handleStartRest(se.exerciseId)}
+                      onViewHistory={() => handleViewHistory(se.exerciseId)}
+                    />
+                  );
+                })}
+              </View>
             </View>
           ))}
         </ScrollView>
@@ -516,8 +523,6 @@ export function WorkoutScreen() {
     </SafeAreaView>
   );
 }
-
-const CHECK_CIRCLE_SIZE = 32;
 
 const styles = StyleSheet.create({
   container: {
@@ -560,7 +565,7 @@ const styles = StyleSheet.create({
   startButtonText: {
     fontSize: fontSize.lg,
     fontWeight: weightBold,
-    color: colors.background,
+    color: colors.onAccent,
   },
   header: {
     flexDirection: 'row',
@@ -568,8 +573,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   timerText: {
     fontSize: fontSize.xl,
@@ -589,12 +592,22 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
     color: colors.danger,
   },
+  sessionBanner: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.md,
+  },
+  sessionBannerText: {
+    fontSize: fontSize.xs,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+  },
   scroll: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxxl + spacing.xl,
   },
   emptyState: {
@@ -610,11 +623,11 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xs,
   },
   categoryHeaderSpaced: {
-    marginTop: spacing.base,
+    marginTop: spacing.lg,
   },
   categoryLabel: {
     fontSize: fontSize.xs,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
     color: colors.secondary,
     letterSpacing: 1.5,
   },
@@ -624,19 +637,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginLeft: spacing.sm,
   },
+  categoryContainer: {
+    // Groups exercise cards within a category
+  },
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   cardActive: {
     backgroundColor: colors.surfaceElevated,
+    borderColor: 'rgba(141, 194, 138, 0.2)',
   },
   cardInactive: {
     backgroundColor: colors.surface,
   },
   cardComplete: {
     backgroundColor: colors.accentDim,
+    borderColor: 'rgba(141, 194, 138, 0.15)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -650,7 +670,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   cardName: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     fontWeight: weightSemiBold,
     color: colors.primary,
   },
@@ -661,6 +681,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     marginTop: 2,
+  },
+  cardHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   checkCircle: {
     width: CHECK_CIRCLE_SIZE,
@@ -679,16 +704,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   checkIcon: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
     fontWeight: weightBold,
-    color: colors.background,
-    lineHeight: fontSize.base + 2,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.sm,
+    color: colors.onAccent,
+    lineHeight: fontSize.sm + 2,
   },
   historyButton: {
     padding: spacing.xs,
@@ -700,79 +719,29 @@ const styles = StyleSheet.create({
   startRestButton: {
     marginTop: spacing.sm,
     backgroundColor: colors.timerActive,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   startRestText: {
     fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
-    color: colors.background,
+    color: colors.onAccent,
   },
   fab: {
     position: 'absolute',
-    right: spacing.base,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    right: spacing.lg,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  summaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: spacing.xl,
-    width: '90%',
-    alignItems: 'center',
-  },
-  summaryTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-    marginBottom: spacing.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  summaryLabel: {
-    fontSize: fontSize.base,
-    color: colors.secondary,
-  },
-  summaryValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  summaryDoneButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    marginTop: spacing.lg,
-    alignItems: 'center',
-    minHeight: 48,
-    justifyContent: 'center' as const,
-  },
-  summaryDoneText: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.background,
   },
   fabText: {
     fontSize: fontSize.xl,
     fontWeight: weightBold,
-    color: colors.background,
+    color: colors.onAccent,
     lineHeight: fontSize.xl + 4,
   },
 });
