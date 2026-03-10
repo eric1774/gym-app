@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import HapticFeedback from 'react-native-haptic-feedback';
 import {
   logSet,
   getSetsForExerciseInSession,
@@ -70,6 +71,11 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
     if (!isTimed && current.length === 0 && last.length > 0) {
       setWeightInput(String(last[0].weightKg));
       setRepsInput(String(last[0].reps));
+    } else if (!isTimed && current.length > 0) {
+      // Re-expanded panel: pre-fill from most recent intra-session set
+      const lastSet = current[current.length - 1];
+      setWeightInput(String(lastSet.weightKg));
+      setRepsInput(String(lastSet.reps));
     }
   }, [sessionId, exerciseId, isTimed]);
 
@@ -111,6 +117,13 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
     setStopwatchSeconds(0);
   }, []);
 
+  const handleStepWeight = useCallback((delta: number) => {
+    const current = parseFloat(weightInput) || 0;
+    const newWeight = Math.max(0, current + delta);
+    setWeightInput(String(newWeight));
+    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
+  }, [weightInput]);
+
   const handleConfirm = useCallback(async () => {
     if (isSubmitting) {
       return;
@@ -126,6 +139,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
         const newSet = await logSet(sessionId, exerciseId, 0, stopwatchSeconds);
         setCompletedSets(prev => [...prev, newSet]);
         onSetLogged(newSet);
+        HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
         handleResetStopwatch();
       } finally {
         setIsSubmitting(false);
@@ -141,6 +155,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
         const newSet = await logSet(sessionId, exerciseId, weight, reps);
         setCompletedSets(prev => [...prev, newSet]);
         onSetLogged(newSet);
+        HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
         // Pre-fill with the just-logged values for the next set
         setWeightInput(String(newSet.weightKg));
         setRepsInput(String(newSet.reps));
@@ -158,6 +173,9 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
   const isConfirmDisabled = isTimed
     ? stopwatchSeconds === 0 || stopwatchRunning || isSubmitting
     : weightInput.trim() === '' || repsInput.trim() === '' || isSubmitting;
+
+  const weightValue = parseFloat(weightInput);
+  const isWeightAtZero = isNaN(weightValue) || weightValue <= 0;
 
   return (
     <View style={styles.container}>
@@ -215,31 +233,50 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
           </View>
         </View>
       ) : (
-        /* Weight/Reps input row for rep-based exercises */
-        <View style={styles.inputRow}>
-          <TextInput
-            ref={weightRef}
-            style={styles.weightInput}
-            value={weightInput}
-            onChangeText={setWeightInput}
-            placeholder="lb"
-            placeholderTextColor={colors.secondary}
-            keyboardType="decimal-pad"
-            returnKeyType="next"
-            onSubmitEditing={() => repsRef.current?.focus()}
-            blurOnSubmit={false}
-          />
-          <TextInput
-            ref={repsRef}
-            style={styles.repsInput}
-            value={repsInput}
-            onChangeText={setRepsInput}
-            placeholder="reps"
-            placeholderTextColor={colors.secondary}
-            keyboardType="number-pad"
-            returnKeyType="done"
-            onSubmitEditing={handleConfirm}
-          />
+        /* Stacked weight + reps layout for rep-based exercises */
+        <View style={styles.inputColumn}>
+          {/* Weight row with steppers */}
+          <View style={styles.weightRow}>
+            <TouchableOpacity
+              style={[styles.stepperButton, isWeightAtZero && styles.stepperButtonDisabled]}
+              onPress={() => handleStepWeight(-5)}
+              disabled={isWeightAtZero}
+              activeOpacity={0.7}>
+              <Text style={[styles.stepperText, isWeightAtZero && styles.stepperTextDisabled]}>-5</Text>
+            </TouchableOpacity>
+            <TextInput
+              ref={weightRef}
+              style={styles.weightInput}
+              value={weightInput}
+              onChangeText={setWeightInput}
+              placeholder="lb"
+              placeholderTextColor={colors.secondary}
+              keyboardType="decimal-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => repsRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={styles.stepperButton}
+              onPress={() => handleStepWeight(5)}
+              activeOpacity={0.7}>
+              <Text style={styles.stepperText}>+5</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Reps row */}
+          <View style={styles.repsRow}>
+            <TextInput
+              ref={repsRef}
+              style={styles.repsInput}
+              value={repsInput}
+              onChangeText={setRepsInput}
+              placeholder="reps"
+              placeholderTextColor={colors.secondary}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              onSubmitEditing={handleConfirm}
+            />
+          </View>
         </View>
       )}
 
@@ -258,24 +295,51 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   setList: {
     maxHeight: 220,
   },
-  inputRow: {
+  inputColumn: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  weightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+  },
+  repsRow: {
+    // reps input stretches full width within the column
+  },
+  stepperButton: {
+    width: 56,
+    height: 48,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperButtonDisabled: {
+    opacity: 0.3,
+  },
+  stepperText: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  stepperTextDisabled: {
+    color: colors.secondary,
   },
   weightInput: {
-    flex: 55,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     fontSize: fontSize.xxl,
@@ -286,9 +350,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   repsInput: {
-    flex: 35,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     fontSize: fontSize.xxl,
@@ -299,22 +362,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   confirmButton: {
-    marginHorizontal: spacing.base,
-    marginBottom: spacing.base,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
     backgroundColor: colors.accent,
     borderRadius: 12,
     paddingVertical: spacing.md,
     alignItems: 'center',
-    minHeight: 48,
+    minHeight: 44,
     justifyContent: 'center' as const,
   },
   confirmButtonDisabled: {
     opacity: 0.5,
   },
   confirmText: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     fontWeight: weightBold,
-    color: colors.background,
+    color: colors.onAccent,
   },
   // Stopwatch styles
   stopwatchContainer: {
@@ -356,7 +419,7 @@ const styles = StyleSheet.create({
   stopwatchButtonText: {
     fontSize: fontSize.md,
     fontWeight: weightBold,
-    color: colors.background,
+    color: colors.onAccent,
   },
   stopwatchResetButton: {
     borderRadius: 12,
