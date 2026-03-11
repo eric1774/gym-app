@@ -47,7 +47,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Reduce friction on set logging, add motivation through PR detection, and surface workout intelligence (volume, summaries, calendar, supersets).
 
-- [ ] **Phase 9: Faster Set Logging** - Weight steppers, auto-fill fix, and haptic feedback throughout workout flow
+- [x] **Phase 9: Faster Set Logging** - Weight steppers, auto-fill fix, and haptic feedback throughout workout flow (completed 2026-03-10)
 - [ ] **Phase 10: PR Detection & Volume Tracking** - Animated PR toast with double haptic, running volume total in workout header
 - [ ] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration
 - [ ] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout
@@ -83,7 +83,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md -- Weight steppers, auto-fill fix, and haptic feedback
+- [x] 09-01-PLAN.md -- Weight steppers, auto-fill fix, and haptic feedback
 
 ### Phase 10: PR Detection & Volume Tracking
 **Goal**: Users receive immediate celebration when setting a personal record and can see their running session volume at all times
@@ -149,7 +149,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 6. Protein Intake Chart | v1.1 | 1/1 | Complete | 2026-03-08 |
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
-| 9. Faster Set Logging | v1.3 | 0/1 | Not started | - |
+| 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
 | 10. PR Detection & Volume Tracking | v1.3 | 0/? | Not started | - |
 | 11. Quick-Start & Rest Timer | v1.3 | 0/? | Not started | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |

@@ -1,64 +1,95 @@
 # Requirements: GymTrack
 
-**Defined:** 2026-03-07
-**Core Value:** Fast, frictionless set logging mid-workout
+**Defined:** 2026-03-10
+**Core Value:** Fast, frictionless set logging mid-workout — log weight + reps in two taps, start your rest timer, and get back to lifting.
 
-## v1.2 Requirements
+## v1.3 Requirements
 
-Requirements for Meal Library milestone. Each maps to roadmap phases.
+Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap phases.
+
+### Set Logging
+
+- [x] **LOG-01**: User can tap +/-5 buttons to increment/decrement weight without typing
+- [x] **LOG-02**: User sees weight input pre-filled from most recent intra-session set when re-expanding the logging panel
+- [x] **LOG-03**: User feels haptic feedback on set confirm, exercise complete, and end workout
+
+### Records
+
+- [ ] **REC-01**: User sees an animated PR toast when logging a set that exceeds all previous weight+reps for that exercise
+- [ ] **REC-02**: User feels double haptic feedback when a PR is detected
+- [ ] **REC-03**: User can see running total volume (weight x reps) in the workout header during a session
 
 ### Navigation
 
-- [x] **NAV-02**: User can tap a "Meals" button on the Protein screen (below Add Meal) to navigate to the Meal Library screen
+- [ ] **NAV-01**: User can see a "Next Workout" card on the dashboard showing the next unfinished program day
+- [ ] **NAV-02**: User can tap the Next Workout card to start a workout session in one tap
 
-### Meal Library Management
+### Rest Timer
 
-- [x] **LIB-01**: User can view a list of saved meals organized by meal type (Breakfast / Lunch / Dinner / Snack)
-- [x] **LIB-02**: User can add a new meal to the library with name, protein grams, and meal type
-- [x] **LIB-03**: User can swipe to delete a meal from the library
+- [ ] **REST-01**: User can see the configured rest duration per exercise during a workout
+- [ ] **REST-02**: User can edit rest duration per exercise during a workout
+- [ ] **REST-03**: Rest timer uses the exercise-specific duration when started
 
-### Quick Logging
+### Summary
 
-- [x] **LOG-01**: User can tap a meal in the library to instantly add it to today's protein tracking (one-tap, no confirmation)
+- [ ] **SUM-01**: User sees a workout completion summary after ending a workout (duration, sets, volume, exercises, PRs)
+- [ ] **SUM-02**: User can dismiss the summary to return to the workout screen
 
-## v1.1 Requirements (Shipped)
+### Calendar
+
+- [ ] **CAL-01**: User can view a monthly calendar grid showing which days had workouts
+- [ ] **CAL-02**: User can navigate between months
+- [ ] **CAL-03**: User can tap a day to see session details (duration, exercise count, volume, program day)
+
+### Supersets
+
+- [ ] **SUP-01**: User can group 2-3 exercises as a superset within a program day
+- [ ] **SUP-02**: User can see superset grouping visually during a workout
+- [ ] **SUP-03**: After logging a set in a superset, the next exercise in the group auto-expands
+- [ ] **SUP-04**: Rest timer starts after the last exercise in a superset group
+
+## Previous Milestones (Shipped)
 
 <details>
-<summary>All 15 requirements complete</summary>
+<summary>v1.2 Meal Library — 5 requirements complete</summary>
 
-### Navigation
-
-- [x] **NAV-01**: User can see a "Protein" tab with carrot icon in bottom navigation
-
-### Daily Goal
-
-- [x] **GOAL-01**: User can set a daily protein goal (e.g., 200g)
-- [x] **GOAL-02**: User can see a progress bar that fills as meals are logged throughout the day
-- [x] **GOAL-03**: Progress bar resets at midnight for each new day
-
-### Meal Logging
-
-- [x] **MEAL-01**: User can tap "Add Meal" to open a modal with protein amount (grams) and description fields
-- [x] **MEAL-02**: User can view today's logged meals below the Add Meal button
-- [x] **MEAL-03**: User can edit a meal's description, amount, or date from the history view
-- [x] **MEAL-04**: User can delete a meal entry from the history view
-- [x] **MEAL-05**: User can re-log a frequent meal with one tap via quick-add buttons
-
-### Visualization
-
-- [x] **VIS-01**: User can view a line chart of daily protein totals
-- [x] **VIS-02**: User can filter the chart by day, week, or month
-- [x] **VIS-03**: User can see a streak indicator showing consecutive days meeting their goal
-- [x] **VIS-04**: User can see a rolling 7-day average of protein intake
-
-### Data Infrastructure
-
-- [x] **DATA-01**: Protein data persists in local SQLite with proper schema migration
-- [x] **DATA-02**: Daily aggregation uses local date (not UTC) for correct day boundaries
+- [x] **NAV-02**: User can tap a "Meals" button on the Protein screen to navigate to the Meal Library screen
+- [x] **LIB-01**: User can view a list of saved meals organized by meal type
+- [x] **LIB-02**: User can add a new meal to the library with name, protein grams, and meal type
+- [x] **LIB-03**: User can swipe to delete a meal from the library
+- [x] **LOG-01**: User can tap a meal in the library to instantly add it to today's protein tracking
 
 </details>
 
-## v2 Requirements
+<details>
+<summary>v1.1 Protein Tracking — 15 requirements complete</summary>
+
+- [x] **NAV-01**: User can see a "Protein" tab with carrot icon in bottom navigation
+- [x] **GOAL-01**: User can set a daily protein goal
+- [x] **GOAL-02**: User can see a progress bar that fills as meals are logged
+- [x] **GOAL-03**: Progress bar resets at midnight for each new day
+- [x] **MEAL-01**: User can tap "Add Meal" to open a modal with protein amount and description
+- [x] **MEAL-02**: User can view today's logged meals
+- [x] **MEAL-03**: User can edit a meal's description, amount, or date
+- [x] **MEAL-04**: User can delete a meal entry
+- [x] **MEAL-05**: User can re-log a frequent meal with one tap via quick-add buttons
+- [x] **VIS-01**: User can view a line chart of daily protein totals
+- [x] **VIS-02**: User can filter the chart by day, week, or month
+- [x] **VIS-03**: User can see a streak indicator
+- [x] **VIS-04**: User can see a rolling 7-day average
+- [x] **DATA-01**: Protein data persists in local SQLite with proper schema migration
+- [x] **DATA-02**: Daily aggregation uses local date for correct day boundaries
+
+</details>
+
+## Future Requirements
+
+### Workout Notes
+
+- **NOTE-01**: User can add notes to a workout session
+- **NOTE-02**: User can add notes to an individual exercise session
+- **NOTE-03**: Notes display a dot badge when content exists
+- **NOTE-04**: DB migration v5 adds notes columns to workout_sessions and exercise_sessions
 
 ### Nutrition Expansion
 
@@ -69,15 +100,14 @@ Requirements for Meal Library milestone. Each maps to roadmap phases.
 
 | Feature | Reason |
 |---------|--------|
-| Meal editing in library | Keep simple — delete and re-add if wrong |
-| Food database / barcode scanning | Violates local-only constraint, 10x scope increase |
-| Full macro tracking (carbs, fats, calories) | Deferred to v2 — protein-only keeps scope tight |
-| AI photo meal logging | Requires cloud services, violates offline constraint |
+| Social/sharing features | Solo personal use only |
+| Cloud sync or internet | Fully local app |
+| iOS support | Android only for now |
+| AI program suggestions | User builds their own programs |
+| Workout notes (v1.3) | Deferred — not critical for workout intelligence |
+| Food database / barcode scanning | Violates local-only constraint |
+| AI photo meal logging | Requires cloud services |
 | Meal planning / recipes | Out of domain — this is tracking, not planning |
-| Social sharing of protein stats | Solo personal use only (project constraint) |
-| Calorie tracking beyond protein | Protein-only focus per v1.1 scope |
-| Meal photos | Adds complexity without core value |
-| Import/export meal library | Future consideration |
 
 ## Traceability
 
@@ -85,17 +115,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NAV-02 | Phase 8 | Complete |
-| LIB-01 | Phase 8 | Complete |
-| LIB-02 | Phase 8 | Complete |
-| LIB-03 | Phase 8 | Complete |
-| LOG-01 | Phase 8 | Complete |
+| LOG-01 | Phase 9 | Complete |
+| LOG-02 | Phase 9 | Complete |
+| LOG-03 | Phase 9 | Complete |
+| REC-01 | Phase 10 | Pending |
+| REC-02 | Phase 10 | Pending |
+| REC-03 | Phase 10 | Pending |
+| NAV-01 | Phase 11 | Pending |
+| NAV-02 | Phase 11 | Pending |
+| REST-01 | Phase 11 | Pending |
+| REST-02 | Phase 11 | Pending |
+| REST-03 | Phase 11 | Pending |
+| SUM-01 | Phase 12 | Pending |
+| SUM-02 | Phase 12 | Pending |
+| CAL-01 | Phase 13 | Pending |
+| CAL-02 | Phase 13 | Pending |
+| CAL-03 | Phase 13 | Pending |
+| SUP-01 | Phase 14 | Pending |
+| SUP-02 | Phase 14 | Pending |
+| SUP-03 | Phase 14 | Pending |
+| SUP-04 | Phase 14 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 5 total
-- Mapped to phases: 5
-- Unmapped: 0
+- v1.3 requirements: 20 total
+- Mapped to phases: 20
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-07*
-*Last updated: 2026-03-09 after v1.2 roadmap created*
+*Requirements defined: 2026-03-10*
+*Last updated: 2026-03-10 after v1.3 roadmap creation*
