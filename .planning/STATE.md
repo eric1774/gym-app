@@ -3,11 +3,27 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Workout Intelligence & Speed
 status: ready_to_plan
-stopped_at: Phase 10 execution complete — all plans done, device verified, pending phase verification
-last_updated: "2026-03-12T01:02:04.589Z"
+stopped_at: Completed 11-01-PLAN.md — Next Workout Card built and committed
+last_updated: "2026-03-12T01:38:40.491Z"
 last_activity: 2026-03-12 — Phase 10 plans 01+02 completed and device-verified
 progress:
   total_phases: 7
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 6
+  percent: 93
+---
+
+---
+gsd_state_version: 1.0
+milestone: v1.3
+milestone_name: Workout Intelligence & Speed
+status: ready_to_plan
+stopped_at: Phase 11 context gathered
+last_updated: "2026-03-12T01:20:46.424Z"
+last_activity: 2026-03-12 — Phase 10 plans 01+02 completed and device-verified
+progress:
+  [█████████░] 93%
   completed_phases: 3
   total_plans: 5
   completed_plans: 5
@@ -109,6 +125,7 @@ Progress: [██████████] 100%
 | Phase 09-faster-set-logging P01 | ~25min | 3 tasks | 2 files |
 | Phase 10-pr-detection-volume-tracking P01 | 2min | 2 tasks | 3 files |
 | Phase 10-pr-detection-volume-tracking P02 | 5min | 1 tasks | 1 files |
+| Phase 11-quick-start-rest-timer P01 | 18min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -125,6 +142,9 @@ Progress: [██████████] 100%
 - [Phase 10-02]: Volume text shows empty string when 0 — avoids visual noise on session start before any sets logged
 - [Phase 10-02]: checkForPR runs inside .then() from synchronous useCallback — avoids making handleSetLogged async
 - [Phase 10-02]: Double haptic uses notificationSuccess (stronger) not impactMedium — distinct from set confirm haptic
+- [Phase 11-01]: Active session tapping Continue navigates to WorkoutTab without creating a new session
+- [Phase 11-01]: Next Workout card hidden entirely when no activated programs exist
+- [Phase 11-01]: All-days-done fallback: shows first day of program as next workout (always actionable)
 
 ### Pending Todos
 
@@ -136,6 +156,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-12T01:00:00.000Z
-Stopped at: Phase 10 execution complete — all plans done, device verified, pending phase verification
+Last session: 2026-03-12T01:38:40.487Z
+Stopped at: Completed 11-01-PLAN.md — Next Workout Card built and committed
 Resume file: None

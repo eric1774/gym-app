@@ -21,8 +21,8 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 
 ### Navigation
 
-- [ ] **NAV-01**: User can see a "Next Workout" card on the dashboard showing the next unfinished program day
-- [ ] **NAV-02**: User can tap the Next Workout card to start a workout session in one tap
+- [x] **NAV-01**: User can see a "Next Workout" card on the dashboard showing the next unfinished program day
+- [x] **NAV-02**: User can tap the Next Workout card to start a workout session in one tap
 
 ### Rest Timer
 
@@ -121,8 +121,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REC-01 | Phase 10 | Complete |
 | REC-02 | Phase 10 | Complete |
 | REC-03 | Phase 10 | Complete |
-| NAV-01 | Phase 11 | Pending |
-| NAV-02 | Phase 11 | Pending |
+| NAV-01 | Phase 11 | Complete |
+| NAV-02 | Phase 11 | Complete |
 | REST-01 | Phase 11 | Pending |
 | REST-02 | Phase 11 | Pending |
 | REST-03 | Phase 11 | Pending |

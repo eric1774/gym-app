@@ -159,7 +159,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
 | 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
-| 11. Quick-Start & Rest Timer | v1.3 | 0/2 | Planned | - |
+| 11. Quick-Start & Rest Timer | 1/2 | In Progress|  | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |
