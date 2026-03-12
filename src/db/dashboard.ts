@@ -13,6 +13,7 @@ import {
   Program,
   ProgramDay,
   ProgramDayExercise,
+  NextWorkoutInfo,
 } from '../types';
 
 // ── Exercise Progress ───────────────────────────────────────────────
@@ -271,6 +272,85 @@ export async function getProgramWeekCompletion(
   return statuses;
 }
 
+// ── Next Workout Day ────────────────────────────────────────────────
+
+/**
+ * Identify the next unfinished program day for the most recently used
+ * activated program. Returns null if no activated programs exist.
+ *
+ * Logic:
+ * 1. Find the most recently used program (via most recent workout session
+ *    with a program_day_id). Fall back to most recently created activated
+ *    program if no sessions exist.
+ * 2. Get week completion status for that program.
+ * 3. Return the first day not yet completed this week.
+ *    If all days are done, return the first day (next week preview).
+ */
+export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
+  const database = await db;
+
+  // Try to find the most recently used activated program via sessions
+  let programId: number | null = null;
+  let programName: string | null = null;
+
+  const recentResult = await executeSql(
+    database,
+    `SELECT DISTINCT p.id, p.name
+     FROM programs p
+     INNER JOIN program_days pd ON pd.program_id = p.id
+     INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
+     WHERE p.start_date IS NOT NULL
+     ORDER BY ws.started_at DESC
+     LIMIT 1`,
+  );
+
+  if (recentResult.rows.length > 0) {
+    const row = recentResult.rows.item(0);
+    programId = row.id;
+    programName = row.name;
+  } else {
+    // Fall back to most recently created activated program
+    const fallbackResult = await executeSql(
+      database,
+      'SELECT id, name FROM programs WHERE start_date IS NOT NULL ORDER BY created_at DESC LIMIT 1',
+    );
+    if (fallbackResult.rows.length === 0) {
+      return null;
+    }
+    const row = fallbackResult.rows.item(0);
+    programId = row.id;
+    programName = row.name;
+  }
+
+  if (programId === null || programName === null) {
+    return null;
+  }
+
+  const dayStatuses = await getProgramWeekCompletion(programId);
+  if (dayStatuses.length === 0) {
+    return null;
+  }
+
+  // Find the first unfinished day; if all done, use first day
+  const nextDay = dayStatuses.find(d => !d.isCompletedThisWeek) ?? dayStatuses[0];
+
+  // Count exercises for the selected day
+  const countResult = await executeSql(
+    database,
+    'SELECT COUNT(*) AS cnt FROM program_day_exercises WHERE program_day_id = ?',
+    [nextDay.dayId],
+  );
+  const exerciseCount = countResult.rows.item(0).cnt as number;
+
+  return {
+    programId,
+    programName,
+    dayId: nextDay.dayId,
+    dayName: nextDay.dayName,
+    exerciseCount,
+  };
+}
+
 /**
  * Unmark a program day as complete by removing all completed sessions for
  * that day within the current week window. Does a fresh DB query so it is
@@ -399,6 +479,7 @@ export async function exportAllData(): Promise<FullDataExport> {
       category: r.category as ExerciseCategory,
       defaultRestSeconds: r.default_rest_seconds,
       isCustom: r.is_custom === 1,
+      measurementType: (r.measurement_type ?? 'reps') as 'reps' | 'timed',
       createdAt: r.created_at,
     });
   }

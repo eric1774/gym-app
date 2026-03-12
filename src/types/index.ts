@@ -113,6 +113,14 @@ export interface ProgramDayCompletionStatus {
   sessionId: number | null;
 }
 
+export interface NextWorkoutInfo {
+  programId: number;
+  programName: string;
+  dayId: number;
+  dayName: string;
+  exerciseCount: number;
+}
+
 export interface SessionTimeSummary {
   totalSeconds: number;
   activeSeconds: number;
