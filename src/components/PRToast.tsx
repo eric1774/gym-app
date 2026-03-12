@@ -43,9 +43,8 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
   // Queue stored in ref — avoids re-renders on enqueue
   const queueRef = useRef<PRItem[]>([]);
 
-  // Currently displayed toast state
+  // Currently displayed toast
   const [currentToast, setCurrentToast] = useState<PRItem | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
 
   // Animated value for translateY — useRef avoids re-renders
   const translateY = useRef(new Animated.Value(TOAST_TRANSLATE_Y_HIDDEN)).current;
@@ -65,19 +64,23 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
     const next = queueRef.current.shift()!;
     isActiveRef.current = true;
 
-    // Reset position before showing
+    // Reset position before showing — animation starts in useEffect after mount
     translateY.setValue(TOAST_TRANSLATE_Y_HIDDEN);
     setCurrentToast(next);
-    setIsVisible(true);
+  }, [translateY]);
 
-    // Slide in
+  // Start slide-in animation AFTER the Animated.View has mounted.
+  // This fixes a race condition where useNativeDriver animation starts
+  // before the native view exists, causing the toast to stay off-screen.
+  useEffect(() => {
+    if (!currentToast) { return; }
+
     Animated.timing(translateY, {
       toValue: 0,
       duration: SLIDE_IN_DURATION,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      // Hold for display duration, then slide out
       dismissTimerRef.current = setTimeout(() => {
         Animated.timing(translateY, {
           toValue: TOAST_TRANSLATE_Y_HIDDEN,
@@ -85,14 +88,20 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }).start(() => {
-          setIsVisible(false);
           setCurrentToast(null);
-          // Check if more items are queued
           dequeueAndShow();
         });
       }, DISPLAY_DURATION_MS);
     });
-  }, [translateY]);
+
+    return () => {
+      translateY.stopAnimation();
+      if (dismissTimerRef.current !== null) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    };
+  }, [currentToast, translateY, dequeueAndShow]);
 
   useImperativeHandle(ref, () => ({
     showPR(exerciseName: string, reps: number, weightKg: number) {
@@ -104,22 +113,8 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
     },
   }), [dequeueAndShow]);
 
-  // Cleanup timer on unmount to avoid setState on unmounted component
-  useEffect(() => {
-    return () => {
-      if (dismissTimerRef.current !== null) {
-        clearTimeout(dismissTimerRef.current);
-      }
-    };
-  }, []);
-
-  if (!isVisible || currentToast === null) {
-    return (
-      <View
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-    );
+  if (!currentToast) {
+    return null;
   }
 
   return (

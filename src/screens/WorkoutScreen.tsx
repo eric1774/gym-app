@@ -313,7 +313,7 @@ export function WorkoutScreen() {
             HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
           }, 400);
         }
-      });
+      }).catch(() => {});
     }
   }, [exercises, session]);
 
