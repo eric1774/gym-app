@@ -54,8 +54,14 @@ function groupByCategory(
   return categoryOrder.map(cat => ({ category: cat, items: categoryMap.get(cat)! }));
 }
 
-/** Format elapsed seconds as MM:SS */
+/** Format elapsed seconds as MM:SS (or H:MM:SS for sessions >= 1 hour) */
 function formatElapsed(seconds: number): string {
+  if (seconds >= 3600) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
@@ -247,6 +253,75 @@ function ExerciseCard({
   );
 }
 
+interface WorkoutSummaryProps {
+  duration: number;
+  totalSets: number;
+  totalVolume: number;
+  exercisesCompleted: number;
+  exercisesTotal: number;
+  prCount: number;
+  onDismiss: () => void;
+}
+
+function WorkoutSummary({
+  duration,
+  totalSets,
+  totalVolume,
+  exercisesCompleted,
+  exercisesTotal,
+  prCount,
+  onDismiss,
+}: WorkoutSummaryProps) {
+  return (
+    <SafeAreaView style={summaryStyles.container} edges={['top', 'bottom']}>
+      <View style={summaryStyles.card}>
+        {/* Heading */}
+        <Text style={summaryStyles.heading}>Workout Complete</Text>
+
+        {/* Stats table */}
+        <View style={summaryStyles.statsContainer}>
+          <View style={summaryStyles.statRow}>
+            <Text style={summaryStyles.statLabel}>Duration</Text>
+            <Text style={summaryStyles.statValue}>{formatElapsed(duration)}</Text>
+          </View>
+
+          <View style={summaryStyles.statRow}>
+            <Text style={summaryStyles.statLabel}>Total Sets</Text>
+            <Text style={summaryStyles.statValue}>{totalSets}</Text>
+          </View>
+
+          <View style={summaryStyles.statRow}>
+            <Text style={summaryStyles.statLabel}>Volume</Text>
+            <Text style={summaryStyles.statValue}>
+              {totalVolume > 0 ? `${totalVolume.toLocaleString()} lbs` : '0 lbs'}
+            </Text>
+          </View>
+
+          <View style={summaryStyles.statRow}>
+            <Text style={summaryStyles.statLabel}>Exercises</Text>
+            <Text style={summaryStyles.statValue}>{exercisesCompleted}/{exercisesTotal}</Text>
+          </View>
+
+          {prCount > 0 && (
+            <View style={summaryStyles.statRow}>
+              <Text style={summaryStyles.prLabel}>{'\uD83C\uDFC6'} PRs</Text>
+              <Text style={summaryStyles.prValue}>{prCount}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Done button */}
+        <TouchableOpacity
+          style={summaryStyles.doneButton}
+          onPress={onDismiss}
+          activeOpacity={0.85}>
+          <Text style={summaryStyles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 export function WorkoutScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<WorkoutStackParamList>>();
@@ -271,6 +346,16 @@ export function WorkoutScreen() {
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const [volumeTotal, setVolumeTotal] = useState(0);
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
+  const [prCount, setPrCount] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryData, setSummaryData] = useState<{
+    duration: number;
+    totalSets: number;
+    totalVolume: number;
+    exercisesCompleted: number;
+    exercisesTotal: number;
+    prCount: number;
+  } | null>(null);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prToastRef = useRef<PRToastHandle>(null);
 
@@ -349,6 +434,7 @@ export function WorkoutScreen() {
 
       checkForPR(exerciseId, set.weightKg, set.reps, session!.id).then(isPR => {
         if (isPR) {
+          setPrCount(prev => prev + 1);
           const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
           prToastRef.current?.showPR(name, set.reps, set.weightKg);
           HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
@@ -421,6 +507,18 @@ export function WorkoutScreen() {
     }, 2000);
   }, []);
 
+  const handleDismissSummary = useCallback(() => {
+    setShowSummary(false);
+    setSummaryData(null);
+    setActiveExerciseId(null);
+    setSetCountsByExercise({});
+    setPendingRestExerciseId(null);
+    setVolumeTotal(0);
+    setRestOverrides({});
+    setPrCount(0);
+    (navigation as any).navigate('DashboardTab');
+  }, [navigation]);
+
   const handleEndWorkout = useCallback(async () => {
     if (!session) { return; }
     const hadActivity = await hasSessionActivity(session.id);
@@ -444,6 +542,7 @@ export function WorkoutScreen() {
               setPendingRestExerciseId(null);
               setVolumeTotal(0);
               setRestOverrides({});
+              setPrCount(0);
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               }
@@ -462,31 +561,46 @@ export function WorkoutScreen() {
             style: 'destructive',
             onPress: async () => {
               HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-              const wasProgramWorkout = !!programDayId;
+              const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
+              const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
+              const exercisesTotal = sessionExercises.length;
+              setSummaryData({
+                duration: elapsed,
+                totalSets,
+                totalVolume: volumeTotal,
+                exercisesCompleted,
+                exercisesTotal,
+                prCount,
+              });
               if (isRunning) { stopTimer(); }
               await endSession();
-              setActiveExerciseId(null);
-              setSetCountsByExercise({});
-              setPendingRestExerciseId(null);
-              setVolumeTotal(0);
-              setRestOverrides({});
-              if (wasProgramWorkout) {
-                (navigation as any).navigate('ProgramsTab');
-              } else {
-                showCompletionMessage('Workout complete!');
-              }
+              setShowSummary(true);
             },
           },
         ],
       );
     }
-  }, [session, endSession, isRunning, stopTimer, showCompletionMessage, programDayId, navigation]);
+  }, [session, endSession, isRunning, stopTimer, programDayId, navigation, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount]);
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.centered} edges={['top']}>
         <ActivityIndicator color={colors.accent} size="large" />
       </SafeAreaView>
+    );
+  }
+
+  if (showSummary && summaryData) {
+    return (
+      <WorkoutSummary
+        duration={summaryData.duration}
+        totalSets={summaryData.totalSets}
+        totalVolume={summaryData.totalVolume}
+        exercisesCompleted={summaryData.exercisesCompleted}
+        exercisesTotal={summaryData.exercisesTotal}
+        prCount={summaryData.prCount}
+        onDismiss={handleDismissSummary}
+      />
     );
   }
 
@@ -889,5 +1003,76 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.onAccent,
     lineHeight: fontSize.xl + 4,
+  },
+});
+
+const summaryStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.xl,
+    width: '100%',
+    maxWidth: 360,
+  },
+  heading: {
+    fontSize: fontSize.xl,
+    fontWeight: weightBold,
+    color: colors.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  statsContainer: {
+    marginBottom: spacing.xl,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  statLabel: {
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+    color: colors.secondary,
+  },
+  statValue: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  prLabel: {
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+    color: colors.prGold,
+  },
+  prValue: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.prGold,
+  },
+  doneButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.base,
+    alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  doneButtonText: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.onAccent,
   },
 });

@@ -122,7 +122,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. After tapping "End Workout," a summary screen appears showing session duration, total sets, total volume, exercises completed, and PRs hit during the session
   2. User can tap a dismiss button to leave the summary and return to an empty workout screen
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 12-01-PLAN.md -- Summary card with stats (duration, sets, volume, exercises, PRs), Done-to-Dashboard navigation
 
 ### Phase 13: Calendar View
 **Goal**: Users can see their full training history laid out on a monthly calendar and drill into any day's session details
@@ -159,7 +162,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
 | 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
-| 11. Quick-Start & Rest Timer | 2/2 | Complete   | 2026-03-12 | - |
-| 12. Workout Summary | v1.3 | 0/? | Not started | - |
+| 11. Quick-Start & Rest Timer | 2/2 | Complete    | 2026-03-12 | - |
+| 12. Workout Summary | v1.3 | 0/1 | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |
