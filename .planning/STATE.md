@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Workout Intelligence & Speed
 status: ready_to_plan
-stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-03-12T01:40:19.030Z"
+stopped_at: "Completed 12-01 tasks 1+2, awaiting checkpoint:human-verify for Task 3"
+last_updated: "2026-03-12T23:08:07.139Z"
 last_activity: 2026-03-12 — Phase 10 plans 01+02 completed and device-verified
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
   percent: 93
 ---
 
@@ -127,6 +127,7 @@ Progress: [██████████] 100%
 | Phase 10-pr-detection-volume-tracking P02 | 5min | 1 tasks | 1 files |
 | Phase 11-quick-start-rest-timer P01 | 18min | 2 tasks | 3 files |
 | Phase 11-quick-start-rest-timer P02 | 4min | 2 tasks | 3 files |
+| Phase 12-workout-summary P01 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -149,6 +150,9 @@ Progress: [██████████] 100%
 - [Phase 11-quick-start-rest-timer]: restOverrides local map avoids needing a new SessionContext method for optimistic rest duration update
 - [Phase 11-quick-start-rest-timer]: handleStartRest priority: restOverrides > sessionExercises.restSeconds > exercise.defaultRestSeconds > 90
 - [Phase 11-quick-start-rest-timer]: Both exercises.default_rest_seconds and exercise_sessions.rest_seconds updated simultaneously on stepper change
+- [Phase 12-01]: Done button always navigates to DashboardTab regardless of program vs ad-hoc workout
+- [Phase 12-01]: WorkoutSummary is purely in-memory — no new files, no DB changes
+- [Phase 12-01]: Empty sessions (zero sets) skip summary entirely — discard path never sets showSummary
 
 ### Pending Todos
 
@@ -160,6 +164,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-12T01:40:19.026Z
-Stopped at: Completed 11-02-PLAN.md
+Last session: 2026-03-12T23:08:07.135Z
+Stopped at: Completed 12-01 tasks 1+2, awaiting checkpoint:human-verify for Task 3
 Resume file: None
