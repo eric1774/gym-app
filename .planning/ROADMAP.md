@@ -96,8 +96,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md -- PR detection query, PRToast component, prGold theme color
-- [ ] 10-02-PLAN.md -- Wire PR check, double haptic, and volume total into WorkoutScreen
+- [x] 10-01-PLAN.md -- PR detection query, PRToast component, prGold theme color
+- [x] 10-02-PLAN.md -- Wire PR check, double haptic, and volume total into WorkoutScreen
 
 ### Phase 11: Quick-Start & Rest Timer
 **Goal**: Users can start their next workout from the dashboard in one tap and configure rest duration per exercise during a session
@@ -154,7 +154,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
-| 10. PR Detection & Volume Tracking | 2/2 | Complete   | 2026-03-12 | - |
+| 10. PR Detection & Volume Tracking | v1.3 | Complete    | 2026-03-12 | 2026-03-12 |
 | 11. Quick-Start & Rest Timer | v1.3 | 0/? | Not started | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |
