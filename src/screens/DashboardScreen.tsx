@@ -1,21 +1,23 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Platform,
-  SectionList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getRecentlyTrainedExercises } from '../db/dashboard';
+import { getRecentlyTrainedExercises, getNextWorkoutDay } from '../db/dashboard';
+import { getProgramDayExercises } from '../db/programs';
+import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
-import { DashboardStackParamList } from '../navigation/TabNavigator';
-import { ExerciseCategory } from '../types';
+import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
+import { ExerciseCategory, NextWorkoutInfo, Exercise } from '../types';
+import { useSession } from '../context/SessionContext';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
@@ -27,11 +29,14 @@ interface RecentExercise {
   measurementType: string;
 }
 
-interface SubCategorySection {
-  groupTitle: string;
-  subCategory: string;
-  isFirstInGroup: boolean;
-  data: RecentExercise[];
+interface SubCategory {
+  name: string;
+  exercises: RecentExercise[];
+}
+
+interface GroupData {
+  title: string;
+  subCategories: SubCategory[];
 }
 
 const CATEGORY_GROUP_ORDER: { title: string; categories: ExerciseCategory[] }[] = [
@@ -40,24 +45,24 @@ const CATEGORY_GROUP_ORDER: { title: string; categories: ExerciseCategory[] }[] 
   { title: 'CARDIO & CONDITIONING', categories: ['conditioning'] },
 ];
 
-function groupBySubCategory(exercises: RecentExercise[]): SubCategorySection[] {
-  const sections: SubCategorySection[] = [];
+function groupByCategory(exercises: RecentExercise[]): GroupData[] {
+  const groups: GroupData[] = [];
   for (const group of CATEGORY_GROUP_ORDER) {
-    let isFirst = true;
+    const subCategories: SubCategory[] = [];
     for (const cat of group.categories) {
       const data = exercises.filter(ex => ex.category === cat);
       if (data.length > 0) {
-        sections.push({
-          groupTitle: group.title,
-          subCategory: cat.charAt(0).toUpperCase() + cat.slice(1),
-          isFirstInGroup: isFirst,
-          data,
+        subCategories.push({
+          name: cat.charAt(0).toUpperCase() + cat.slice(1),
+          exercises: data,
         });
-        isFirst = false;
       }
     }
+    if (subCategories.length > 0) {
+      groups.push({ title: group.title, subCategories });
+    }
   }
-  return sections;
+  return groups;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -77,17 +82,41 @@ function formatRelativeTime(dateStr: string): string {
   return diffMonths + 'mo ago';
 }
 
+function formatElapsed(s: number): string {
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
+  const { session, startSessionFromProgramDay } = useSession();
   const [exercises, setExercises] = useState<RecentExercise[]>([]);
+  const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
+  const [activeElapsed, setActiveElapsed] = useState(0);
+
+  // Elapsed timer for active session state
+  useEffect(() => {
+    if (!session) { setActiveElapsed(0); return; }
+    const tick = () => {
+      setActiveElapsed(Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [session]);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
         try {
-          const result = await getRecentlyTrainedExercises();
-          if (!cancelled) { setExercises(result); }
+          const [result, nextDay] = await Promise.all([
+            getRecentlyTrainedExercises(),
+            getNextWorkoutDay(),
+          ]);
+          if (!cancelled) {
+            setExercises(result);
+            setNextWorkout(nextDay);
+          }
         } catch {
           // ignore
         }
@@ -96,7 +125,7 @@ export function DashboardScreen() {
     }, []),
   );
 
-  const sections = useMemo(() => groupBySubCategory(exercises), [exercises]);
+  const groups = useMemo(() => groupByCategory(exercises), [exercises]);
 
   const handlePress = useCallback(
     (item: RecentExercise) => {
@@ -109,37 +138,73 @@ export function DashboardScreen() {
     [navigation],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: RecentExercise }) => (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.7}
-        onPress={() => handlePress(item)}>
-        <View style={styles.cardRow}>
-          <Text style={styles.exerciseName}>{item.exerciseName}</Text>
-          <Text style={styles.timeAgo}>{formatRelativeTime(item.lastTrainedAt)}</Text>
-        </View>
-        <Text style={styles.category}>{item.category}</Text>
-      </TouchableOpacity>
-    ),
-    [handlePress],
-  );
-
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: SubCategorySection }) => (
-      <View>
-        {section.isFirstInGroup && (
-          <Text style={styles.groupHeader}>{section.groupTitle}</Text>
-        )}
-        <Text style={styles.subCategoryHeader}>{section.subCategory}</Text>
-      </View>
-    ),
-    [],
-  );
+  const handleQuickStart = useCallback(async () => {
+    try {
+      const parent = navigation.getParent<NavigationProp<TabParamList>>();
+      if (session) {
+        // Active session — navigate to WorkoutTab without creating a new session
+        if (parent) { parent.navigate('WorkoutTab'); }
+        return;
+      }
+      if (!nextWorkout) { return; }
+      const [pdes, allExercises] = await Promise.all([
+        getProgramDayExercises(nextWorkout.dayId),
+        getExercises(),
+      ]);
+      const exerciseMap = new Map<number, Exercise>();
+      for (const ex of allExercises) {
+        exerciseMap.set(ex.id, ex);
+      }
+      const exerciseObjects = pdes
+        .map(pde => exerciseMap.get(pde.exerciseId))
+        .filter((ex): ex is Exercise => ex !== undefined);
+      if (exerciseObjects.length === 0) { return; }
+      await startSessionFromProgramDay(nextWorkout.dayId, exerciseObjects);
+      if (parent) { parent.navigate('WorkoutTab'); }
+    } catch {
+      // ignore
+    }
+  }, [session, nextWorkout, startSessionFromProgramDay, navigation]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.title}>Dashboard</Text>
+
+      {/* Next Workout Card — only shown when an activated program exists */}
+      {nextWorkout !== null && (
+        <View style={styles.nextWorkoutCard}>
+          {session ? (
+            /* Active state */
+            <>
+              <View style={styles.nextWorkoutActiveHeader}>
+                <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
+                <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.nextWorkoutButton}
+                activeOpacity={0.7}
+                onPress={handleQuickStart}>
+                <Text style={styles.nextWorkoutButtonText}>Continue</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            /* Idle state */
+            <>
+              <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
+              <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
+              <Text style={styles.nextWorkoutMeta}>
+                {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
+              </Text>
+              <TouchableOpacity
+                style={styles.nextWorkoutButton}
+                activeOpacity={0.7}
+                onPress={handleQuickStart}>
+                <Text style={styles.nextWorkoutButtonText}>Start</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
 
       {exercises.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -148,14 +213,48 @@ export function DashboardScreen() {
           </Text>
         </View>
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={item => String(item.exerciseId)}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          contentContainerStyle={styles.list}
-          stickySectionHeadersEnabled={false}
-        />
+        <ScrollView contentContainerStyle={styles.list}>
+          {groups.map(group => (
+            <View key={group.title} style={styles.groupWrapper}>
+              {/* Group header strip */}
+              <View style={styles.groupHeaderStrip}>
+                <Text style={styles.groupHeader}>{group.title}</Text>
+              </View>
+
+              {/* Surface container with all sub-categories */}
+              <View style={styles.surfaceContainer}>
+                {group.subCategories.map((sub, subIdx) => (
+                  <View key={sub.name}>
+                    {/* Sub-category label */}
+                    <Text style={[
+                      styles.subCategoryHeader,
+                      subIdx > 0 && styles.subCategorySpacing,
+                    ]}>
+                      {sub.name}
+                    </Text>
+
+                    {/* Exercise cards */}
+                    {sub.exercises.map(item => (
+                      <TouchableOpacity
+                        key={item.exerciseId}
+                        style={styles.card}
+                        activeOpacity={0.7}
+                        onPress={() => handlePress(item)}>
+                        <View style={styles.cardRow}>
+                          <Text style={styles.exerciseName}>{item.exerciseName}</Text>
+                          <Text style={styles.timeAgo}>
+                            {formatRelativeTime(item.lastTrainedAt)}
+                          </Text>
+                        </View>
+                        <Text style={styles.category}>{item.category}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -178,41 +277,126 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.xxl,
   },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xxl,
+  },
+  emptyText: {
+    color: colors.secondary,
+    fontSize: fontSize.base,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  /* ── Next Workout Card ───────────────────────────────────────────── */
+  nextWorkoutCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.base,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+  },
+  nextWorkoutLabel: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs,
+  },
+  nextWorkoutActiveLabel: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    letterSpacing: 1.2,
+  },
+  nextWorkoutActiveHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  nextWorkoutElapsed: {
+    color: colors.primary,
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    letterSpacing: 2,
+  },
+  nextWorkoutDayName: {
+    color: colors.primary,
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    marginBottom: spacing.xs,
+  },
+  nextWorkoutMeta: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+  },
+  nextWorkoutButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  nextWorkoutButtonText: {
+    color: colors.onAccent,
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+  },
+
+  /* ── Group ──────────────────────────────────────────────── */
+  groupWrapper: {
+    marginBottom: spacing.lg,
+  },
+  groupHeaderStrip: {
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   groupHeader: {
     color: colors.secondary,
     fontSize: fontSize.sm,
     fontWeight: weightBold,
     letterSpacing: 1.2,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xs,
   },
+
+  /* ── Surface container ──────────────────────────────────── */
+  surfaceContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.base,
+  },
+
+  /* ── Sub-category ───────────────────────────────────────── */
   subCategoryHeader: {
-    color: colors.accent,
+    color: colors.secondary,
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
-    marginTop: spacing.sm,
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
+  subCategorySpacing: {
+    marginTop: spacing.base,
+  },
+
+  /* ── Exercise card ──────────────────────────────────────── */
   card: {
     backgroundColor: colors.surfaceElevated,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: spacing.base,
     marginBottom: spacing.sm,
-    minHeight: 48,
-    ...Platform.select({
-      android: {
-        elevation: 8,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      },
-    }),
   },
   cardRow: {
     flexDirection: 'row',
@@ -235,17 +419,5 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     fontSize: fontSize.sm,
     textTransform: 'capitalize',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
-  emptyText: {
-    color: colors.secondary,
-    fontSize: fontSize.base,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });
