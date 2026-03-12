@@ -103,6 +103,19 @@ export async function updateExercise(
   return rowToExercise(row.rows.item(0));
 }
 
+/** Update an exercise's default rest duration (seconds). */
+export async function updateDefaultRestSeconds(
+  exerciseId: number,
+  restSeconds: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE exercises SET default_rest_seconds = ? WHERE id = ?',
+    [restSeconds, exerciseId],
+  );
+}
+
 /** Case-insensitive name search across all categories. */
 export async function searchExercises(query: string): Promise<Exercise[]> {
   const database = await db;

@@ -183,6 +183,20 @@ export async function deleteSession(sessionId: number): Promise<void> {
   await executeSql(database, 'DELETE FROM workout_sessions WHERE id = ?', [sessionId]);
 }
 
+/** Update rest_seconds for an exercise within a specific session. */
+export async function updateSessionRestSeconds(
+  sessionId: number,
+  exerciseId: number,
+  restSeconds: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE exercise_sessions SET rest_seconds = ? WHERE session_id = ? AND exercise_id = ?',
+    [restSeconds, sessionId, exerciseId],
+  );
+}
+
 /**
  * Set completed_at back to NULL on a session (uncomplete it).
  */
