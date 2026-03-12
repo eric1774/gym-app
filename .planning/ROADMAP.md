@@ -109,7 +109,11 @@ Plans:
   3. Each exercise card in the workout screen shows its configured rest duration (e.g., "Rest: 90s")
   4. User can tap the rest duration label to edit it inline during a workout
   5. When the user starts the rest timer after a set, it counts down using the exercise-specific duration
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md -- Next Workout card on dashboard with quick-start and active session state
+- [ ] 11-02-PLAN.md -- Per-exercise rest duration display, +/-15s steppers, and timer integration
 
 ### Phase 12: Workout Summary
 **Goal**: Users see a satisfying summary of their completed workout before returning to the home screen
@@ -154,8 +158,8 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
-| 10. PR Detection & Volume Tracking | v1.3 | Complete    | 2026-03-12 | 2026-03-12 |
-| 11. Quick-Start & Rest Timer | v1.3 | 0/? | Not started | - |
+| 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
+| 11. Quick-Start & Rest Timer | v1.3 | 0/2 | Planned | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |
