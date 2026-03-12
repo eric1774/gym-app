@@ -27,8 +27,9 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
 import { getProgramDayExercises } from '../db/programs';
 import { getExerciseHistory } from '../db/dashboard';
-import { hasSessionActivity } from '../db/sessions';
+import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { checkForPR } from '../db/sets';
+import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
@@ -116,11 +117,13 @@ interface ExerciseCardProps {
   pendingRest: boolean;
   programTarget: ProgramTarget | null;
   measurementType: ExerciseMeasurementType;
+  restSeconds: number;
   onPress: () => void;
   onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
   onStartRest: () => void;
   onViewHistory: () => void;
+  onRestChange: (newRestSeconds: number) => void;
 }
 
 function ExerciseCard({
@@ -132,13 +135,16 @@ function ExerciseCard({
   pendingRest,
   programTarget,
   measurementType,
+  restSeconds,
   onPress,
   onToggleComplete,
   onSetLogged,
   onStartRest,
   onViewHistory,
+  onRestChange,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
+  const [restStepperVisible, setRestStepperVisible] = useState(false);
 
   return (
     <TouchableOpacity
@@ -184,6 +190,42 @@ function ExerciseCard({
 
       {isActive && (
         <View style={styles.cardExpanded}>
+          {/* Rest duration label + stepper */}
+          <TouchableOpacity
+            style={styles.restLabelRow}
+            onPress={() => setRestStepperVisible(v => !v)}
+            activeOpacity={0.7}>
+            <Text style={styles.restLabelText}>Rest: {restSeconds}s</Text>
+          </TouchableOpacity>
+          {restStepperVisible && (
+            <View style={styles.restStepperRow}>
+              <TouchableOpacity
+                style={[styles.restStepperButton, restSeconds <= 30 && styles.restStepperButtonDisabled]}
+                onPress={() => {
+                  if (restSeconds > 30) {
+                    onRestChange(restSeconds - 15);
+                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
+                  }
+                }}
+                disabled={restSeconds <= 30}
+                activeOpacity={0.7}>
+                <Text style={[styles.restStepperText, restSeconds <= 30 && styles.restStepperTextDisabled]}>-15</Text>
+              </TouchableOpacity>
+              <Text style={styles.restStepperValue}>{restSeconds}s</Text>
+              <TouchableOpacity
+                style={[styles.restStepperButton, restSeconds >= 180 && styles.restStepperButtonDisabled]}
+                onPress={() => {
+                  if (restSeconds < 180) {
+                    onRestChange(restSeconds + 15);
+                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
+                  }
+                }}
+                disabled={restSeconds >= 180}
+                activeOpacity={0.7}>
+                <Text style={[styles.restStepperText, restSeconds >= 180 && styles.restStepperTextDisabled]}>+15</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <SetLoggingPanel
             sessionId={sessionId}
             exerciseId={exerciseSession.exerciseId}
@@ -228,6 +270,7 @@ export function WorkoutScreen() {
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const [volumeTotal, setVolumeTotal] = useState(0);
+  const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prToastRef = useRef<PRToastHandle>(null);
 
@@ -317,14 +360,34 @@ export function WorkoutScreen() {
     }
   }, [exercises, session]);
 
+  const handleRestChange = useCallback(
+    (exerciseId: number, newRestSeconds: number) => {
+      const clamped = Math.max(30, Math.min(180, newRestSeconds));
+      setRestOverrides(prev => ({ ...prev, [exerciseId]: clamped }));
+
+      // Persist to both tables — fire and forget
+      if (session) {
+        updateSessionRestSeconds(session.id, exerciseId, clamped).catch(() => {});
+        updateDefaultRestSeconds(exerciseId, clamped).catch(() => {});
+      }
+    },
+    [session],
+  );
+
   const handleStartRest = useCallback(
     (exerciseId: number) => {
-      const exercise = exercises.find(ex => ex.id === exerciseId);
-      const duration = exercise?.defaultRestSeconds ?? 90;
-      startTimer(duration);
+      // Prefer local override, fall back to session rest, then exercise default, then 90
+      const override = restOverrides[exerciseId];
+      if (override !== undefined) {
+        startTimer(override);
+      } else {
+        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
+        const duration = se?.restSeconds ?? exercises.find(ex => ex.id === exerciseId)?.defaultRestSeconds ?? 90;
+        startTimer(duration);
+      }
       setPendingRestExerciseId(null);
     },
-    [exercises, startTimer],
+    [restOverrides, sessionExercises, exercises, startTimer],
   );
 
   const handleViewHistory = useCallback(
@@ -380,6 +443,7 @@ export function WorkoutScreen() {
               setSetCountsByExercise({});
               setPendingRestExerciseId(null);
               setVolumeTotal(0);
+              setRestOverrides({});
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               }
@@ -405,6 +469,7 @@ export function WorkoutScreen() {
               setSetCountsByExercise({});
               setPendingRestExerciseId(null);
               setVolumeTotal(0);
+              setRestOverrides({});
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               } else {
@@ -518,11 +583,13 @@ export function WorkoutScreen() {
                       pendingRest={pendingRestExerciseId === se.exerciseId}
                       programTarget={programTargetsMap.get(se.exerciseId) ?? null}
                       measurementType={exercise?.measurementType ?? 'reps'}
+                      restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
                       onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
                       onToggleComplete={() => handleToggleComplete(se.exerciseId)}
                       onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
                       onStartRest={() => handleStartRest(se.exerciseId)}
                       onViewHistory={() => handleViewHistory(se.exerciseId)}
+                      onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
                     />
                   );
                 })}
@@ -750,6 +817,50 @@ const styles = StyleSheet.create({
   cardExpanded: {
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
+  },
+  restLabelRow: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  restLabelText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.secondary,
+  },
+  restStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  restStepperButton: {
+    width: 56,
+    height: 48,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  restStepperButtonDisabled: {
+    opacity: 0.3,
+  },
+  restStepperText: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  restStepperTextDisabled: {
+    color: colors.secondary,
+  },
+  restStepperValue: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.primary,
+    minWidth: 60,
+    textAlign: 'center',
   },
   startRestButton: {
     marginTop: spacing.sm,
