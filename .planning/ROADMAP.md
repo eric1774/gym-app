@@ -154,7 +154,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
-| 10. PR Detection & Volume Tracking | v1.3 | 0/2 | Planned | - |
+| 10. PR Detection & Volume Tracking | 1/2 | In Progress|  | - |
 | 11. Quick-Start & Rest Timer | v1.3 | 0/? | Not started | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |

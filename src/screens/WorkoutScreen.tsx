@@ -28,6 +28,8 @@ import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, P
 import { getProgramDayExercises } from '../db/programs';
 import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity } from '../db/sessions';
+import { checkForPR } from '../db/sets';
+import { PRToast, PRToastHandle } from '../components/PRToast';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -225,7 +227,9 @@ export function WorkoutScreen() {
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
+  const [volumeTotal, setVolumeTotal] = useState(0);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prToastRef = useRef<PRToastHandle>(null);
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
@@ -289,13 +293,29 @@ export function WorkoutScreen() {
     [toggleExerciseComplete],
   );
 
-  const handleSetLogged = useCallback((exerciseId: number, _set: WorkoutSet) => {
+  const handleSetLogged = useCallback((exerciseId: number, set: WorkoutSet) => {
     setSetCountsByExercise(prev => ({
       ...prev,
       [exerciseId]: (prev[exerciseId] ?? 0) + 1,
     }));
     setPendingRestExerciseId(exerciseId);
-  }, []);
+
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
+      setVolumeTotal(prev => prev + set.weightKg * set.reps);
+
+      checkForPR(exerciseId, set.weightKg, set.reps, session!.id).then(isPR => {
+        if (isPR) {
+          const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
+          prToastRef.current?.showPR(name, set.reps, set.weightKg);
+          HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+          setTimeout(() => {
+            HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+          }, 400);
+        }
+      });
+    }
+  }, [exercises, session]);
 
   const handleStartRest = useCallback(
     (exerciseId: number) => {
@@ -359,6 +379,7 @@ export function WorkoutScreen() {
               setActiveExerciseId(null);
               setSetCountsByExercise({});
               setPendingRestExerciseId(null);
+              setVolumeTotal(0);
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               }
@@ -383,6 +404,7 @@ export function WorkoutScreen() {
               setActiveExerciseId(null);
               setSetCountsByExercise({});
               setPendingRestExerciseId(null);
+              setVolumeTotal(0);
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               } else {
@@ -432,6 +454,9 @@ export function WorkoutScreen() {
       {/* Session header */}
       <View style={styles.header}>
         <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
+        <Text style={styles.volumeText}>
+          {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
+        </Text>
         <TouchableOpacity
           onPress={handleEndWorkout}
           style={styles.endButtonTouchable}
@@ -520,6 +545,8 @@ export function WorkoutScreen() {
         onClose={() => setPickerVisible(false)}
         onSelect={handleAddExercise}
       />
+
+      <PRToast ref={prToastRef} />
     </SafeAreaView>
   );
 }
@@ -579,6 +606,14 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.primary,
     letterSpacing: 2,
+  },
+  volumeText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.secondary,
+    letterSpacing: 0.5,
+    minWidth: 80,
+    textAlign: 'center',
   },
   endButtonTouchable: {
     paddingVertical: spacing.sm,

@@ -15,8 +15,8 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 
 ### Records
 
-- [ ] **REC-01**: User sees an animated PR toast when logging a set that exceeds all previous weight+reps for that exercise
-- [ ] **REC-02**: User feels double haptic feedback when a PR is detected
+- [x] **REC-01**: User sees an animated PR toast when logging a set that exceeds all previous weight+reps for that exercise
+- [x] **REC-02**: User feels double haptic feedback when a PR is detected
 - [ ] **REC-03**: User can see running total volume (weight x reps) in the workout header during a session
 
 ### Navigation
@@ -118,8 +118,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LOG-01 | Phase 9 | Complete |
 | LOG-02 | Phase 9 | Complete |
 | LOG-03 | Phase 9 | Complete |
-| REC-01 | Phase 10 | Pending |
-| REC-02 | Phase 10 | Pending |
+| REC-01 | Phase 10 | Complete |
+| REC-02 | Phase 10 | Complete |
 | REC-03 | Phase 10 | Pending |
 | NAV-01 | Phase 11 | Pending |
 | NAV-02 | Phase 11 | Pending |
