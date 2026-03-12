@@ -122,3 +122,44 @@ export async function deleteSet(id: number): Promise<void> {
   const database = await db;
   await executeSql(database, 'DELETE FROM workout_sets WHERE id = ?', [id]);
 }
+
+/**
+ * Check whether a completed set is a personal record at this exact rep count.
+ *
+ * A set is a PR if `weightKg` strictly exceeds the highest weight ever logged
+ * for the same `exerciseId` and same `reps` value across all previously
+ * COMPLETED sessions (excluding the current session and warmup sets).
+ *
+ * Returns `false` if no prior sets exist at this rep count — a first-ever
+ * performance is not considered a PR (there is no baseline to beat).
+ */
+export async function checkForPR(
+  exerciseId: number,
+  weightKg: number,
+  reps: number,
+  currentSessionId: number,
+): Promise<boolean> {
+  const database = await db;
+
+  const result = await executeSql(
+    database,
+    `SELECT MAX(ws.weight_kg) as max_weight
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND ws.reps = ?
+       AND ws.is_warmup = 0
+       AND wss.completed_at IS NOT NULL
+       AND ws.session_id != ?`,
+    [exerciseId, reps, currentSessionId],
+  );
+
+  const maxWeight: number | null = result.rows.item(0).max_weight as number | null;
+
+  if (maxWeight === null) {
+    // No previous sets at this rep count — not a PR
+    return false;
+  }
+
+  return weightKg > maxWeight;
+}

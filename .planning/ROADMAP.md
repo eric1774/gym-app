@@ -47,7 +47,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Reduce friction on set logging, add motivation through PR detection, and surface workout intelligence (volume, summaries, calendar, supersets).
 
-- [x] **Phase 9: Faster Set Logging** - Weight steppers, auto-fill fix, and haptic feedback throughout workout flow (completed 2026-03-10)
+- [x] **Phase 9: Faster Set Logging** - Weight steppers, auto-fill fix, and haptic feedback throughout workout flow (completed 2026-03-10)
 - [ ] **Phase 10: PR Detection & Volume Tracking** - Animated PR toast with double haptic, running volume total in workout header
 - [ ] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration
 - [ ] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout
@@ -93,7 +93,11 @@ Plans:
   1. When a logged set exceeds all previous weight+reps for that exercise, an animated gold PR toast slides in from the top and auto-dismisses
   2. User feels two distinct haptic pulses (400ms apart) on PR detection
   3. The workout header displays a running volume total (weight x reps) that updates immediately after each set is logged
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md -- PR detection query, PRToast component, prGold theme color
+- [ ] 10-02-PLAN.md -- Wire PR check, double haptic, and volume total into WorkoutScreen
 
 ### Phase 11: Quick-Start & Rest Timer
 **Goal**: Users can start their next workout from the dashboard in one tap and configure rest duration per exercise during a session
@@ -150,7 +154,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 7. Polish and Differentiators | v1.1 | 2/2 | Complete | 2026-03-08 |
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
-| 10. PR Detection & Volume Tracking | v1.3 | 0/? | Not started | - |
+| 10. PR Detection & Volume Tracking | v1.3 | 0/2 | Planned | - |
 | 11. Quick-Start & Rest Timer | v1.3 | 0/? | Not started | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |

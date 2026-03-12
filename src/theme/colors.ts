@@ -7,11 +7,14 @@ export const colors = {
   secondary: '#8E9298',       // Subtitles, timestamps, section headers
   accent: '#8DC28A',          // Mint green — CTAs, active states, progress fills
   accentDim: '#1A3326',       // Very faint mint for subtle backgrounds
+  onAccent: '#1A1A1A',        // Dark text on accent-colored backgrounds
   danger: '#D9534F',          // Muted red/coral for destructive actions
   timerActive: '#FACC15',     // Timer accent (keep existing)
   tabBar: '#151718',          // Match app background
   tabIconActive: '#8DC28A',   // Mint green for active tab
   tabIconInactive: '#555555', // Medium grey for inactive tabs
+  prGold: '#FFB800',          // Warm amber-gold for PR toasts and highlights
+  prGoldDim: '#3D2E00',       // Subtle background behind PR toast text
 } as const;
 
 export type ColorKey = keyof typeof colors;
