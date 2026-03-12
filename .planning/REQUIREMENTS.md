@@ -26,9 +26,9 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 
 ### Rest Timer
 
-- [ ] **REST-01**: User can see the configured rest duration per exercise during a workout
-- [ ] **REST-02**: User can edit rest duration per exercise during a workout
-- [ ] **REST-03**: Rest timer uses the exercise-specific duration when started
+- [x] **REST-01**: User can see the configured rest duration per exercise during a workout
+- [x] **REST-02**: User can edit rest duration per exercise during a workout
+- [x] **REST-03**: Rest timer uses the exercise-specific duration when started
 
 ### Summary
 
@@ -123,9 +123,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REC-03 | Phase 10 | Complete |
 | NAV-01 | Phase 11 | Complete |
 | NAV-02 | Phase 11 | Complete |
-| REST-01 | Phase 11 | Pending |
-| REST-02 | Phase 11 | Pending |
-| REST-03 | Phase 11 | Pending |
+| REST-01 | Phase 11 | Complete |
+| REST-02 | Phase 11 | Complete |
+| REST-03 | Phase 11 | Complete |
 | SUM-01 | Phase 12 | Pending |
 | SUM-02 | Phase 12 | Pending |
 | CAL-01 | Phase 13 | Pending |

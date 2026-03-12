@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Workout Intelligence & Speed
 status: ready_to_plan
-stopped_at: Completed 11-01-PLAN.md — Next Workout Card built and committed
-last_updated: "2026-03-12T01:38:40.491Z"
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-03-12T01:40:19.030Z"
 last_activity: 2026-03-12 — Phase 10 plans 01+02 completed and device-verified
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
   percent: 93
 ---
 
@@ -126,6 +126,7 @@ Progress: [██████████] 100%
 | Phase 10-pr-detection-volume-tracking P01 | 2min | 2 tasks | 3 files |
 | Phase 10-pr-detection-volume-tracking P02 | 5min | 1 tasks | 1 files |
 | Phase 11-quick-start-rest-timer P01 | 18min | 2 tasks | 3 files |
+| Phase 11-quick-start-rest-timer P02 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,9 @@ Progress: [██████████] 100%
 - [Phase 11-01]: Active session tapping Continue navigates to WorkoutTab without creating a new session
 - [Phase 11-01]: Next Workout card hidden entirely when no activated programs exist
 - [Phase 11-01]: All-days-done fallback: shows first day of program as next workout (always actionable)
+- [Phase 11-quick-start-rest-timer]: restOverrides local map avoids needing a new SessionContext method for optimistic rest duration update
+- [Phase 11-quick-start-rest-timer]: handleStartRest priority: restOverrides > sessionExercises.restSeconds > exercise.defaultRestSeconds > 90
+- [Phase 11-quick-start-rest-timer]: Both exercises.default_rest_seconds and exercise_sessions.rest_seconds updated simultaneously on stepper change
 
 ### Pending Todos
 
@@ -156,6 +160,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-12T01:38:40.487Z
-Stopped at: Completed 11-01-PLAN.md — Next Workout Card built and committed
+Last session: 2026-03-12T01:40:19.026Z
+Stopped at: Completed 11-02-PLAN.md
 Resume file: None

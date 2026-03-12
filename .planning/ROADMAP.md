@@ -49,7 +49,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 - [x] **Phase 9: Faster Set Logging** - Weight steppers, auto-fill fix, and haptic feedback throughout workout flow (completed 2026-03-10)
 - [x] **Phase 10: PR Detection & Volume Tracking** - Animated PR toast with double haptic, running volume total in workout header (completed 2026-03-12)
-- [ ] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration
+- [x] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration (completed 2026-03-12)
 - [ ] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout
 - [ ] **Phase 13: Calendar View** - Monthly calendar grid showing training history with day detail view
 - [ ] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v6)
@@ -159,7 +159,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
 | 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
-| 11. Quick-Start & Rest Timer | 1/2 | In Progress|  | - |
+| 11. Quick-Start & Rest Timer | 2/2 | Complete   | 2026-03-12 | - |
 | 12. Workout Summary | v1.3 | 0/? | Not started | - |
 | 13. Calendar View | v1.3 | 0/? | Not started | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |
