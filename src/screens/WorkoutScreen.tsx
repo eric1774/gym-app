@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
@@ -52,6 +53,49 @@ function groupByCategory(
   }
 
   return categoryOrder.map(cat => ({ category: cat, items: categoryMap.get(cat)! }));
+}
+
+type WorkoutSection =
+  | { type: 'superset'; groupId: number; exerciseIds: number[] }
+  | { type: 'category'; category: ExerciseCategory; items: ExerciseSession[] };
+
+/**
+ * Groups sessionExercises into a render list of WorkoutSection items.
+ * Superset exercises are grouped by groupId first (in sortOrder). Non-superset
+ * exercises fall through to the existing category-based grouping.
+ */
+function groupForWorkout(
+  sessionExercises: ExerciseSession[],
+  exerciseLookup: Exercise[],
+  exerciseSupersetMap: Map<number, number>,
+  supersetGroups: Map<number, number[]>,
+): WorkoutSection[] {
+  const sections: WorkoutSection[] = [];
+
+  // Build superset sections in the order their first exercise appears in sessionExercises
+  const seenGroupIds = new Set<number>();
+  const nonSupersetSessions: ExerciseSession[] = [];
+
+  for (const se of sessionExercises) {
+    const groupId = exerciseSupersetMap.get(se.exerciseId);
+    if (groupId !== undefined) {
+      if (!seenGroupIds.has(groupId)) {
+        seenGroupIds.add(groupId);
+        const exerciseIds = supersetGroups.get(groupId) ?? [se.exerciseId];
+        sections.push({ type: 'superset', groupId, exerciseIds });
+      }
+    } else {
+      nonSupersetSessions.push(se);
+    }
+  }
+
+  // Append category sections for non-superset exercises
+  const catGroups = groupByCategory(nonSupersetSessions, exerciseLookup);
+  for (const g of catGroups) {
+    sections.push({ type: 'category', category: g.category, items: g.items });
+  }
+
+  return sections;
 }
 
 /** Format elapsed seconds as MM:SS (or H:MM:SS for sessions >= 1 hour) */
@@ -124,6 +168,8 @@ interface ExerciseCardProps {
   programTarget: ProgramTarget | null;
   measurementType: ExerciseMeasurementType;
   restSeconds: number;
+  insideSuperset?: boolean;
+  isLastInSuperset?: boolean;
   onPress: () => void;
   onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
@@ -142,6 +188,7 @@ function ExerciseCard({
   programTarget,
   measurementType,
   restSeconds,
+  insideSuperset = false,
   onPress,
   onToggleComplete,
   onSetLogged,
@@ -155,13 +202,13 @@ function ExerciseCard({
   return (
     <TouchableOpacity
       style={[
-        styles.card,
+        insideSuperset ? styles.cardInSuperset : styles.card,
         isActive ? styles.cardActive : styles.cardInactive,
         isComplete && styles.cardComplete,
       ]}
       onPress={onPress}
       activeOpacity={0.8}>
-      <View style={styles.cardHeader}>
+      <View style={[styles.cardHeader, insideSuperset && styles.cardHeaderInSuperset]}>
         <View style={styles.cardNameContainer}>
           <Text style={[styles.cardName, isComplete && styles.cardNameComplete]}>
             {exerciseName}
@@ -195,7 +242,7 @@ function ExerciseCard({
       </View>
 
       {isActive && (
-        <View style={styles.cardExpanded}>
+        <View style={[styles.cardExpanded, insideSuperset && styles.cardExpandedInSuperset]}>
           {/* Rest duration label + stepper */}
           <TouchableOpacity
             style={styles.restLabelRow}
@@ -252,6 +299,136 @@ function ExerciseCard({
     </TouchableOpacity>
   );
 }
+
+interface SupersetContainerProps {
+  groupId: number;
+  exerciseIds: number[];
+  sessionExercises: ExerciseSession[];
+  exercises: Exercise[];
+  activeExerciseId: number | null;
+  setCountsByExercise: Record<number, number>;
+  pendingRestExerciseId: number | null;
+  programTargetsMap: Map<number, ProgramTarget>;
+  restOverrides: Record<number, number>;
+  sessionId: number;
+  onPressExercise: (exerciseId: number, isActive: boolean) => void;
+  onToggleComplete: (exerciseId: number) => void;
+  onSetLogged: (exerciseId: number, set: WorkoutSet) => void;
+  onStartRest: (exerciseId: number) => void;
+  onViewHistory: (exerciseId: number) => void;
+  onRestChange: (exerciseId: number, newRestSeconds: number) => void;
+}
+
+function SupersetContainer({
+  groupId,
+  exerciseIds,
+  sessionExercises,
+  exercises,
+  activeExerciseId,
+  setCountsByExercise,
+  pendingRestExerciseId,
+  programTargetsMap,
+  restOverrides,
+  sessionId,
+  onPressExercise,
+  onToggleComplete,
+  onSetLogged,
+  onStartRest,
+  onViewHistory,
+  onRestChange,
+}: SupersetContainerProps) {
+  // Round = min completed sets across all exercises + 1
+  const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
+  const total = Math.max(...exerciseIds.map(id => programTargetsMap.get(id)?.targetSets ?? 3));
+
+  return (
+    <View style={supersetStyles.container}>
+      {/* Mint accent bar on the left */}
+      <View style={supersetStyles.accentBar} />
+
+      {/* SUPERSET header label */}
+      <View style={supersetStyles.header}>
+        <Text style={supersetStyles.headerText}>
+          {'SUPERSET \u00B7 Round '}{round}/{total}
+        </Text>
+      </View>
+
+      {/* Exercise cards */}
+      {exerciseIds.map((exerciseId, index) => {
+        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
+        if (!se) { return null; }
+        const exercise = exercises.find(ex => ex.id === exerciseId);
+        const name = exercise?.name ?? `Exercise ${exerciseId}`;
+        const isActive = activeExerciseId === exerciseId;
+        const setCount = setCountsByExercise[exerciseId] ?? 0;
+        const isLast = index === exerciseIds.length - 1;
+
+        return (
+          <View key={exerciseId}>
+            {index > 0 && <View style={supersetStyles.divider} />}
+            <ExerciseCard
+              exerciseSession={se}
+              exerciseName={name}
+              isActive={isActive}
+              setCount={setCount}
+              sessionId={sessionId}
+              pendingRest={pendingRestExerciseId === exerciseId}
+              programTarget={programTargetsMap.get(exerciseId) ?? null}
+              measurementType={exercise?.measurementType ?? 'reps'}
+              restSeconds={restOverrides[exerciseId] ?? se.restSeconds}
+              insideSuperset={true}
+              isLastInSuperset={isLast}
+              onPress={() => onPressExercise(exerciseId, isActive)}
+              onToggleComplete={() => onToggleComplete(exerciseId)}
+              onSetLogged={(set) => onSetLogged(exerciseId, set)}
+              onStartRest={() => onStartRest(exerciseId)}
+              onViewHistory={() => onViewHistory(exerciseId)}
+              onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const supersetStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.accent,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+  },
+  header: {
+    paddingLeft: spacing.base + 8,
+    paddingRight: spacing.base,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  headerText: {
+    fontSize: 11,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.5,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: spacing.base + 8,
+  },
+});
 
 interface WorkoutSummaryProps {
   duration: number;
@@ -362,10 +539,14 @@ export function WorkoutScreen() {
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
   const [programDayName, setProgramDayName] = useState<string | null>(null);
+  // Superset group maps: groupId -> ordered exerciseIds, exerciseId -> groupId
+  const [supersetGroups, setSupersetGroups] = useState<Map<number, number[]>>(new Map());
+  const [exerciseSupersetMap, setExerciseSupersetMap] = useState<Map<number, number>>(new Map());
 
   useEffect(() => {
     if (programDayId) {
       getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
+        // Build programTargetsMap
         const map = new Map<number, ProgramTarget>();
         for (const pde of pdes) {
           map.set(pde.exerciseId, {
@@ -375,9 +556,28 @@ export function WorkoutScreen() {
           });
         }
         setProgramTargetsMap(map);
+
+        // Build superset maps from supersetGroupId
+        const groupsMap = new Map<number, number[]>();
+        const exMap = new Map<number, number>();
+        // Sort by sortOrder to preserve ordering within groups
+        const sorted = [...pdes].sort((a, b) => a.sortOrder - b.sortOrder);
+        for (const pde of sorted) {
+          if (pde.supersetGroupId !== null) {
+            if (!groupsMap.has(pde.supersetGroupId)) {
+              groupsMap.set(pde.supersetGroupId, []);
+            }
+            groupsMap.get(pde.supersetGroupId)!.push(pde.exerciseId);
+            exMap.set(pde.exerciseId, pde.supersetGroupId);
+          }
+        }
+        setSupersetGroups(groupsMap);
+        setExerciseSupersetMap(exMap);
       });
     } else {
       setProgramTargetsMap(new Map());
+      setSupersetGroups(new Map());
+      setExerciseSupersetMap(new Map());
     }
   }, [programDayId]);
 
@@ -622,11 +822,14 @@ export function WorkoutScreen() {
     );
   }
 
-  // Build a session title from exercise categories
-  const categories = groupByCategory(sessionExercises, exercises);
+  // Build a session title from exercise categories (used for banner only)
+  const allCategories = groupByCategory(sessionExercises, exercises);
   const sessionTitle = programDayId
-    ? categories.map(g => g.category.toUpperCase()).join(' & ')
+    ? allCategories.map(g => g.category.toUpperCase()).join(' & ')
     : null;
+
+  // Build superset-aware grouped sections for rendering
+  const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -674,42 +877,71 @@ export function WorkoutScreen() {
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
-          {categories.map((group, groupIdx) => (
-            <View key={group.category}>
-              <View style={[styles.categoryHeader, groupIdx > 0 && styles.categoryHeaderSpaced]}>
-                <Text style={styles.categoryLabel}>{group.category.toUpperCase()}</Text>
-                <View style={styles.categoryLine} />
+          {workoutSections.map((section, sectionIdx) => {
+            if (section.type === 'superset') {
+              return (
+                <SupersetContainer
+                  key={`superset-${section.groupId}`}
+                  groupId={section.groupId}
+                  exerciseIds={section.exerciseIds}
+                  sessionExercises={sessionExercises}
+                  exercises={exercises}
+                  activeExerciseId={activeExerciseId}
+                  setCountsByExercise={setCountsByExercise}
+                  pendingRestExerciseId={pendingRestExerciseId}
+                  programTargetsMap={programTargetsMap}
+                  restOverrides={restOverrides}
+                  sessionId={session.id}
+                  onPressExercise={(exerciseId, isActive) =>
+                    setActiveExerciseId(isActive ? null : exerciseId)
+                  }
+                  onToggleComplete={handleToggleComplete}
+                  onSetLogged={handleSetLogged}
+                  onStartRest={handleStartRest}
+                  onViewHistory={handleViewHistory}
+                  onRestChange={handleRestChange}
+                />
+              );
+            }
+
+            // Category section
+            return (
+              <View key={section.category}>
+                <View style={[styles.categoryHeader, (sectionIdx > 0) && styles.categoryHeaderSpaced]}>
+                  <Text style={styles.categoryLabel}>{section.category.toUpperCase()}</Text>
+                  <View style={styles.categoryLine} />
+                </View>
+                <View style={styles.categoryContainer}>
+                  {section.items.map((se) => {
+                    const exercise = exercises.find(ex => ex.id === se.exerciseId);
+                    const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
+                    const isActive = activeExerciseId === se.exerciseId;
+                    const setCount = setCountsByExercise[se.exerciseId] ?? 0;
+                    return (
+                      <ExerciseCard
+                        key={se.exerciseId}
+                        exerciseSession={se}
+                        exerciseName={name}
+                        isActive={isActive}
+                        setCount={setCount}
+                        sessionId={session.id}
+                        pendingRest={pendingRestExerciseId === se.exerciseId}
+                        programTarget={programTargetsMap.get(se.exerciseId) ?? null}
+                        measurementType={exercise?.measurementType ?? 'reps'}
+                        restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
+                        onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
+                        onToggleComplete={() => handleToggleComplete(se.exerciseId)}
+                        onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
+                        onStartRest={() => handleStartRest(se.exerciseId)}
+                        onViewHistory={() => handleViewHistory(se.exerciseId)}
+                        onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
+                      />
+                    );
+                  })}
+                </View>
               </View>
-              <View style={styles.categoryContainer}>
-                {group.items.map((se) => {
-                  const exercise = exercises.find(ex => ex.id === se.exerciseId);
-                  const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
-                  const isActive = activeExerciseId === se.exerciseId;
-                  const setCount = setCountsByExercise[se.exerciseId] ?? 0;
-                  return (
-                    <ExerciseCard
-                      key={se.exerciseId}
-                      exerciseSession={se}
-                      exerciseName={name}
-                      isActive={isActive}
-                      setCount={setCount}
-                      sessionId={session.id}
-                      pendingRest={pendingRestExerciseId === se.exerciseId}
-                      programTarget={programTargetsMap.get(se.exerciseId) ?? null}
-                      measurementType={exercise?.measurementType ?? 'reps'}
-                      restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
-                      onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
-                      onToggleComplete={() => handleToggleComplete(se.exerciseId)}
-                      onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-                      onStartRest={() => handleStartRest(se.exerciseId)}
-                      onViewHistory={() => handleViewHistory(se.exerciseId)}
-                      onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
-                    />
-                  );
-                })}
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -863,6 +1095,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
+  // Card inside a SupersetContainer — no individual border/radius/margin
+  cardInSuperset: {
+    overflow: 'hidden',
+  },
   cardActive: {
     backgroundColor: colors.surfaceElevated,
     borderColor: 'rgba(141, 194, 138, 0.2)',
@@ -880,6 +1116,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
+  },
+  // Offset header content from the accent bar on the left
+  cardHeaderInSuperset: {
+    paddingLeft: spacing.base + 8,
   },
   cardNameContainer: {
     flex: 1,
@@ -931,6 +1171,10 @@ const styles = StyleSheet.create({
   cardExpanded: {
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
+  },
+  // Offset expanded content from the accent bar
+  cardExpandedInSuperset: {
+    paddingLeft: spacing.base + 8,
   },
   restLabelRow: {
     paddingVertical: spacing.sm,
