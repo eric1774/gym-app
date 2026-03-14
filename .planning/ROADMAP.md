@@ -173,4 +173,4 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
-| 14. Superset Support | v1.3 | 0/2 | Not started | - |
+| 14. Superset Support | 1/2 | In Progress|  | - |
