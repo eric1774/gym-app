@@ -168,5 +168,5 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
-| 13. Calendar View | v1.3 | 0/2 | Not started | - |
+| 13. Calendar View | 1/2 | In Progress|  | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |

@@ -32,13 +32,13 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 
 ### Summary
 
-- [ ] **SUM-01**: User sees a workout completion summary after ending a workout (duration, sets, volume, exercises, PRs)
-- [ ] **SUM-02**: User can dismiss the summary to return to the workout screen
+- [x] **SUM-01**: User sees a workout completion summary after ending a workout (duration, sets, volume, exercises, PRs)
+- [x] **SUM-02**: User can dismiss the summary to return to the workout screen
 
 ### Calendar
 
-- [ ] **CAL-01**: User can view a monthly calendar grid showing which days had workouts
-- [ ] **CAL-02**: User can navigate between months
+- [x] **CAL-01**: User can view a monthly calendar grid showing which days had workouts
+- [x] **CAL-02**: User can navigate between months
 - [ ] **CAL-03**: User can tap a day to see session details (duration, exercise count, volume, program day)
 
 ### Supersets
@@ -126,10 +126,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REST-01 | Phase 11 | Complete |
 | REST-02 | Phase 11 | Complete |
 | REST-03 | Phase 11 | Complete |
-| SUM-01 | Phase 12 | Pending |
-| SUM-02 | Phase 12 | Pending |
-| CAL-01 | Phase 13 | Pending |
-| CAL-02 | Phase 13 | Pending |
+| SUM-01 | Phase 12 | Complete |
+| SUM-02 | Phase 12 | Complete |
+| CAL-01 | Phase 13 | Complete |
+| CAL-02 | Phase 13 | Complete |
 | CAL-03 | Phase 13 | Pending |
 | SUP-01 | Phase 14 | Pending |
 | SUP-02 | Phase 14 | Pending |
