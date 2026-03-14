@@ -3,7 +3,7 @@ import { Platform, View, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { LibraryScreen } from '../screens/LibraryScreen';
 import { ProgramsScreen } from '../screens/ProgramsScreen';
@@ -15,13 +15,20 @@ import { ExerciseProgressScreen } from '../screens/ExerciseProgressScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ProteinScreen } from '../screens/ProteinScreen';
 import { MealLibraryScreen } from '../screens/MealLibraryScreen';
+import { CalendarScreen } from '../screens/CalendarScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
+  CalendarTab: undefined;
   LibraryTab: undefined;
   ProgramsTab: undefined;
   WorkoutTab: undefined;
   ProteinTab: undefined;
+};
+
+export type CalendarStackParamList = {
+  CalendarHome: undefined;
+  CalendarDayDetail: { date: string };
 };
 
 export type WorkoutStackParamList = {
@@ -51,6 +58,7 @@ const ProgramsStack = createNativeStackNavigator<ProgramsStackParamList>();
 const DashboardStack = createNativeStackNavigator<DashboardStackParamList>();
 const WorkoutStack = createNativeStackNavigator<WorkoutStackParamList>();
 const ProteinStack = createNativeStackNavigator<ProteinStackParamList>();
+const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
 
 const ICON_SIZE = 22;
 
@@ -97,6 +105,34 @@ function CarrotIcon({ color }: { color: string }) {
       <Path d="M16 3C14.5 3 13 4 12 5.5C11 4 9.5 3 8 3" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <Path d="M12 5.5C12 5.5 15 10 15 15C15 18 13.5 21 12 21C10.5 21 9 18 9 15C9 10 12 5.5 12 5.5Z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
+  );
+}
+
+function CalendarIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      {/* Calendar body */}
+      <Rect x={3} y={4} width={18} height={17} rx={2} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {/* Binding posts at top */}
+      <Line x1={8} y1={2} x2={8} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Line x1={16} y1={2} x2={16} y2={6} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      {/* Horizontal divider */}
+      <Line x1={3} y1={9} x2={21} y2={9} stroke={color} strokeWidth={2} strokeLinecap="round" />
+      {/* Grid dots */}
+      <Rect x={7} y={12} width={2} height={2} rx={0.5} fill={color} />
+      <Rect x={11} y={12} width={2} height={2} rx={0.5} fill={color} />
+      <Rect x={15} y={12} width={2} height={2} rx={0.5} fill={color} />
+      <Rect x={7} y={16} width={2} height={2} rx={0.5} fill={color} />
+      <Rect x={11} y={16} width={2} height={2} rx={0.5} fill={color} />
+    </Svg>
+  );
+}
+
+function CalendarStackNavigator() {
+  return (
+    <CalendarStack.Navigator screenOptions={{ headerShown: false }}>
+      <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
+    </CalendarStack.Navigator>
   );
 }
 
@@ -168,6 +204,14 @@ export function TabNavigator() {
         options={{
           tabBarLabel: 'Home',
           tabBarIcon: ({ color }) => <HomeIcon color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarStackNavigator}
+        options={{
+          tabBarLabel: 'Calendar',
+          tabBarIcon: ({ color }) => <CalendarIcon color={color} />,
         }}
       />
       <Tab.Screen
