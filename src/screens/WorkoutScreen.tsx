@@ -535,6 +535,8 @@ export function WorkoutScreen() {
   } | null>(null);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prToastRef = useRef<PRToastHandle>(null);
+  // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
+  const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
@@ -542,6 +544,9 @@ export function WorkoutScreen() {
   // Superset group maps: groupId -> ordered exerciseIds, exerciseId -> groupId
   const [supersetGroups, setSupersetGroups] = useState<Map<number, number[]>>(new Map());
   const [exerciseSupersetMap, setExerciseSupersetMap] = useState<Map<number, number>>(new Map());
+  // Refs for accessing superset maps inside callbacks without stale closures
+  const supersetGroupsRef = useRef<Map<number, number[]>>(new Map());
+  const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     if (programDayId) {
@@ -573,11 +578,17 @@ export function WorkoutScreen() {
         }
         setSupersetGroups(groupsMap);
         setExerciseSupersetMap(exMap);
+        supersetGroupsRef.current = groupsMap;
+        exerciseSupersetMapRef.current = exMap;
       });
     } else {
+      const emptyMap1 = new Map<number, number[]>();
+      const emptyMap2 = new Map<number, number>();
       setProgramTargetsMap(new Map());
-      setSupersetGroups(new Map());
-      setExerciseSupersetMap(new Map());
+      setSupersetGroups(emptyMap1);
+      setExerciseSupersetMap(emptyMap2);
+      supersetGroupsRef.current = emptyMap1;
+      exerciseSupersetMapRef.current = emptyMap2;
     }
   }, [programDayId]);
 
@@ -605,6 +616,26 @@ export function WorkoutScreen() {
     };
   }, []);
 
+  // Post-rest auto-advance: when rest timer ends and last superset exercise triggered it,
+  // auto-expand the FIRST exercise in the group for the next round
+  const isRunningRef = useRef(isRunning);
+  useEffect(() => {
+    const wasRunning = isRunningRef.current;
+    isRunningRef.current = isRunning;
+
+    if (wasRunning && !isRunning && lastSupersetRestRef.current) {
+      const { groupId } = lastSupersetRestRef.current;
+      lastSupersetRestRef.current = null;
+      const groupExerciseIds = supersetGroupsRef.current.get(groupId);
+      if (groupExerciseIds && groupExerciseIds.length > 0) {
+        LayoutAnimation.configureNext(
+          LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
+        );
+        setActiveExerciseId(groupExerciseIds[0]);
+      }
+    }
+  }, [isRunning]);
+
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
       await addExercise(exercise);
@@ -626,7 +657,31 @@ export function WorkoutScreen() {
       ...prev,
       [exerciseId]: (prev[exerciseId] ?? 0) + 1,
     }));
-    setPendingRestExerciseId(exerciseId);
+
+    // Superset auto-advance: check if this exercise is in a superset group
+    const groupId = exerciseSupersetMapRef.current.get(exerciseId);
+    if (groupId !== undefined) {
+      const groupExerciseIds = supersetGroupsRef.current.get(groupId) ?? [];
+      const currentIndex = groupExerciseIds.indexOf(exerciseId);
+      const isLastInGroup = currentIndex === groupExerciseIds.length - 1;
+
+      if (!isLastInGroup) {
+        // Not the last exercise — auto-advance to next, suppress rest timer
+        const nextExerciseId = groupExerciseIds[currentIndex + 1];
+        LayoutAnimation.configureNext(
+          LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
+        );
+        setActiveExerciseId(nextExerciseId);
+        // Do NOT set pendingRestExerciseId — rest is suppressed for non-last exercises
+      } else {
+        // Last exercise in group — show rest timer as normal, track for post-rest advance
+        setPendingRestExerciseId(exerciseId);
+        lastSupersetRestRef.current = { groupId, exerciseId };
+      }
+    } else {
+      // Not in a superset — normal behavior
+      setPendingRestExerciseId(exerciseId);
+    }
 
     const exercise = exercises.find(ex => ex.id === exerciseId);
     if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
