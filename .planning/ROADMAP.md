@@ -112,8 +112,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md -- Next Workout card on dashboard with quick-start and active session state
-- [ ] 11-02-PLAN.md -- Per-exercise rest duration display, +/-15s steppers, and timer integration
+- [x] 11-01-PLAN.md -- Next Workout card on dashboard with quick-start and active session state
+- [x] 11-02-PLAN.md -- Per-exercise rest duration display, +/-15s steppers, and timer integration
 
 ### Phase 12: Workout Summary
 **Goal**: Users see a satisfying summary of their completed workout before returning to the home screen
@@ -125,7 +125,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 12-01-PLAN.md -- Summary card with stats (duration, sets, volume, exercises, PRs), Done-to-Dashboard navigation
+- [x] 12-01-PLAN.md -- Summary card with stats (duration, sets, volume, exercises, PRs), Done-to-Dashboard navigation
 
 ### Phase 13: Calendar View
 **Goal**: Users can see their full training history laid out on a monthly calendar and drill into any day's session details
@@ -135,7 +135,11 @@ Plans:
   1. A calendar screen renders the current month as a 7-column grid with mint dot indicators on days that had workouts
   2. User can tap left/right arrows to navigate to adjacent months and the grid updates accordingly
   3. Tapping a day that had a workout reveals session details including duration, exercise count, volume, and program day name
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 13-01-PLAN.md -- Calendar data layer, monthly grid screen with workout indicators, tab navigation wiring
+- [ ] 13-02-PLAN.md -- Day detail screen with session cards, exercise breakdown, and PR highlighting
 
 ### Phase 14: Superset Support
 **Goal**: Users can group exercises as supersets in their programs and experience a seamless alternating-set flow during workouts
@@ -162,7 +166,7 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 8. Meal Library | v1.2 | 2/2 | Complete | 2026-03-09 |
 | 9. Faster Set Logging | v1.3 | 1/1 | Complete | 2026-03-11 |
 | 10. PR Detection & Volume Tracking | v1.3 | 2/2 | Complete | 2026-03-12 |
-| 11. Quick-Start & Rest Timer | 2/2 | Complete    | 2026-03-12 | - |
-| 12. Workout Summary | 1/1 | Complete   | 2026-03-12 | - |
-| 13. Calendar View | v1.3 | 0/? | Not started | - |
+| 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
+| 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
+| 13. Calendar View | v1.3 | 0/2 | Not started | - |
 | 14. Superset Support | v1.3 | 0/? | Not started | - |

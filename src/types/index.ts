@@ -179,3 +179,43 @@ export interface LibraryMeal {
   mealType: MealType;
   createdAt: string;
 }
+
+// -- Calendar domain types (Phase 13) --
+
+/** A day in a month that had at least one completed workout. */
+export interface CalendarDaySession {
+  /** YYYY-MM-DD local date string */
+  date: string;
+  /** Number of completed sessions on this date */
+  sessionCount: number;
+}
+
+/** Detailed session info for the day detail screen. */
+export interface CalendarSessionDetail {
+  sessionId: number;
+  startedAt: string;
+  completedAt: string;
+  programDayName: string | null;
+  durationSeconds: number;
+  totalSets: number;
+  totalVolume: number;
+  exerciseCount: number;
+  prCount: number;
+  exercises: CalendarExerciseDetail[];
+}
+
+/** Per-exercise breakdown within a session. */
+export interface CalendarExerciseDetail {
+  exerciseId: number;
+  exerciseName: string;
+  sets: CalendarSetDetail[];
+}
+
+/** Individual set within an exercise. */
+export interface CalendarSetDetail {
+  setNumber: number;
+  weightKg: number;
+  reps: number;
+  isWarmup: boolean;
+  isPR: boolean;
+}
