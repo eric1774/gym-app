@@ -44,9 +44,9 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 ### Supersets
 
 - [x] **SUP-01**: User can group 2-3 exercises as a superset within a program day
-- [ ] **SUP-02**: User can see superset grouping visually during a workout
-- [ ] **SUP-03**: After logging a set in a superset, the next exercise in the group auto-expands
-- [ ] **SUP-04**: Rest timer starts after the last exercise in a superset group
+- [x] **SUP-02**: User can see superset grouping visually during a workout
+- [x] **SUP-03**: After logging a set in a superset, the next exercise in the group auto-expands
+- [x] **SUP-04**: Rest timer starts after the last exercise in a superset group
 
 ## Previous Milestones (Shipped)
 
@@ -132,9 +132,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAL-02 | Phase 13 | Complete |
 | CAL-03 | Phase 13 | Pending |
 | SUP-01 | Phase 14 | Complete |
-| SUP-02 | Phase 14 | Pending |
-| SUP-03 | Phase 14 | Pending |
-| SUP-04 | Phase 14 | Pending |
+| SUP-02 | Phase 14 | Complete |
+| SUP-03 | Phase 14 | Complete |
+| SUP-04 | Phase 14 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 20 total

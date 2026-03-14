@@ -52,7 +52,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration (completed 2026-03-12)
 - [x] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout (completed 2026-03-12)
 - [x] **Phase 13: Calendar View** - Monthly calendar grid showing training history with day detail view (completed 2026-03-14)
-- [ ] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v7)
+- [x] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v7) (completed 2026-03-14)
 
 ## Phase Details
 
@@ -173,4 +173,4 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
-| 14. Superset Support | 1/2 | In Progress|  | - |
+| 14. Superset Support | 2/2 | Complete   | 2026-03-14 | - |
