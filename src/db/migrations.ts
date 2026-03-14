@@ -17,6 +17,8 @@ interface Migration {
  * - Version 2: Add measurement_type column to exercises
  * - Version 3: Create protein domain tables (meals, protein_settings)
  * - Version 4: Create meal_library table
+ * - Version 5: Add program_week to workout_sessions
+ * - Version 6: Deduplicate exercises, re-point history to winners
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -139,6 +141,91 @@ const MIGRATIONS: Migration[] = [
           protein_grams REAL NOT NULL,
           meal_type TEXT NOT NULL,
           created_at TEXT NOT NULL
+        )
+      `);
+    },
+  },
+  {
+    version: 5,
+    description: 'Add program_week column to workout_sessions and backfill existing rows',
+    up: (tx: Transaction) => {
+      tx.executeSql(
+        'ALTER TABLE workout_sessions ADD COLUMN program_week INTEGER',
+      );
+      tx.executeSql(
+        'UPDATE workout_sessions SET program_week = 1 WHERE program_day_id IS NOT NULL AND program_week IS NULL',
+      );
+    },
+  },
+  {
+    version: 6,
+    description: 'Deduplicate exercises by name+category, re-point history to winners',
+    up: (tx: Transaction) => {
+      // Re-point workout_sets from duplicate exercise ids to the winner (lowest id per name+category)
+      tx.executeSql(`
+        UPDATE workout_sets
+        SET exercise_id = (
+          SELECT MIN(e2.id)
+          FROM exercises e2
+          WHERE e2.name = (SELECT e3.name FROM exercises e3 WHERE e3.id = workout_sets.exercise_id)
+            AND e2.category = (SELECT e3.category FROM exercises e3 WHERE e3.id = workout_sets.exercise_id)
+        )
+        WHERE exercise_id NOT IN (
+          SELECT MIN(id) FROM exercises GROUP BY name, category
+        )
+      `);
+
+      // Re-point program_day_exercises from duplicates to winners
+      tx.executeSql(`
+        UPDATE program_day_exercises
+        SET exercise_id = (
+          SELECT MIN(e2.id)
+          FROM exercises e2
+          WHERE e2.name = (SELECT e3.name FROM exercises e3 WHERE e3.id = program_day_exercises.exercise_id)
+            AND e2.category = (SELECT e3.category FROM exercises e3 WHERE e3.id = program_day_exercises.exercise_id)
+        )
+        WHERE exercise_id NOT IN (
+          SELECT MIN(id) FROM exercises GROUP BY name, category
+        )
+      `);
+
+      // For exercise_sessions: delete rows that would conflict with the winner,
+      // then re-point the rest
+      tx.executeSql(`
+        DELETE FROM exercise_sessions
+        WHERE exercise_id NOT IN (
+          SELECT MIN(id) FROM exercises GROUP BY name, category
+        )
+        AND EXISTS (
+          SELECT 1 FROM exercise_sessions es2
+          WHERE es2.session_id = exercise_sessions.session_id
+            AND es2.exercise_id = (
+              SELECT MIN(e2.id)
+              FROM exercises e2
+              WHERE e2.name = (SELECT e3.name FROM exercises e3 WHERE e3.id = exercise_sessions.exercise_id)
+                AND e2.category = (SELECT e3.category FROM exercises e3 WHERE e3.id = exercise_sessions.exercise_id)
+            )
+        )
+      `);
+
+      tx.executeSql(`
+        UPDATE exercise_sessions
+        SET exercise_id = (
+          SELECT MIN(e2.id)
+          FROM exercises e2
+          WHERE e2.name = (SELECT e3.name FROM exercises e3 WHERE e3.id = exercise_sessions.exercise_id)
+            AND e2.category = (SELECT e3.category FROM exercises e3 WHERE e3.id = exercise_sessions.exercise_id)
+        )
+        WHERE exercise_id NOT IN (
+          SELECT MIN(id) FROM exercises GROUP BY name, category
+        )
+      `);
+
+      // Now safe to delete duplicate exercise rows
+      tx.executeSql(`
+        DELETE FROM exercises
+        WHERE id NOT IN (
+          SELECT MIN(id) FROM exercises GROUP BY name, category
         )
       `);
     },

@@ -14,10 +14,11 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 interface ProteinProgressBarProps {
   goal: number;
   current: number;
+  average: number | null;
   onGoalChanged: (newGoal: number) => void;
 }
 
-export function ProteinProgressBar({ goal, current, onGoalChanged }: ProteinProgressBarProps) {
+export function ProteinProgressBar({ goal, current, average, onGoalChanged }: ProteinProgressBarProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,6 @@ export function ProteinProgressBar({ goal, current, onGoalChanged }: ProteinProg
       setError('Please enter a number greater than 0');
       return;
     }
-
     setError(null);
     try {
       await setProteinGoal(parsed);
@@ -57,110 +57,167 @@ export function ProteinProgressBar({ goal, current, onGoalChanged }: ProteinProg
 
   if (isEditing) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.editLabel}>Daily protein goal (grams)</Text>
-        <TextInput
-          style={styles.input}
-          value={editValue}
-          onChangeText={setEditValue}
-          keyboardType="number-pad"
-          autoFocus
-          returnKeyType="done"
-          onSubmitEditing={handleSave}
-          maxLength={5}
-        />
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+      <View style={styles.wrapper}>
+        <Text style={styles.sectionHeader}>PROTEIN DAILY GOAL</Text>
+        <View style={styles.container}>
+          <Text style={styles.editLabel}>Daily protein goal (grams)</Text>
+          <TextInput
+            style={styles.input}
+            value={editValue}
+            onChangeText={setEditValue}
+            keyboardType="number-pad"
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+            maxLength={5}
+          />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={handleStartEdit}
-      activeOpacity={0.7}>
-      <Text style={styles.progressText}>
-        {percentage}% {'\u2014'} {current}g / {goal}g
-      </Text>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${percentage}%` }]} />
-      </View>
-    </TouchableOpacity>
+    <View style={styles.wrapper}>
+      <Text style={styles.sectionHeader}>PROTEIN DAILY GOAL</Text>
+      <TouchableOpacity
+        style={styles.container}
+        onPress={handleStartEdit}
+        activeOpacity={0.7}>
+        <View style={styles.barRow}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.max(percentage, 12)}%` }]}>
+              <Text style={styles.percentText}>{percentage}%</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoText}>
+            {current}g consumed / {goal}g goal
+          </Text>
+        </View>
+
+        {average !== null && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoText}>
+                7-day avg: {average}g
+              </Text>
+            </View>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginHorizontal: spacing.base,
+  wrapper: {
+    paddingHorizontal: spacing.base,
     marginTop: spacing.base,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: spacing.base,
   },
-  progressText: {
-    fontSize: fontSize.base,
+  sectionHeader: {
+    fontSize: fontSize.sm,
     fontWeight: weightBold,
-    color: colors.primary,
+    color: colors.secondary,
+    letterSpacing: 1.2,
     marginBottom: spacing.sm,
   },
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  barRow: {
+    padding: spacing.base,
+  },
   progressTrack: {
-    height: 8,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 4,
+    height: 28,
+    backgroundColor: '#33373D',
+    borderRadius: 14,
     overflow: 'hidden',
   },
   progressFill: {
-    height: 8,
+    height: 28,
     backgroundColor: colors.accent,
-    borderRadius: 4,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  percentText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.onAccent,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  infoRow: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  infoText: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
   },
   editLabel: {
     fontSize: fontSize.sm,
     color: colors.secondary,
     fontWeight: weightSemiBold,
-    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
   },
   input: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: spacing.md,
     fontSize: fontSize.base,
     color: colors.primary,
+    marginHorizontal: spacing.base,
+    marginTop: spacing.sm,
   },
   errorText: {
     fontSize: fontSize.sm,
     color: colors.danger,
     marginTop: spacing.xs,
+    paddingHorizontal: spacing.base,
   },
   buttonRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    padding: spacing.base,
   },
   saveButton: {
     flex: 1,
     backgroundColor: colors.accent,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
   saveButtonText: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
   },
   cancelButton: {
     flex: 1,
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },

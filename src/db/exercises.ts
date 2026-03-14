@@ -71,33 +71,25 @@ export async function addExercise(
 }
 
 /**
- * Delete a custom exercise.
- * Throws if the exercise is a preset (is_custom = 0).
+ * Delete an exercise by id.
  */
 export async function deleteExercise(id: number): Promise<void> {
   const database = await db;
-  const check = await executeSql(database, 'SELECT is_custom FROM exercises WHERE id = ?', [id]);
-  if (check.rows.length === 0) {
-    throw new Error(`Exercise ${id} not found`);
-  }
-  const isCustom: number = check.rows.item(0).is_custom;
-  if (isCustom !== 1) {
-    throw new Error(`Cannot delete preset exercise ${id}. Only custom exercises can be deleted.`);
-  }
   await executeSql(database, 'DELETE FROM exercises WHERE id = ?', [id]);
 }
 
-/** Update an exercise's category and/or measurement type. */
+/** Update an exercise's name, category and/or measurement type. */
 export async function updateExercise(
   id: number,
+  name: string,
   category: ExerciseCategory,
   measurementType: ExerciseMeasurementType,
 ): Promise<Exercise> {
   const database = await db;
   await executeSql(
     database,
-    'UPDATE exercises SET category = ?, measurement_type = ? WHERE id = ?',
-    [category, measurementType, id],
+    'UPDATE exercises SET name = ?, category = ?, measurement_type = ? WHERE id = ?',
+    [name, category, measurementType, id],
   );
   const row = await executeSql(database, 'SELECT * FROM exercises WHERE id = ?', [id]);
   return rowToExercise(row.rows.item(0));

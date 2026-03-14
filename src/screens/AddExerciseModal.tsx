@@ -61,7 +61,7 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
     setError(null);
     try {
       if (isEditMode && editExercise) {
-        const updated = await updateExercise(editExercise.id, selectedCategory, measurementType);
+        const updated = await updateExercise(editExercise.id, name.trim(), selectedCategory, measurementType);
         onAdded(updated);
       } else {
         const exercise = await addExercise(name.trim(), selectedCategory, 90, measurementType);
@@ -94,13 +94,12 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
 
             <Text style={styles.label}>Exercise Name</Text>
             <TextInput
-              style={[styles.input, isEditMode && styles.inputDisabled]}
+              style={styles.input}
               placeholder="e.g. Bulgarian Split Squat"
               placeholderTextColor={colors.secondary}
               value={name}
               onChangeText={setName}
               autoFocus={!isEditMode}
-              editable={!isEditMode}
               returnKeyType="done"
               onSubmitEditing={handleSubmit}
               maxLength={50}
@@ -203,9 +202,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     fontSize: fontSize.base,
     color: colors.primary,
-  },
-  inputDisabled: {
-    opacity: 0.5,
   },
   errorText: {
     fontSize: fontSize.sm,

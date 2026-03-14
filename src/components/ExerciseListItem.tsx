@@ -1,9 +1,20 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import {
+  Alert,
+  Animated,
+  PanResponder,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightMedium } from '../theme/typography';
+import { fontSize, weightMedium, weightSemiBold } from '../theme/typography';
 import { Exercise } from '../types';
+
+const SWIPE_THRESHOLD = -80;
+const DELETE_ZONE_WIDTH = 80;
 
 interface ExerciseListItemProps {
   exercise: Exercise;
@@ -13,8 +24,83 @@ interface ExerciseListItemProps {
 }
 
 export function ExerciseListItem({ exercise, onDelete, onSelect, onLongPress }: ExerciseListItemProps) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isSwipeOpen = useRef(false);
+
+  const canSwipe = !!onDelete;
+
+  // Fade in the delete zone only when the card starts sliding
+  const deleteOpacity = translateX.interpolate({
+    inputRange: [-DELETE_ZONE_WIDTH, -10, 0],
+    outputRange: [1, 1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        canSwipe && Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 10,
+      onPanResponderMove: (_, gestureState) => {
+        if (!canSwipe) return;
+        const newX = isSwipeOpen.current
+          ? Math.min(0, gestureState.dx - DELETE_ZONE_WIDTH)
+          : Math.min(0, gestureState.dx);
+        translateX.setValue(newX);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (!canSwipe) return;
+        const currentX = isSwipeOpen.current
+          ? gestureState.dx - DELETE_ZONE_WIDTH
+          : gestureState.dx;
+
+        if (currentX < SWIPE_THRESHOLD) {
+          Animated.spring(translateX, {
+            toValue: -DELETE_ZONE_WIDTH,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+          isSwipeOpen.current = true;
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+          isSwipeOpen.current = false;
+        }
+      },
+    }),
+  ).current;
+
+  const handleDeletePress = () => {
+    Alert.alert(
+      'Delete Exercise',
+      `Are you sure you want to delete "${exercise.name}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => {
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              bounciness: 4,
+            }).start();
+            isSwipeOpen.current = false;
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete?.(),
+        },
+      ],
+    );
+  };
+
   const rowContent = (
     <View style={styles.row}>
+      <View style={styles.accentBar} />
       <View style={styles.nameContainer}>
         <Text style={styles.name}>{exercise.name}</Text>
         {exercise.measurementType === 'timed' && (
@@ -23,46 +109,105 @@ export function ExerciseListItem({ exercise, onDelete, onSelect, onLongPress }: 
           </View>
         )}
       </View>
-      {exercise.isCustom && onDelete ? (
-        <TouchableOpacity
-          onPress={onDelete}
-          style={styles.deleteButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.deleteIcon}>✕</Text>
-        </TouchableOpacity>
-      ) : null}
     </View>
   );
 
-  if (onSelect || onLongPress) {
-    return (
-      <TouchableOpacity
-        onPress={onSelect}
-        onLongPress={onLongPress}
-        delayLongPress={1000}
-        style={styles.container}>
-        {rowContent}
-      </TouchableOpacity>
-    );
+  const cardStyle = canSwipe ? styles.cardSwipeable : styles.card;
+
+  const cardInner = onSelect || onLongPress ? (
+    <TouchableOpacity
+      onPress={onSelect}
+      onLongPress={onLongPress}
+      delayLongPress={1000}
+      style={cardStyle}>
+      {rowContent}
+    </TouchableOpacity>
+  ) : (
+    <View style={cardStyle}>{rowContent}</View>
+  );
+
+  if (!canSwipe) {
+    return cardInner;
   }
 
-  return <View style={styles.container}>{rowContent}</View>;
+  return (
+    <View style={styles.swipeContainer}>
+      <Animated.View style={[styles.deleteAction, { opacity: deleteOpacity }]}>
+        <TouchableOpacity
+          style={styles.deleteActionTouchable}
+          onPress={handleDeletePress}
+          activeOpacity={0.8}>
+          <Text style={styles.deleteActionText}>Delete</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      <Animated.View
+        style={{ transform: [{ translateX }] }}
+        {...panResponder.panHandlers}>
+        {cardInner}
+      </Animated.View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    paddingHorizontal: spacing.base,
-    paddingVertical: 14,
-    minHeight: 48,
-    justifyContent: 'center' as const,
+  swipeContainer: {
+    position: 'relative',
+    marginBottom: spacing.sm,
+  },
+  deleteAction: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: DELETE_ZONE_WIDTH,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  deleteActionTouchable: {
+    flex: 1,
+    backgroundColor: colors.danger,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteActionText: {
+    color: '#fff',
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+  },
+  card: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: spacing.md,
+    paddingRight: spacing.base,
+    paddingLeft: 0,
+    marginBottom: spacing.sm,
+    overflow: 'hidden',
+  },
+  cardSwipeable: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: spacing.md,
+    paddingRight: spacing.base,
+    paddingLeft: 0,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  accentBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    backgroundColor: colors.accent,
+    borderRadius: 2,
+    marginRight: spacing.md,
+    marginLeft: spacing.md,
   },
   nameContainer: {
     flex: 1,
@@ -72,7 +217,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: fontSize.base,
-    fontWeight: weightMedium,
+    fontWeight: weightSemiBold,
     color: colors.primary,
     flexShrink: 1,
   },
@@ -86,17 +231,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: weightMedium,
     color: colors.background,
-  },
-  deleteButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  deleteIcon: {
-    fontSize: fontSize.base,
-    color: colors.danger,
-    fontWeight: weightMedium,
   },
 });

@@ -9,13 +9,14 @@ import {
 } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightMedium } from '../theme/typography';
+import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Meal } from '../types';
 
 interface MealListItemProps {
   meal: Meal;
   onEdit: (meal: Meal) => void;
   onDelete: (meal: Meal) => void;
+  isLast?: boolean;
 }
 
 const DELETE_THRESHOLD = -80;
@@ -28,6 +29,7 @@ export const MealListItem = React.memo(function MealListItem({
   meal,
   onEdit,
   onDelete,
+  isLast = false,
 }: MealListItemProps) {
   const translateX = useRef(new Animated.Value(0)).current;
 
@@ -57,7 +59,7 @@ export const MealListItem = React.memo(function MealListItem({
   ).current;
 
   return (
-    <View style={styles.outerContainer}>
+    <View style={[styles.outerContainer, !isLast && styles.withBorder]}>
       <TouchableOpacity
         style={styles.deleteArea}
         onPress={() => onDelete(meal)}
@@ -72,8 +74,13 @@ export const MealListItem = React.memo(function MealListItem({
           style={styles.rowContent}
           onPress={() => onEdit(meal)}
           activeOpacity={0.7}>
+          <View style={styles.checkCircle}>
+            <Text style={styles.checkMark}>{'\u2713'}</Text>
+          </View>
           <View style={styles.leftContent}>
-            <Text style={styles.mealTypeLabel}>{capitalize(meal.mealType)}</Text>
+            <Text style={styles.mealTypeLabel}>
+              {capitalize(meal.mealType)}:
+            </Text>
             {meal.description ? (
               <Text style={styles.description} numberOfLines={1}>
                 {meal.description}
@@ -91,6 +98,10 @@ const styles = StyleSheet.create({
   outerContainer: {
     position: 'relative',
     overflow: 'hidden',
+  },
+  withBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   deleteArea: {
     position: 'absolute',
@@ -114,10 +125,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.base,
-    paddingVertical: 14,
-    minHeight: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingVertical: spacing.md,
+    minHeight: 56,
+  },
+  checkCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  checkMark: {
+    fontSize: 14,
+    fontWeight: weightBold,
+    color: colors.onAccent,
+    marginTop: -1,
   },
   leftContent: {
     flex: 1,
@@ -125,15 +149,14 @@ const styles = StyleSheet.create({
   mealTypeLabel: {
     fontSize: fontSize.xs,
     color: colors.secondary,
-    marginBottom: 2,
   },
   description: {
     fontSize: fontSize.base,
-    fontWeight: weightMedium,
+    fontWeight: weightSemiBold,
     color: colors.primary,
   },
   proteinGrams: {
-    fontSize: fontSize.base,
+    fontSize: fontSize.md,
     fontWeight: weightBold,
     color: colors.accent,
     marginLeft: spacing.sm,

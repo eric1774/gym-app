@@ -20,7 +20,8 @@ export const CREATE_WORKOUT_SESSIONS_TABLE = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at TEXT NOT NULL,
     completed_at TEXT,
-    program_day_id INTEGER
+    program_day_id INTEGER,
+    program_week INTEGER
   )
 `;
 

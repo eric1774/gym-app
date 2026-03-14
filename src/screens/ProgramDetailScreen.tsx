@@ -1,11 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  FlatList,
+  Animated,
+  LayoutAnimation,
+  PanResponder,
+  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,8 +27,9 @@ import {
   getProgramDays,
   renameProgram,
   renameProgramDay,
+  reorderProgramDays,
 } from '../db/programs';
-import { getProgramWeekCompletion, unmarkDayCompletion } from '../db/dashboard';
+import { getProgramWeekCompletion, getProgramTotalCompleted, unmarkDayCompletion } from '../db/dashboard';
 import { createCompletedSession } from '../db/sessions';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -33,7 +39,73 @@ import { ProgramsStackParamList } from '../navigation/TabNavigator';
 import { AddDayModal } from './AddDayModal';
 import { RenameModal } from '../components/RenameModal';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 type DetailRoute = RouteProp<ProgramsStackParamList, 'ProgramDetail'>;
+
+function CompletionCircle({ isDone, size = 24 }: { isDone: boolean; size?: number }) {
+  return (
+    <View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderWidth: 2,
+        },
+        isDone
+          ? { borderColor: colors.accent, backgroundColor: colors.accent }
+          : { borderColor: colors.secondary, backgroundColor: 'transparent' },
+      ]}>
+      {isDone && (
+        <Text
+          style={{
+            fontSize: size * 0.5,
+            fontWeight: weightBold,
+            color: colors.onAccent,
+            lineHeight: size * 0.6,
+          }}>
+          {'\u2713'}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function GripHandle({
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+}: {
+  onDragStart: () => void;
+  onDragMove: (dy: number) => void;
+  onDragEnd: () => void;
+}) {
+  const cb = useRef({ onDragStart, onDragMove, onDragEnd });
+  cb.current = { onDragStart, onDragMove, onDragEnd };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => cb.current.onDragStart(),
+      onPanResponderMove: (_, gs) => cb.current.onDragMove(gs.dy),
+      onPanResponderRelease: () => cb.current.onDragEnd(),
+      onPanResponderTerminate: () => cb.current.onDragEnd(),
+    }),
+  ).current;
+
+  return (
+    <View {...panResponder.panHandlers} style={styles.gripHandle}>
+      <View style={styles.gripLine} />
+      <View style={styles.gripLine} />
+      <View style={styles.gripLine} />
+    </View>
+  );
+}
 
 export function ProgramDetailScreen() {
   const navigation = useNavigation();
@@ -48,13 +120,29 @@ export function ProgramDetailScreen() {
   const [renameProgramVisible, setRenameProgramVisible] = useState(false);
   const [renameDayTarget, setRenameDayTarget] = useState<ProgramDay | null>(null);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
+  const [completedWorkouts, setCompletedWorkouts] = useState(0);
+
+  // Drag state
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [orderedDays, setOrderedDays] = useState<ProgramDay[]>([]);
+  const dragY = useRef(new Animated.Value(0)).current;
+  const cardHeightsMap = useRef<Map<number, number>>(new Map());
+  const swapOffset = useRef(0);
+  const orderedDaysRef = useRef<ProgramDay[]>([]);
+  const draggingIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setOrderedDays(days);
+    orderedDaysRef.current = days;
+  }, [days]);
 
   const refresh = useCallback(async () => {
     try {
-      const [p, d, wc] = await Promise.all([getProgram(programId), getProgramDays(programId), getProgramWeekCompletion(programId)]);
+      const [p, d, wc, completed] = await Promise.all([getProgram(programId), getProgramDays(programId), getProgramWeekCompletion(programId), getProgramTotalCompleted(programId)]);
       setProgram(p);
       setDays(d);
       setWeekCompletion(wc);
+      setCompletedWorkouts(completed);
     } catch {
       // ignore
     }
@@ -246,62 +334,91 @@ export function ProgramDetailScreen() {
     setExpandedDayId(prev => (prev === dayId ? null : dayId));
   }, []);
 
-  const renderDay = useCallback(
-    ({ item }: { item: ProgramDay }) => {
-      const completion = weekCompletion.find(wc => wc.dayId === item.id);
-      const isDone = completion?.isCompletedThisWeek ?? false;
-      const isExpanded = expandedDayId === item.id;
-      return (
-        <View style={[styles.dayCard, isDone && styles.dayCardDone]}>
-          <TouchableOpacity
-            style={styles.dayRow}
-            onPress={() => handleDayTap(item)}
-            onLongPress={() => handleDayLongPress(item)}
-            delayLongPress={1000}
-            activeOpacity={0.7}>
-            <View style={styles.dayLeft}>
-              <Text style={[styles.completionIcon, isDone && styles.completionIconDone]}>
-                {isDone ? '✓' : '○'}
-              </Text>
-            </View>
-            <Text style={styles.dayName}>{item.name}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => toggleDayMenu(item.id)}
-            style={styles.caretButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.caretText}>{isExpanded ? '▴' : '▾'}</Text>
-          </TouchableOpacity>
-          {isExpanded && (
-            <View style={styles.dayActions}>
-              <TouchableOpacity
-                style={styles.actionChip}
-                onPress={() => { setExpandedDayId(null); setRenameDayTarget(item); }}>
-                <Text style={styles.actionChipText}>Rename</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionChip}
-                onPress={() => { setExpandedDayId(null); handleDuplicateDay(item.id); }}>
-                <Text style={styles.actionChipText}>Duplicate</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionChip, styles.actionChipDanger]}
-                onPress={() => { setExpandedDayId(null); handleDeleteDay(item); }}>
-                <Text style={styles.actionChipTextDanger}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      );
-    },
-    [handleDayTap, handleDayLongPress, handleDeleteDay, handleDuplicateDay, weekCompletion, expandedDayId, toggleDayMenu],
-  );
+  // ── Drag handlers ──────────────────────────────────────────────────
 
-  const keyExtractor = useCallback((item: ProgramDay) => String(item.id), []);
+  const handleDragStart = useCallback((dayId: number) => {
+    setExpandedDayId(null);
+    setDraggingId(dayId);
+    draggingIdRef.current = dayId;
+    swapOffset.current = 0;
+    dragY.setValue(0);
+  }, [dragY]);
+
+  const handleDragMove = useCallback((dy: number) => {
+    const currentDraggingId = draggingIdRef.current;
+    if (currentDraggingId === null) return;
+
+    const currentOrder = orderedDaysRef.current;
+    const currentIndex = currentOrder.findIndex(d => d.id === currentDraggingId);
+    if (currentIndex < 0) return;
+
+    const adjustedDy = dy - swapOffset.current;
+    dragY.setValue(adjustedDy);
+
+    const heights = currentOrder.map(d => cardHeightsMap.current.get(d.id) || 62);
+
+    let yBefore = 0;
+    for (let i = 0; i < currentIndex; i++) yBefore += heights[i];
+    const draggedCenter = yBefore + heights[currentIndex] / 2 + adjustedDy;
+
+    let targetIndex = currentIndex;
+
+    if (currentIndex < currentOrder.length - 1) {
+      let nextY = 0;
+      for (let i = 0; i <= currentIndex; i++) nextY += heights[i];
+      const nextCenter = nextY + heights[currentIndex + 1] / 2;
+      if (draggedCenter > nextCenter) targetIndex = currentIndex + 1;
+    }
+
+    if (currentIndex > 0) {
+      let prevY = 0;
+      for (let i = 0; i < currentIndex - 1; i++) prevY += heights[i];
+      const prevCenter = prevY + heights[currentIndex - 1] / 2;
+      if (draggedCenter < prevCenter) targetIndex = currentIndex - 1;
+    }
+
+    if (targetIndex !== currentIndex) {
+      const swappedHeight = heights[targetIndex];
+      if (targetIndex > currentIndex) {
+        swapOffset.current += swappedHeight;
+      } else {
+        swapOffset.current -= swappedHeight;
+      }
+
+      LayoutAnimation.configureNext({
+        duration: 200,
+        update: { type: LayoutAnimation.Types.easeInEaseOut },
+      });
+
+      const newOrder = [...currentOrder];
+      const [item] = newOrder.splice(currentIndex, 1);
+      newOrder.splice(targetIndex, 0, item);
+      orderedDaysRef.current = newOrder;
+      setOrderedDays(newOrder);
+    }
+  }, [dragY]);
+
+  const handleDragEnd = useCallback(() => {
+    const finalOrder = orderedDaysRef.current;
+    draggingIdRef.current = null;
+
+    Animated.spring(dragY, {
+      toValue: 0,
+      useNativeDriver: false,
+      bounciness: 4,
+      speed: 20,
+    }).start(() => {
+      setDraggingId(null);
+    });
+
+    reorderProgramDays(programId, finalOrder.map(d => d.id));
+  }, [dragY, programId]);
+
+  // ── Derived state ──────────────────────────────────────────────────
 
   if (!program) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.centered}>
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -312,16 +429,24 @@ export function ProgramDetailScreen() {
   const isActivated = program.startDate !== null;
   const canAdvance = isActivated && program.currentWeek < program.weeks;
   const canGoBack = isActivated && program.currentWeek > 1;
-  const isComplete = isActivated && program.currentWeek >= program.weeks;
+  const totalWorkouts = orderedDays.length * program.weeks;
+  const isComplete = isActivated && totalWorkouts > 0 && completedWorkouts >= totalWorkouts;
+  const progress = isActivated && totalWorkouts > 0 ? Math.min(completedWorkouts / totalWorkouts, 1) : 0;
+  const progressPercent = Math.round(progress * 100);
+
+  const orderedWeekCompletion = orderedDays
+    .map(d => weekCompletion.find(wc => wc.dayId === d.id))
+    .filter((wc): wc is ProgramDayCompletionStatus => wc != null);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.backText}>{'<'}</Text>
+          <Text style={styles.backText}>{'\u2039'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.headerCenter}
@@ -330,9 +455,11 @@ export function ProgramDetailScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {program.name}
           </Text>
-          <Text style={styles.headerSubtitle}>
-            Week {program.currentWeek}/{program.weeks}
-          </Text>
+          {isActivated && (
+            <Text style={styles.headerSubtitle}>
+              Week {program.currentWeek}/{program.weeks}
+            </Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleDeleteProgram}
@@ -342,103 +469,184 @@ export function ProgramDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {isComplete && (
-        <View style={styles.completeBanner}>
-          <Text style={styles.completeBannerText}>Program Complete!</Text>
-        </View>
-      )}
-
-      <View style={styles.actionRow}>
-        {!isActivated ? (
-          <TouchableOpacity style={styles.actionButton} onPress={handleActivate}>
-            <Text style={styles.actionButtonText}>Start Program</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.weekControls}>
-            <TouchableOpacity
-              style={[styles.weekNavButton, !canGoBack && styles.weekNavButtonDisabled]}
-              onPress={handleGoBack}
-              disabled={!canGoBack}>
-              <Text style={[styles.weekNavText, !canGoBack && styles.weekNavTextDisabled]}>
-                {'< Prev'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.weekNavButton, !canAdvance && styles.weekNavButtonDisabled]}
-              onPress={handleAdvanceWeek}
-              disabled={!canAdvance}>
-              <Text style={[styles.weekNavText, !canAdvance && styles.weekNavTextDisabled]}>
-                {'Next >'}
-              </Text>
-            </TouchableOpacity>
+      <ScrollView
+        scrollEnabled={draggingId === null}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handlePullRefresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }>
+        {isComplete && (
+          <View style={styles.completeBanner}>
+            <Text style={styles.completeBannerText}>Program Complete!</Text>
           </View>
         )}
-      </View>
 
-      {isActivated && weekCompletion.length > 0 && (
-        <View style={styles.weekCard}>
-          <Text style={styles.weekTitle}>
-            Week {program.currentWeek} of {program.weeks}
-          </Text>
-          {weekCompletion.map((day) => (
-            <TouchableOpacity
-              key={day.dayId}
-              style={styles.weekRow}
-              onLongPress={() => {
-                const d = days.find(dd => dd.id === day.dayId);
-                if (d) { handleDayLongPress(d); }
-              }}
-              delayLongPress={1000}
-              activeOpacity={0.7}>
-              <Text style={day.isCompletedThisWeek ? styles.checkDone : styles.checkPending}>
-                {day.isCompletedThisWeek ? '✓' : '○'}
-              </Text>
-              <Text
-                style={[
-                  styles.weekDayName,
-                  day.isCompletedThisWeek ? styles.weekDayDone : styles.weekDayPending,
-                ]}>
-                {day.dayName}
-              </Text>
+        {/* Action row */}
+        <View style={styles.actionRow}>
+          {!isActivated ? (
+            <TouchableOpacity style={styles.actionButton} onPress={handleActivate}>
+              <Text style={styles.actionButtonText}>Start Program</Text>
             </TouchableOpacity>
-          ))}
+          ) : (
+            <View style={styles.weekControls}>
+              <TouchableOpacity
+                style={[styles.weekNavButton, !canGoBack && styles.weekNavButtonDisabled]}
+                onPress={handleGoBack}
+                disabled={!canGoBack}>
+                <Text style={[styles.weekNavText, !canGoBack && styles.weekNavTextDisabled]}>
+                  {'\u2039 Prev'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.weekNavButton, !canAdvance && styles.weekNavButtonDisabled]}
+                onPress={handleAdvanceWeek}
+                disabled={!canAdvance}>
+                <Text style={[styles.weekNavText, !canAdvance && styles.weekNavTextDisabled]}>
+                  {'Next \u203A'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-      )}
 
-      {days.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No workout days yet</Text>
-          <Text style={styles.emptyHint}>Tap Add Day to get started</Text>
+        {/* Progress bar */}
+        {isActivated && !isComplete && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>{progressPercent}%</Text>
+          </View>
+        )}
+
+        {/* Week completion card */}
+        {isActivated && orderedWeekCompletion.length > 0 && (
+          <View style={styles.weekCard}>
+            <Text style={styles.weekCardTitle}>
+              WEEK {program.currentWeek} OF {program.weeks}
+            </Text>
+            {orderedWeekCompletion.map((day) => (
+              <TouchableOpacity
+                key={day.dayId}
+                style={styles.weekRow}
+                onLongPress={() => {
+                  const d = orderedDays.find(dd => dd.id === day.dayId);
+                  if (d) { handleDayLongPress(d); }
+                }}
+                delayLongPress={1000}
+                activeOpacity={0.7}>
+                <CompletionCircle isDone={day.isCompletedThisWeek} size={20} />
+                <Text
+                  style={[
+                    styles.weekDayName,
+                    day.isCompletedThisWeek ? styles.weekDayDone : styles.weekDayPending,
+                  ]}>
+                  {day.dayName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Section header */}
+        <Text style={styles.daysSectionHeader}>WORKOUT DAYS</Text>
+
+        {/* Day cards */}
+        <View style={styles.daysContainer}>
+          {orderedDays.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No workout days yet</Text>
+              <Text style={styles.emptyHint}>Tap Add Day to get started</Text>
+            </View>
+          ) : (
+            orderedDays.map((day) => {
+              const isDragging = day.id === draggingId;
+              const completion = weekCompletion.find(wc => wc.dayId === day.id);
+              const isDone = completion?.isCompletedThisWeek ?? false;
+              const isExpanded = expandedDayId === day.id;
+
+              return (
+                <Animated.View
+                  key={day.id}
+                  onLayout={(e) => {
+                    cardHeightsMap.current.set(day.id, e.nativeEvent.layout.height);
+                  }}
+                  style={
+                    isDragging
+                      ? {
+                          opacity: 0.5,
+                          transform: [{ translateY: dragY }, { scale: 1.03 }],
+                          zIndex: 999,
+                          ...(Platform.OS === 'android' ? { elevation: 10 } : {}),
+                        }
+                      : undefined
+                  }>
+                  <View style={styles.dayCard}>
+                    <View style={styles.dayRowWithGrip}>
+                      <GripHandle
+                        onDragStart={() => handleDragStart(day.id)}
+                        onDragMove={handleDragMove}
+                        onDragEnd={handleDragEnd}
+                      />
+                      <TouchableOpacity
+                        style={styles.dayRow}
+                        onPress={() => handleDayTap(day)}
+                        onLongPress={() => handleDayLongPress(day)}
+                        delayLongPress={1000}
+                        activeOpacity={0.7}>
+                        <CompletionCircle isDone={isDone} size={24} />
+                        <Text style={styles.dayName}>{day.name}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => toggleDayMenu(day.id)}
+                      style={styles.caretButton}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={styles.caretText}>{isExpanded ? '\u25B4' : '\u25BE'}</Text>
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <View style={styles.dayActions}>
+                        <TouchableOpacity
+                          style={styles.actionChip}
+                          onPress={() => { setExpandedDayId(null); setRenameDayTarget(day); }}>
+                          <Text style={styles.actionChipText}>Rename</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.actionChip}
+                          onPress={() => { setExpandedDayId(null); handleDuplicateDay(day.id); }}>
+                          <Text style={styles.actionChipText}>Duplicate</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.actionChip, styles.actionChipDanger]}
+                          onPress={() => { setExpandedDayId(null); handleDeleteDay(day); }}>
+                          <Text style={styles.actionChipTextDanger}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </Animated.View>
+              );
+            })
+          )}
         </View>
-      ) : (
-        <FlatList
-          data={days}
-          renderItem={renderDay}
-          keyExtractor={keyExtractor}
-          extraData={weekCompletion}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handlePullRefresh}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-        />
-      )}
 
-      <TouchableOpacity
-        style={styles.addDayButton}
-        onPress={() => setAddDayVisible(true)}>
-        <Text style={styles.addDayButtonText}>+ Add Day</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addDayButton}
+          onPress={() => setAddDayVisible(true)}>
+          <Text style={styles.addDayButtonText}>+ Add Day</Text>
+        </TouchableOpacity>
+      </ScrollView>
 
       <AddDayModal
         visible={addDayVisible}
         onClose={() => setAddDayVisible(false)}
         onAdd={handleAddDay}
-        defaultName={`Day ${days.length + 1}`}
+        defaultName={`Day ${orderedDays.length + 1}`}
       />
 
       <RenameModal
@@ -488,9 +696,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: fontSize.xl,
+    fontSize: 32,
     color: colors.accent,
     fontWeight: weightBold,
+    lineHeight: 36,
   },
   headerCenter: {
     flex: 1,
@@ -508,12 +717,17 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   deleteHeaderText: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
-    color: '#E53935',
+    color: colors.danger,
     textAlign: 'center',
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   actionRow: {
     paddingHorizontal: spacing.base,
@@ -524,11 +738,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: spacing.md,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   actionButtonText: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
   },
   completeBanner: {
     backgroundColor: colors.accent,
@@ -539,7 +755,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   completeBannerText: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSize.base,
     fontWeight: weightBold,
   },
@@ -549,12 +765,14 @@ const styles = StyleSheet.create({
   },
   weekNavButton: {
     flex: 1,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     paddingVertical: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.accent,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   weekNavButtonDisabled: {
     borderColor: colors.border,
@@ -562,41 +780,52 @@ const styles = StyleSheet.create({
   weekNavText: {
     color: colors.accent,
     fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
   },
   weekNavTextDisabled: {
     color: colors.secondary,
   },
+  progressSection: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.md,
+  },
+  progressTrack: {
+    height: 8,
+    backgroundColor: '#33373D',
+    borderRadius: 8,
+  },
+  progressFill: {
+    height: 8,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+  },
+  progressLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.accent,
+    marginTop: spacing.xs,
+  },
   weekCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: spacing.base,
     marginHorizontal: spacing.base,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  weekTitle: {
-    fontSize: fontSize.md,
+  weekCardTitle: {
+    fontSize: fontSize.sm,
     fontWeight: weightBold,
-    color: colors.primary,
+    color: colors.secondary,
+    letterSpacing: 1.2,
     marginBottom: spacing.sm,
   },
   weekRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  checkDone: {
-    fontSize: fontSize.base,
-    color: colors.accent,
-    marginRight: spacing.sm,
-    fontWeight: weightBold,
-  },
-  checkPending: {
-    fontSize: fontSize.base,
-    color: colors.secondary,
-    marginRight: spacing.sm,
+    gap: spacing.sm,
   },
   weekDayName: {
     fontSize: fontSize.base,
@@ -608,41 +837,52 @@ const styles = StyleSheet.create({
   weekDayPending: {
     color: colors.secondary,
   },
-  list: {
+  daysSectionHeader: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
     paddingHorizontal: spacing.base,
-    paddingBottom: spacing.xl,
+    marginBottom: spacing.sm,
+  },
+  daysContainer: {
+    paddingHorizontal: spacing.base,
   },
   dayCard: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: spacing.base,
     marginBottom: spacing.sm,
-  },
-  dayCardDone: {
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.border,
+  },
+  dayRowWithGrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gripHandle: {
+    width: 28,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+    gap: 3,
+  },
+  gripLine: {
+    width: 16,
+    height: 2,
+    backgroundColor: colors.secondary,
+    borderRadius: 1,
   },
   dayRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-  },
-  dayLeft: {
-    marginRight: spacing.sm,
-  },
-  completionIcon: {
-    fontSize: fontSize.base,
-    color: colors.secondary,
-    width: 20,
-    textAlign: 'center',
-  },
-  completionIconDone: {
-    color: colors.accent,
-    fontWeight: weightBold,
+    gap: spacing.sm,
   },
   dayName: {
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
     color: colors.primary,
     flex: 1,
   },
@@ -670,13 +910,13 @@ const styles = StyleSheet.create({
   },
   actionChip: {
     flex: 1,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 10,
     backgroundColor: colors.surfaceElevated,
     alignItems: 'center',
   },
   actionChipDanger: {
-    backgroundColor: 'rgba(229, 57, 53, 0.1)',
+    backgroundColor: 'rgba(217, 83, 79, 0.1)',
   },
   actionChipText: {
     fontSize: fontSize.sm,
@@ -686,13 +926,14 @@ const styles = StyleSheet.create({
   actionChipTextDanger: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
-    color: '#E53935',
+    color: colors.danger,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
   },
   emptyText: {
     fontSize: fontSize.base,
@@ -708,14 +949,16 @@ const styles = StyleSheet.create({
   addDayButton: {
     backgroundColor: colors.accent,
     borderRadius: 12,
-    paddingVertical: spacing.base,
+    paddingVertical: spacing.md,
     marginHorizontal: spacing.base,
     marginBottom: spacing.lg,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   addDayButtonText: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
   },
 });

@@ -217,34 +217,13 @@ export async function getProgramWeekCompletion(
     return [];
   }
   const prog = progResult.rows.item(0);
-  const startDate: string | null = prog.start_date;
+  const currentWeek: number = prog.current_week;
 
   const daysResult = await executeSql(
     database,
     'SELECT id, name FROM program_days WHERE program_id = ? ORDER BY sort_order',
     [programId],
   );
-
-  if (!startDate) {
-    const statuses: ProgramDayCompletionStatus[] = [];
-    for (let i = 0; i < daysResult.rows.length; i++) {
-      const day = daysResult.rows.item(i);
-      statuses.push({
-        dayId: day.id,
-        dayName: day.name,
-        isCompletedThisWeek: false,
-        sessionId: null,
-      });
-    }
-    return statuses;
-  }
-
-  const currentWeek: number = prog.current_week;
-  const startMs = new Date(startDate).getTime();
-  const weekStartMs = startMs + (currentWeek - 1) * 7 * 24 * 60 * 60 * 1000;
-  const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
-  const weekStartISO = new Date(weekStartMs).toISOString();
-  const weekEndISO = new Date(weekEndMs).toISOString();
 
   const statuses: ProgramDayCompletionStatus[] = [];
   for (let i = 0; i < daysResult.rows.length; i++) {
@@ -254,11 +233,10 @@ export async function getProgramWeekCompletion(
       `SELECT id FROM workout_sessions
        WHERE program_day_id = ?
          AND completed_at IS NOT NULL
-         AND completed_at >= ?
-         AND completed_at < ?
+         AND program_week = ?
        ORDER BY completed_at DESC
        LIMIT 1`,
-      [day.id, weekStartISO, weekEndISO],
+      [day.id, currentWeek],
     );
 
     const hasSession = sessionResult.rows.length > 0;
@@ -270,6 +248,27 @@ export async function getProgramWeekCompletion(
     });
   }
   return statuses;
+}
+
+/**
+ * Count distinct completed workouts across all weeks for a program.
+ * A workout counts once per (day, week) pair.
+ */
+export async function getProgramTotalCompleted(programId: number): Promise<number> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT COUNT(*) AS cnt FROM (
+       SELECT DISTINCT ws.program_day_id, ws.program_week
+       FROM workout_sessions ws
+       INNER JOIN program_days pd ON pd.id = ws.program_day_id
+       WHERE pd.program_id = ?
+         AND ws.completed_at IS NOT NULL
+         AND ws.program_week IS NOT NULL
+     )`,
+    [programId],
+  );
+  return result.rows.item(0).cnt as number;
 }
 
 // ── Next Workout Day ────────────────────────────────────────────────
@@ -364,30 +363,20 @@ export async function unmarkDayCompletion(
 
   const progResult = await executeSql(
     database,
-    'SELECT start_date, current_week FROM programs WHERE id = ?',
+    'SELECT current_week FROM programs WHERE id = ?',
     [programId],
   );
   if (progResult.rows.length === 0) { return; }
-  const prog = progResult.rows.item(0);
-  const startDate: string | null = prog.start_date;
-  if (!startDate) { return; }
+  const currentWeek: number = progResult.rows.item(0).current_week;
 
-  const currentWeek: number = prog.current_week;
-  const startMs = new Date(startDate).getTime();
-  const weekStartMs = startMs + (currentWeek - 1) * 7 * 24 * 60 * 60 * 1000;
-  const weekEndMs = weekStartMs + 7 * 24 * 60 * 60 * 1000;
-  const weekStartISO = new Date(weekStartMs).toISOString();
-  const weekEndISO = new Date(weekEndMs).toISOString();
-
-  // Find all completed sessions for this day within the current week
+  // Find all completed sessions for this day in the current week
   const sessions = await executeSql(
     database,
     `SELECT id FROM workout_sessions
      WHERE program_day_id = ?
        AND completed_at IS NOT NULL
-       AND completed_at >= ?
-       AND completed_at < ?`,
-    [programDayId, weekStartISO, weekEndISO],
+       AND program_week = ?`,
+    [programDayId, currentWeek],
   );
 
   for (let i = 0; i < sessions.rows.length; i++) {

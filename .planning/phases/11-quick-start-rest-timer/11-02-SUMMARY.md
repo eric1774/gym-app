@@ -106,6 +106,15 @@ None - no external service configuration required.
 - `handleStartRest` is wired to use per-exercise rest — Phase 11-03 (quick-start / auto-start rest timer) can now read the correct duration without additional wiring
 - No blockers
 
+## Self-Check: PASSED
+
+- FOUND: src/db/exercises.ts (updateDefaultRestSeconds exported)
+- FOUND: src/db/sessions.ts (updateSessionRestSeconds exported)
+- FOUND: src/screens/WorkoutScreen.tsx (restStepperVisible present)
+- FOUND: .planning/phases/11-quick-start-rest-timer/11-02-SUMMARY.md
+- FOUND commit: 8bc857d (DB helpers)
+- FOUND commit: 69a4c11 (WorkoutScreen stepper UI)
+
 ---
 *Phase: 11-quick-start-rest-timer*
 *Completed: 2026-03-12*

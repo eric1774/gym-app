@@ -297,6 +297,22 @@ export async function updateExerciseTargets(
   );
 }
 
+/** Reorder days in a program. Updates sort_order based on array index. */
+export async function reorderProgramDays(
+  programId: number,
+  orderedDayIds: number[],
+): Promise<void> {
+  const database = await db;
+  await runTransaction(database, (tx) => {
+    orderedDayIds.forEach((id, index) => {
+      tx.executeSql(
+        'UPDATE program_days SET sort_order = ? WHERE id = ? AND program_id = ?',
+        [index, id, programId],
+      );
+    });
+  });
+}
+
 /** Reorder exercises in a program day. Updates sort_order based on array index. */
 export async function reorderProgramDayExercises(
   dayId: number,

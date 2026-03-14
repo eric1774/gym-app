@@ -18,6 +18,10 @@ import { fontSize, weightBold } from '../theme/typography';
 import { Exercise, ExerciseCategory } from '../types';
 import { AddExerciseModal } from './AddExerciseModal';
 
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
@@ -143,29 +147,42 @@ export function LibraryScreen() {
 
   const keyExtractor = useCallback((item: Exercise) => String(item.id), []);
 
+  const isSearching = searchQuery.trim() !== '';
+  const sectionLabel = isSearching
+    ? `SEARCH: "${searchQuery.trim().toUpperCase()}"`
+    : `FILTERED: ${selectedCategory.toUpperCase()}`;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Exercise Library</Text>
       </View>
 
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search exercises..."
-          placeholderTextColor={colors.secondary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          returnKeyType="search"
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-        />
+        <View style={styles.searchInputWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search exercises..."
+            placeholderTextColor={colors.secondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+            clearButtonMode="while-editing"
+          />
+          <Text style={styles.searchIcon}>🔍</Text>
+        </View>
       </View>
 
-      {searchQuery.trim() === '' ? (
+      {!isSearching && (
         <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
-      ) : null}
+      )}
+
+      {/* Section header */}
+      <View style={styles.sectionHeaderStrip}>
+        <Text style={styles.sectionHeader}>{sectionLabel}</Text>
+      </View>
 
       {isLoading ? (
         <ActivityIndicator style={styles.loader} color={colors.accent} />
@@ -179,6 +196,7 @@ export function LibraryScreen() {
           data={exercises}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          contentContainerStyle={styles.listContent}
           style={styles.list}
         />
       )}
@@ -213,7 +231,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   title: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
     fontWeight: weightBold,
     color: colors.primary,
   },
@@ -221,17 +239,47 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.sm,
   },
+  searchInputWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
   searchInput: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
     paddingHorizontal: spacing.base,
-    paddingVertical: 14,
+    paddingVertical: spacing.sm + 2,
+    paddingRight: 40,
     color: colors.primary,
     fontSize: fontSize.base,
-    minHeight: 48,
+  },
+  searchIcon: {
+    position: 'absolute',
+    right: spacing.md,
+    fontSize: fontSize.base,
+    opacity: 0.5,
+  },
+  sectionHeaderStrip: {
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.base,
+    borderRadius: 10,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sectionHeader: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    letterSpacing: 1.2,
   },
   list: {
     flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.xxl,
   },
   loader: {
     flex: 1,
@@ -256,22 +304,18 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    right: spacing.base,
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    right: spacing.lg,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    zIndex: 10,
   },
   fabText: {
     fontSize: fontSize.xl,
-    color: colors.background,
+    color: colors.onAccent,
     fontWeight: weightBold,
     lineHeight: 28,
   },

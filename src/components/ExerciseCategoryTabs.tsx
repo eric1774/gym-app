@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightSemiBold } from '../theme/typography';
+import { fontSize, weightBold } from '../theme/typography';
 import { ExerciseCategory, EXERCISE_CATEGORIES } from '../types';
 
 interface ExerciseCategoryTabsProps {
@@ -52,24 +52,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   pill: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: 24,
-    minHeight: 40,
-    justifyContent: 'center' as const,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 20,
   },
   pillSelected: {
     backgroundColor: colors.accent,
   },
   pillUnselected: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#33373D',
   },
   pillText: {
     fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
   },
   pillTextSelected: {
-    color: colors.background,
+    color: colors.onAccent,
   },
   pillTextUnselected: {
     color: colors.secondary,

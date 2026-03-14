@@ -1,28 +1,25 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ProteinStackParamList } from '../navigation/TabNavigator';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal, addMeal, getStreakDays, get7DayAverage, getRecentDistinctMeals } from '../db';
+import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal, addMeal, get7DayAverage, getRecentDistinctMeals } from '../db';
 import { getLocalDateString } from '../utils/dates';
 import { Meal, MealType } from '../types';
 import { GoalSetupForm } from '../components/GoalSetupForm';
 import { MealListItem } from '../components/MealListItem';
 import { ProteinChart } from '../components/ProteinChart';
 import { ProteinProgressBar } from '../components/ProteinProgressBar';
-import { StreakAverageRow } from '../components/StreakAverageRow';
 import { QuickAddButtons } from '../components/QuickAddButtons';
 import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
@@ -38,13 +35,13 @@ export function ProteinScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
-  const [streak, setStreak] = useState(0);
   const [average, setAverage] = useState<number | null>(null);
   const [recentMeals, setRecentMeals] = useState<Array<{ description: string; proteinGrams: number; mealType: MealType }>>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+
   const isToday = selectedDate === getLocalDateString();
 
   const dateLabel = useMemo(() => {
@@ -56,18 +53,17 @@ export function ProteinScreen() {
   }, [selectedDate, isToday]);
 
   const refreshData = useCallback(async () => {
-    const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
+    const today = getLocalDateString();
+    const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedAverage, fetchedRecent] = await Promise.all([
       getProteinGoal(),
       getTodayProteinTotal(),
       getMealsByDate(selectedDate),
-      getStreakDays(),
       get7DayAverage(),
       getRecentDistinctMeals(),
     ]);
     setGoal(fetchedGoal);
     setTodayTotal(fetchedTotal);
     setMeals(fetchedMeals);
-    setStreak(fetchedStreak);
     setAverage(fetchedAverage);
     setRecentMeals(fetchedRecent);
     setChartRefreshKey(k => k + 1);
@@ -83,13 +79,12 @@ export function ProteinScreen() {
     useCallback(() => {
       let cancelled = false;
       setSelectedDate(getLocalDateString());
-
       async function load() {
-        const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedStreak, fetchedAverage, fetchedRecent] = await Promise.all([
+        const today = getLocalDateString();
+        const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedAverage, fetchedRecent] = await Promise.all([
           getProteinGoal(),
           getTodayProteinTotal(),
-          getMealsByDate(getLocalDateString()),
-          getStreakDays(),
+          getMealsByDate(today),
           get7DayAverage(),
           getRecentDistinctMeals(),
         ]);
@@ -97,19 +92,32 @@ export function ProteinScreen() {
           setGoal(fetchedGoal);
           setTodayTotal(fetchedTotal);
           setMeals(fetchedMeals);
-          setStreak(fetchedStreak);
           setAverage(fetchedAverage);
           setRecentMeals(fetchedRecent);
           setIsLoading(false);
         }
       }
-
       load();
-      return () => {
-        cancelled = true;
-      };
+      return () => { cancelled = true; };
     }, []),
   );
+
+  const handlePrevDay = useCallback(() => {
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    const newDate = getLocalDateString(d);
+    setSelectedDate(newDate);
+    getMealsByDate(newDate).then(setMeals);
+  }, [selectedDate]);
+
+  const handleNextDay = useCallback(() => {
+    if (isToday) return;
+    const d = new Date(selectedDate + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    const newDate = getLocalDateString(d);
+    setSelectedDate(newDate);
+    getMealsByDate(newDate).then(setMeals);
+  }, [selectedDate, isToday]);
 
   const handleAddMeal = useCallback(() => {
     setEditingMeal(null);
@@ -150,15 +158,6 @@ export function ProteinScreen() {
     refreshData();
   }, [refreshData]);
 
-  const renderMealItem = useCallback(
-    ({ item }: { item: Meal }) => (
-      <MealListItem meal={item} onEdit={handleEdit} onDelete={handleDelete} />
-    ),
-    [handleEdit, handleDelete],
-  );
-
-  const keyExtractor = useCallback((item: Meal) => String(item.id), []);
-
   const handleCloseModal = useCallback(() => {
     setModalVisible(false);
   }, []);
@@ -177,66 +176,6 @@ export function ProteinScreen() {
       Alert.alert('Error', 'Failed to log meal');
     }
   }, [refreshData]);
-
-  const handleOpenLibrary = useCallback(() => {
-    navigation.navigate('MealLibrary');
-  }, [navigation]);
-
-  const handlePrevDay = useCallback(() => {
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() - 1);
-    const newDate = getLocalDateString(d);
-    setSelectedDate(newDate);
-    getMealsByDate(newDate).then(setMeals);
-  }, [selectedDate]);
-
-  const handleNextDay = useCallback(() => {
-    if (isToday) return;
-    const d = new Date(selectedDate + 'T12:00:00');
-    d.setDate(d.getDate() + 1);
-    const newDate = getLocalDateString(d);
-    setSelectedDate(newDate);
-    getMealsByDate(newDate).then(setMeals);
-  }, [selectedDate, isToday]);
-
-  // Memoize as a JSX element (not a component function) so FlatList gets a
-  // stable reference and never unmounts/remounts the header on parent re-renders.
-  const listHeader = useMemo(() => {
-    if (goal === null) { return null; }
-    return (
-      <View>
-        <ProteinProgressBar
-          goal={goal}
-          current={todayTotal}
-          onGoalChanged={handleGoalChanged}
-        />
-
-        <StreakAverageRow streak={streak} average={average} />
-
-        <TouchableOpacity style={styles.addMealButton} onPress={handleAddMeal}>
-          <Text style={styles.addMealButtonText}>Add Meal</Text>
-        </TouchableOpacity>
-
-        <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
-
-        <TouchableOpacity style={styles.libraryButton} onPress={handleOpenLibrary}>
-          <Text style={styles.libraryButtonText}>Meal Library</Text>
-        </TouchableOpacity>
-
-        <ProteinChart goal={goal} refreshKey={chartRefreshKey} />
-
-        <View style={styles.dateNav}>
-          <TouchableOpacity onPress={handlePrevDay} style={styles.dateNavArrow} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={styles.dateNavArrowText}>‹</Text>
-          </TouchableOpacity>
-          <Text style={styles.dateNavLabel}>{dateLabel}</Text>
-          <TouchableOpacity onPress={handleNextDay} style={styles.dateNavArrow} disabled={isToday} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Text style={[styles.dateNavArrowText, isToday && styles.dateNavArrowDisabled]}>›</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }, [goal, todayTotal, handleAddMeal, handleGoalChanged, streak, average, recentMeals, handleQuickAdd, handleOpenLibrary, chartRefreshKey, dateLabel, isToday, handlePrevDay, handleNextDay]);
 
   if (isLoading) {
     return (
@@ -268,20 +207,64 @@ export function ProteinScreen() {
         <Text style={styles.title}>Protein</Text>
       </View>
 
-      <FlatList
-        data={meals}
-        renderItem={renderMealItem}
-        keyExtractor={keyExtractor}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>{isToday ? 'No meals logged today' : 'No meals logged'}</Text>
-        }
-        style={styles.mealList}
-        contentContainerStyle={meals.length === 0 ? styles.emptyContainer : undefined}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} colors={[colors.accent]} />
         }
-      />
+      >
+        <ProteinProgressBar
+          goal={goal}
+          current={todayTotal}
+          average={average}
+          onGoalChanged={handleGoalChanged}
+        />
+
+        <TouchableOpacity style={styles.addMealButton} onPress={() => navigation.navigate('MealLibrary')}>
+          <Text style={styles.addMealButtonText}>Meal Library</Text>
+        </TouchableOpacity>
+
+        <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
+
+        <ProteinChart goal={goal} refreshKey={chartRefreshKey} />
+
+        {/* LOGS */}
+        <View style={styles.logsSection}>
+          <Text style={styles.sectionHeader}>{isToday ? "TODAY'S LOGS" : 'LOGS'}</Text>
+          <View style={styles.dateNav}>
+            <TouchableOpacity onPress={handlePrevDay} style={styles.dateNavArrow} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Text style={styles.dateNavArrowText}>{'\u2039'}</Text>
+            </TouchableOpacity>
+            <Text style={styles.dateNavLabel}>{dateLabel}</Text>
+            <TouchableOpacity onPress={handleNextDay} style={styles.dateNavArrow} disabled={isToday} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Text style={[styles.dateNavArrowText, isToday && styles.dateNavArrowDisabled]}>{'\u203A'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.logsContainer}>
+            {meals.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{isToday ? 'No meals logged today' : 'No meals logged'}</Text>
+              </View>
+            ) : (
+              meals.map((meal, index) => (
+                <MealListItem
+                  key={meal.id}
+                  meal={meal}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  isLast={index === meals.length - 1}
+                />
+              ))
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* FAB */}
+      <TouchableOpacity style={styles.fab} onPress={handleAddMeal} activeOpacity={0.8}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
 
       {toastMessage && (
         <View style={styles.toast}>
@@ -316,50 +299,55 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   title: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.xl,
     fontWeight: weightBold,
     color: colors.primary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   addMealButton: {
     backgroundColor: colors.accent,
     borderRadius: 12,
-    paddingVertical: spacing.base,
+    paddingVertical: spacing.md,
     alignItems: 'center',
     marginHorizontal: spacing.base,
-    marginTop: spacing.base,
+    marginTop: spacing.lg,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   addMealButtonText: {
-    color: colors.background,
+    color: colors.onAccent,
     fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
+    fontWeight: weightBold,
   },
-  libraryButton: {
-    borderWidth: 1.5,
-    borderColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: spacing.base,
-    alignItems: 'center' as const,
-    marginHorizontal: spacing.base,
-    marginTop: spacing.sm,
+  sectionHeader: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
   },
-  libraryButtonText: {
-    color: colors.accent,
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-  },
-  mealList: {
-    flex: 1,
+  logsSection: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.lg,
   },
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.base,
+    marginBottom: spacing.sm,
   },
   dateNavArrow: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -369,27 +357,52 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
   },
   dateNavArrowDisabled: {
-    color: colors.border,
+    opacity: 0.25,
   },
   dateNavLabel: {
     flex: 1,
     color: colors.primary,
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
     textAlign: 'center',
   },
+  logsContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
   emptyContainer: {
+    paddingVertical: spacing.xl,
     alignItems: 'center',
-    paddingTop: spacing.xl,
   },
   emptyText: {
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
   },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  fabText: {
+    fontSize: 24,
+    color: colors.onAccent,
+    fontWeight: weightBold,
+    marginTop: -2,
+  },
   toast: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 90,
     alignSelf: 'center',
     backgroundColor: colors.surfaceElevated,
     paddingHorizontal: spacing.base,

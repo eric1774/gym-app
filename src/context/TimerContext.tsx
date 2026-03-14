@@ -9,6 +9,23 @@ import React, {
 import BackgroundTimer from 'react-native-background-timer';
 import HapticFeedback from 'react-native-haptic-feedback';
 import notifee, { AndroidImportance } from '@notifee/react-native';
+import Sound from 'react-native-sound';
+
+// ─── Countdown sound helpers ────────────────────────────────────────────────
+
+// Play sounds alongside other audio (e.g. music) without interrupting
+Sound.setCategory('Playback', true);
+
+// Preload the two countdown sounds so playback is instant
+const countdownBeep = new Sound('countdown_beep.wav', Sound.MAIN_BUNDLE, err => {
+  if (err) { console.warn('Failed to load countdown_beep:', err); }
+});
+const countdownDone = new Sound('countdown_done.wav', Sound.MAIN_BUNDLE, err => {
+  if (err) { console.warn('Failed to load countdown_done:', err); }
+});
+// Keep volume soft — audible but not jarring in a gym
+countdownBeep.setVolume(0.5);
+countdownDone.setVolume(0.6);
 
 // ─── Notification helpers ────────────────────────────────────────────────────
 
@@ -119,8 +136,18 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         setRemainingSeconds(next);
 
         if (next <= 0) {
+          // Final "boop" — lower pitch signals rest is over
+          countdownDone.stop();
+          countdownDone.play();
           onComplete();
           return;
+        }
+
+        // Countdown beeps at 3, 2, 1 seconds remaining
+        if (next >= 1 && next <= 3) {
+          countdownBeep.stop();
+          countdownBeep.play();
+          HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
         }
 
         if (next % 5 === 0) {

@@ -13,12 +13,12 @@ import { getLocalDateString } from '../utils/dates';
 import { ProteinChartPoint } from '../types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightMedium, weightSemiBold } from '../theme/typography';
+import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
 
 const TIME_RANGES = ['1W', '1M', '3M', 'All'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
 
-const CHART_WIDTH = Dimensions.get('window').width - spacing.base * 2;
+const CHART_WIDTH = Dimensions.get('window').width - spacing.base * 2 - 2;
 const MAX_POINTS = 50;
 
 interface ProteinChartProps {
@@ -105,7 +105,6 @@ export function ProteinChart({ goal, refreshKey }: ProteinChartProps) {
         : '',
     );
 
-    // Build datasets: primary data line + goal line as second dataset
     const datasets = [
       {
         data: sampled.map(p => p.totalProteinGrams),
@@ -125,39 +124,31 @@ export function ProteinChart({ goal, refreshKey }: ProteinChartProps) {
 
   return (
     <View style={styles.wrapper}>
-      {/* Filter pills */}
-      <View style={styles.filterRow}>
-        {TIME_RANGES.map(range => (
-          <TouchableOpacity
-            key={range}
-            style={[
-              styles.filterButton,
-              selectedRange === range && styles.filterButtonActive,
-            ]}
-            activeOpacity={0.7}
-            onPress={() => handleRangePress(range)}>
-            <Text
-              style={[
-                styles.filterText,
-                selectedRange === range && styles.filterTextActive,
-              ]}>
-              {range}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Text style={styles.sectionHeader}>PROTEIN INTAKE HISTORY</Text>
 
-      {/* Chart or empty state */}
-      {chartData === null ? (
-        <View style={styles.noDataContainer}>
-          <Text style={styles.noDataText}>No data yet</Text>
+      <View style={styles.chartCard}>
+        {/* Legend */}
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={styles.legendLine} />
+            <Text style={styles.legendText}>DAILY INTAKE</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={styles.legendDot} />
+            <Text style={styles.legendText}>{goal}g GOAL</Text>
+          </View>
         </View>
-      ) : (
-        <View style={styles.chartContainer}>
+
+        {/* Chart or empty state */}
+        {chartData === null ? (
+          <View style={styles.noDataContainer}>
+            <Text style={styles.noDataText}>No data yet</Text>
+          </View>
+        ) : (
           <LineChart
             data={chartData}
             width={CHART_WIDTH}
-            height={220}
+            height={180}
             yAxisSuffix="g"
             withDots={data.length <= 10}
             withInnerLines={false}
@@ -178,65 +169,123 @@ export function ProteinChart({ goal, refreshKey }: ProteinChartProps) {
             bezier
             style={styles.chart}
           />
-          <Text style={styles.goalLabel}>{goal}g goal</Text>
-        </View>
-      )}
+        )}
+      </View>
+
+      {/* Filter pills below chart */}
+      <View style={styles.filterRow}>
+        {TIME_RANGES.map(range => (
+          <TouchableOpacity
+            key={range}
+            style={[
+              styles.filterButton,
+              selectedRange === range && styles.filterButtonActive,
+            ]}
+            activeOpacity={0.7}
+            onPress={() => handleRangePress(range)}>
+            <Text
+              style={[
+                styles.filterText,
+                selectedRange === range && styles.filterTextActive,
+              ]}>
+              {range}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     paddingHorizontal: spacing.base,
   },
-  filterRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.base,
-    gap: spacing.sm,
-  },
-  filterButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.base,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.accent,
-  },
-  filterText: {
-    color: colors.secondary,
+  sectionHeader: {
     fontSize: fontSize.sm,
-    fontWeight: weightMedium,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
   },
-  filterTextActive: {
-    color: colors.background,
-    fontWeight: weightSemiBold,
-  },
-  chartContainer: {
-    borderRadius: 10,
+  chartCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
     overflow: 'hidden',
   },
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.base,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendLine: {
+    width: 16,
+    height: 2,
+    backgroundColor: colors.accent,
+    borderRadius: 1,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.secondary,
+  },
+  legendText: {
+    fontSize: 10,
+    color: colors.secondary,
+    fontWeight: weightMedium,
+  },
   chart: {
-    borderRadius: 10,
+    borderRadius: 0,
+    marginLeft: -spacing.base,
   },
   noDataContainer: {
-    height: 220,
+    height: 180,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
   },
   noDataText: {
     color: colors.secondary,
     fontSize: fontSize.base,
     textAlign: 'center',
   },
-  goalLabel: {
-    position: 'absolute',
-    right: spacing.sm,
-    top: spacing.sm,
+  filterRow: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  filterButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  filterText: {
     color: colors.secondary,
-    fontSize: 10,
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+  },
+  filterTextActive: {
+    color: colors.onAccent,
+    fontWeight: weightBold,
   },
 });

@@ -38,10 +38,25 @@ function rowToExerciseSession(row: {
 export async function createSession(programDayId?: number | null): Promise<WorkoutSession> {
   const database = await db;
   const startedAt = new Date().toISOString();
+
+  let programWeek: number | null = null;
+  if (programDayId) {
+    const weekResult = await executeSql(
+      database,
+      `SELECT p.current_week FROM programs p
+       INNER JOIN program_days pd ON pd.program_id = p.id
+       WHERE pd.id = ?`,
+      [programDayId],
+    );
+    if (weekResult.rows.length > 0) {
+      programWeek = weekResult.rows.item(0).current_week;
+    }
+  }
+
   const result = await executeSql(
     database,
-    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id) VALUES (?, NULL, ?)',
-    [startedAt, programDayId ?? null],
+    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, NULL, ?, ?)',
+    [startedAt, programDayId ?? null, programWeek],
   );
   const row = await executeSql(database, 'SELECT * FROM workout_sessions WHERE id = ?', [
     result.insertId,
@@ -215,9 +230,22 @@ export async function uncompleteSession(sessionId: number): Promise<void> {
 export async function createCompletedSession(programDayId: number): Promise<void> {
   const database = await db;
   const now = new Date().toISOString();
+
+  let programWeek: number | null = null;
+  const weekResult = await executeSql(
+    database,
+    `SELECT p.current_week FROM programs p
+     INNER JOIN program_days pd ON pd.program_id = p.id
+     WHERE pd.id = ?`,
+    [programDayId],
+  );
+  if (weekResult.rows.length > 0) {
+    programWeek = weekResult.rows.item(0).current_week;
+  }
+
   await executeSql(
     database,
-    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id) VALUES (?, ?, ?)',
-    [now, now, programDayId],
+    'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, ?)',
+    [now, now, programDayId, programWeek],
   );
 }
