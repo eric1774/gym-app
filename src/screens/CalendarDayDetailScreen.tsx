@@ -99,12 +99,31 @@ function SessionCard({ session, index }: SessionCardProps) {
         <StatItem label="Exercises" value={String(session.exerciseCount)} />
         {session.prCount > 0 && (
           <StatItem
-            label="PRs"
+            label={'\uD83C\uDFC6 PRs'}
             value={String(session.prCount)}
             valueColor={colors.prGold}
           />
         )}
       </View>
+
+      {/* PR highlights */}
+      {session.prCount > 0 && (
+        <View style={styles.prHighlightsSection}>
+          <Text style={styles.prHighlightsTitle}>{'\uD83C\uDFC6'} Personal Records</Text>
+          {session.exercises.flatMap(exercise =>
+            exercise.sets
+              .filter(set => set.isPR)
+              .map(set => (
+                <View key={`${exercise.exerciseId}-${set.setNumber}`} style={styles.prHighlightRow}>
+                  <Text style={styles.prExerciseName}>{exercise.exerciseName}</Text>
+                  <Text style={styles.prDetails}>
+                    {set.weightKg} lbs × {set.reps} reps
+                  </Text>
+                </View>
+              )),
+          )}
+        </View>
+      )}
 
       {/* Exercise breakdown */}
       {session.exercises.map((exercise, exIdx) => (
@@ -113,7 +132,8 @@ function SessionCard({ session, index }: SessionCardProps) {
           <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
           {exercise.sets.map(set => {
             const warmupSuffix = set.isWarmup ? ' (warm-up)' : '';
-            const label = `Set ${set.setNumber}: ${set.weightKg} x ${set.reps}${warmupSuffix}`;
+            const prPrefix = set.isPR ? '\uD83C\uDFC6 ' : '';
+            const label = `${prPrefix}Set ${set.setNumber}: ${set.weightKg} x ${set.reps}${warmupSuffix}`;
             return (
               <Text
                 key={set.setNumber}
@@ -331,5 +351,38 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginTop: spacing.md,
+  },
+
+  // PR highlights
+  prHighlightsSection: {
+    backgroundColor: colors.prGoldDim,
+    borderRadius: 10,
+    padding: spacing.sm,
+    marginBottom: spacing.base,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 184, 0, 0.3)',
+  },
+  prHighlightsTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.prGold,
+    marginBottom: spacing.xs,
+  },
+  prHighlightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  prExerciseName: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.prGold,
+    flex: 1,
+  },
+  prDetails: {
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    color: colors.prGold,
   },
 });
