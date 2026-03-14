@@ -16,6 +16,7 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { ProteinScreen } from '../screens/ProteinScreen';
 import { MealLibraryScreen } from '../screens/MealLibraryScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
+import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -132,6 +133,7 @@ function CalendarStackNavigator() {
   return (
     <CalendarStack.Navigator screenOptions={{ headerShown: false }}>
       <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
+      <CalendarStack.Screen name="CalendarDayDetail" component={CalendarDayDetailScreen} />
     </CalendarStack.Navigator>
   );
 }
