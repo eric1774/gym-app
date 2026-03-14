@@ -52,7 +52,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 11: Quick-Start & Rest Timer** - Next Workout dashboard card and per-exercise rest timer configuration (completed 2026-03-12)
 - [x] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout (completed 2026-03-12)
 - [x] **Phase 13: Calendar View** - Monthly calendar grid showing training history with day detail view (completed 2026-03-14)
-- [ ] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v6)
+- [ ] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v7)
 
 ## Phase Details
 
@@ -150,7 +150,11 @@ Plans:
   2. During a workout, superset exercises are rendered inside a shared container with a connecting visual indicator
   3. After logging a set for any exercise in a superset (except the last), the next exercise in the group auto-expands immediately
   4. After logging a set for the last exercise in a superset group, the rest timer prompt appears using that exercise's configured rest duration
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 14-01-PLAN.md -- Data layer (migration v7, types, DB functions) and DayDetailScreen superset creation/removal UI
+- [ ] 14-02-PLAN.md -- WorkoutScreen superset container, auto-advance logic, and rest timer suppression
 
 ## Progress
 
@@ -169,4 +173,4 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
-| 14. Superset Support | v1.3 | 0/? | Not started | - |
+| 14. Superset Support | v1.3 | 0/2 | Not started | - |

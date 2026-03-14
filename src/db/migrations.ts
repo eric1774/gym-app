@@ -19,6 +19,7 @@ interface Migration {
  * - Version 4: Create meal_library table
  * - Version 5: Add program_week to workout_sessions
  * - Version 6: Deduplicate exercises, re-point history to winners
+ * - Version 7: Add superset_group_id column to program_day_exercises
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -228,6 +229,15 @@ const MIGRATIONS: Migration[] = [
           SELECT MIN(id) FROM exercises GROUP BY name, category
         )
       `);
+    },
+  },
+  {
+    version: 7,
+    description: 'Add superset_group_id column to program_day_exercises',
+    up: (tx: Transaction) => {
+      tx.executeSql(
+        'ALTER TABLE program_day_exercises ADD COLUMN superset_group_id INTEGER',
+      );
     },
   },
 ];

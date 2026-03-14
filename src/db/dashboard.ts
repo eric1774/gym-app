@@ -533,6 +533,7 @@ export async function exportAllData(): Promise<FullDataExport> {
           targetReps: e.target_reps,
           targetWeightKg: e.target_weight_kg,
           sortOrder: e.sort_order,
+          supersetGroupId: e.superset_group_id ?? null,
         });
       }
       days.push({

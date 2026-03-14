@@ -45,6 +45,7 @@ function rowToProgramDayExercise(row: {
   target_reps: number;
   target_weight_kg: number;
   sort_order: number;
+  superset_group_id: number | null;
 }): ProgramDayExercise {
   return {
     id: row.id,
@@ -54,6 +55,7 @@ function rowToProgramDayExercise(row: {
     targetReps: row.target_reps,
     targetWeightKg: row.target_weight_kg,
     sortOrder: row.sort_order,
+    supersetGroupId: row.superset_group_id ?? null,
   };
 }
 
@@ -195,19 +197,35 @@ export async function duplicateProgramDay(dayId: number): Promise<ProgramDay> {
   );
   const newDayId = insertResult.insertId;
 
-  // Copy exercises
+  // Copy exercises — preserve superset groupings with new group IDs
   const exercises = await executeSql(
     database,
     'SELECT * FROM program_day_exercises WHERE program_day_id = ? ORDER BY sort_order',
     [dayId],
   );
 
+  // Build a mapping from old group IDs to new group IDs
+  const groupIdMap = new Map<number, number>();
+  let groupOffset = 0;
   for (let i = 0; i < exercises.rows.length; i++) {
     const ex = exercises.rows.item(i);
+    if (ex.superset_group_id !== null && ex.superset_group_id !== undefined) {
+      if (!groupIdMap.has(ex.superset_group_id)) {
+        groupIdMap.set(ex.superset_group_id, Date.now() + groupOffset);
+        groupOffset += 1;
+      }
+    }
+  }
+
+  for (let i = 0; i < exercises.rows.length; i++) {
+    const ex = exercises.rows.item(i);
+    const oldGroupId: number | null = ex.superset_group_id ?? null;
+    const newGroupId: number | null =
+      oldGroupId !== null ? (groupIdMap.get(oldGroupId) ?? null) : null;
     await executeSql(
       database,
-      'INSERT INTO program_day_exercises (program_day_id, exercise_id, target_sets, target_reps, target_weight_kg, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [newDayId, ex.exercise_id, ex.target_sets, ex.target_reps, ex.target_weight_kg, ex.sort_order],
+      'INSERT INTO program_day_exercises (program_day_id, exercise_id, target_sets, target_reps, target_weight_kg, sort_order, superset_group_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [newDayId, ex.exercise_id, ex.target_sets, ex.target_reps, ex.target_weight_kg, ex.sort_order, newGroupId],
     );
   }
 
@@ -327,4 +345,39 @@ export async function reorderProgramDayExercises(
       );
     });
   });
+}
+
+/**
+ * Group 2-3 exercises as a superset within a program day.
+ * Assigns a shared group ID (Date.now()) to all specified exercise rows.
+ */
+export async function createSupersetGroup(
+  dayId: number,
+  exerciseIds: number[],
+): Promise<void> {
+  const groupId = Date.now();
+  const database = await db;
+  const placeholders = exerciseIds.map(() => '?').join(', ');
+  await runTransaction(database, (tx) => {
+    tx.executeSql(
+      `UPDATE program_day_exercises SET superset_group_id = ? WHERE program_day_id = ? AND id IN (${placeholders})`,
+      [groupId, dayId, ...exerciseIds],
+    );
+  });
+}
+
+/**
+ * Remove a superset group from a program day.
+ * Clears superset_group_id for all exercises that shared the given group ID.
+ */
+export async function removeSupersetGroup(
+  dayId: number,
+  groupId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_day_exercises SET superset_group_id = NULL WHERE program_day_id = ? AND superset_group_id = ?',
+    [dayId, groupId],
+  );
 }
