@@ -3,7 +3,7 @@ import { Program, ProgramDay, ProgramDayExercise } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
-function rowToProgram(row: {
+export function rowToProgram(row: {
   id: number;
   name: string;
   weeks: number;
@@ -21,7 +21,7 @@ function rowToProgram(row: {
   };
 }
 
-function rowToProgramDay(row: {
+export function rowToProgramDay(row: {
   id: number;
   program_id: number;
   name: string;
@@ -37,7 +37,7 @@ function rowToProgramDay(row: {
   };
 }
 
-function rowToProgramDayExercise(row: {
+export function rowToProgramDayExercise(row: {
   id: number;
   program_day_id: number;
   exercise_id: number;

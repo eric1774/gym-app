@@ -3,7 +3,7 @@ import { Meal, MealType, ProteinSettings, ProteinChartPoint, LibraryMeal, MEAL_T
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
 
 /** Map a raw SQLite result row to the Meal domain type. */
-function rowToMeal(row: {
+export function rowToMeal(row: {
   id: number;
   protein_grams: number;
   description: string;
@@ -24,7 +24,7 @@ function rowToMeal(row: {
 }
 
 /** Map a raw SQLite result row to the ProteinSettings domain type. */
-function rowToProteinSettings(row: {
+export function rowToProteinSettings(row: {
   id: number;
   daily_goal_grams: number;
   created_at: string;
@@ -354,7 +354,7 @@ export async function get7DayAverage(): Promise<number | null> {
 // -- Meal Library functions (Phase 8) --
 
 /** Map a raw SQLite result row to the LibraryMeal domain type. */
-function rowToLibraryMeal(row: {
+export function rowToLibraryMeal(row: {
   id: number;
   name: string;
   protein_grams: number;

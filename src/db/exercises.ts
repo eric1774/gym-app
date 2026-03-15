@@ -2,7 +2,7 @@ import { db, executeSql } from './database';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType } from '../types';
 
 /** Map a raw SQLite result row to the Exercise domain type. */
-function rowToExercise(row: {
+export function rowToExercise(row: {
   id: number;
   name: string;
   category: string;

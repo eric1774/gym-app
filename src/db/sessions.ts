@@ -2,7 +2,7 @@ import { db, executeSql } from './database';
 import { WorkoutSession, ExerciseSession } from '../types';
 
 /** Map a raw SQLite result row to the WorkoutSession domain type. */
-function rowToSession(row: {
+export function rowToSession(row: {
   id: number;
   started_at: string;
   completed_at: string | null;
@@ -17,7 +17,7 @@ function rowToSession(row: {
 }
 
 /** Map a raw SQLite row to the ExerciseSession domain type. */
-function rowToExerciseSession(row: {
+export function rowToExerciseSession(row: {
   exercise_id: number;
   session_id: number;
   is_complete: number;

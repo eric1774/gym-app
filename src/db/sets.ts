@@ -2,7 +2,7 @@ import { db, executeSql } from './database';
 import { WorkoutSet } from '../types';
 
 /** Map a raw SQLite result row to the WorkoutSet domain type. */
-function rowToSet(row: {
+export function rowToSet(row: {
   id: number;
   session_id: number;
   exercise_id: number;
