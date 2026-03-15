@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 17-03-PLAN.md
-last_updated: "2026-03-15T22:35:36.352Z"
+stopped_at: Completed 17-02-PLAN.md
+last_updated: "2026-03-15T22:37:29.476Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
   completed_phases: 9
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 100
 ---
 
@@ -63,6 +63,7 @@ Progress: [█░░░░░░░░░] 7%
 | Phase 15-test-infrastructure P02 | 2 | 2 tasks | 14 files |
 | Phase 16-utility-and-mapper-tests P01 | 15 | 2 tasks | 11 files |
 | Phase 17-db-business-logic-tests P03 | 3 | 2 tasks | 3 files |
+| Phase 17-db-business-logic-tests P02 | 4 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,8 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 16-01]: DB mapper test pattern: jest.mock('../database') as first statement, then import named mapper functions directly for pure function testing without async DB setup
 - [Phase 17-03]: Object.defineProperty pattern required for db mock — direct assignment fails because db is a read-only const export
 - [Phase 17-03]: getDaySessionDetails PR detection: isPR=false when priorMax is null (first-ever session, no baseline)
+- [Phase 17-02]: Object.defineProperty pattern required for db export override — cast assignment fails at runtime with 'db is read-only'
+- [Phase 17-02]: getLocalDateString mocked with Date-arg-aware implementation to support streak loop's getLocalDateString(expectedDate) calls
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-15T22:35:36.349Z
-Stopped at: Completed 17-03-PLAN.md
+Last session: 2026-03-15T22:37:29.472Z
+Stopped at: Completed 17-02-PLAN.md
 Resume file: None

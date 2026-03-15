@@ -25,8 +25,8 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 - [ ] **DBLG-01**: exercises.ts CRUD and search functions have tests with mocked SQL results
 - [ ] **DBLG-02**: sessions.ts lifecycle functions (create, get, complete, toggle, delete) have tests
 - [ ] **DBLG-03**: sets.ts functions (logSet, getSets, getLastSessionSets, deleteSet, checkForPR) have tests
-- [ ] **DBLG-04**: programs.ts CRUD including superset group operations have tests
-- [ ] **DBLG-05**: protein.ts functions (meals, goals, streaks, averages) have tests
+- [x] **DBLG-04**: programs.ts CRUD including superset group operations have tests
+- [x] **DBLG-05**: protein.ts functions (meals, goals, streaks, averages) have tests
 - [x] **DBLG-06**: dashboard.ts query functions (progress, history, completion, export) have tests
 - [x] **DBLG-07**: calendar.ts functions (workout days, first session date, day details) have tests
 - [x] **DBLG-08**: seed.ts seedIfEmpty has tests for empty and non-empty cases
@@ -156,8 +156,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBLG-01 | Phase 17 | Pending |
 | DBLG-02 | Phase 17 | Pending |
 | DBLG-03 | Phase 17 | Pending |
-| DBLG-04 | Phase 17 | Pending |
-| DBLG-05 | Phase 17 | Pending |
+| DBLG-04 | Phase 17 | Complete |
+| DBLG-05 | Phase 17 | Complete |
 | DBLG-06 | Phase 17 | Complete |
 | DBLG-07 | Phase 17 | Complete |
 | DBLG-08 | Phase 17 | Complete |
