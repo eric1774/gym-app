@@ -294,7 +294,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 15. Test Infrastructure | 2/2 | Complete    | 2026-03-15 | - |
 | 16. Utility and Mapper Tests | 1/1 | Complete    | 2026-03-15 | - |
 | 17. DB Business Logic Tests | 3/3 | Complete    | 2026-03-15 | - |
-| 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |
+| 18. Component and Context Tests | 2/3 | In Progress|  | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
 | 20. Screens Part 2 | v1.4 | 0/2 | Not started | - |
 | 21. Gap Closing | v1.4 | 0/1 | Not started | - |

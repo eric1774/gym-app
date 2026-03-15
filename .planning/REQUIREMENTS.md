@@ -38,8 +38,8 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 ### Context Providers (CTX)
 
-- [ ] **CTX-01**: SessionContext has tests for session lifecycle and loading state
-- [ ] **CTX-02**: TimerContext has tests for countdown, haptic/sound triggers, and cleanup
+- [x] **CTX-01**: SessionContext has tests for session lifecycle and loading state
+- [x] **CTX-02**: TimerContext has tests for countdown, haptic/sound triggers, and cleanup
 
 ### Screens (SCRN)
 
@@ -163,8 +163,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBLG-08 | Phase 17 | Complete |
 | COMP-01 | Phase 18 | Pending |
 | COMP-02 | Phase 18 | Pending |
-| CTX-01 | Phase 18 | Pending |
-| CTX-02 | Phase 18 | Pending |
+| CTX-01 | Phase 18 | Complete |
+| CTX-02 | Phase 18 | Complete |
 | SCRN-01 | Phase 19 | Pending |
 | SCRN-02 | Phase 19 | Pending |
 | SCRN-03 | Phase 20 | Pending |

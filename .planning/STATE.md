@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 17-01-PLAN.md
-last_updated: "2026-03-15T23:14:23.027Z"
+stopped_at: Completed 18-03-PLAN.md
+last_updated: "2026-03-15T23:59:42.217Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
   completed_phases: 10
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 21
+  completed_plans: 19
 ---
 
 ---
@@ -79,6 +79,7 @@ Progress: [█░░░░░░░░░] 7%
 | Phase 16-utility-and-mapper-tests P01 | 15 | 2 tasks | 11 files |
 | Phase 17-db-business-logic-tests P03 | 3 | 2 tasks | 3 files |
 | Phase 17-db-business-logic-tests P02 | 4 | 2 tasks | 2 files |
+| Phase 18-component-and-context-tests P03 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,9 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 17-01]: jest.mock('../database') auto-mock (no factory) required for exercises/sessions/sets — factory mock is lazy and doesn't intercept module imports; auto-mock ensures shared function reference
 - [Phase 17-01]: Import mockResultSet from @test-utils/dbMock not @test-utils — @test-utils/index loads mockProviders.tsx which calls jest.mock('../db/exercises') and jest.mock('../db/sessions') as side effects, overriding auto-mocks
 - [Phase 17-01]: Object.defineProperty(dbModule, 'db', { value: Promise.resolve(mockDb) }) after require('../database') correctly overrides the db Promise for all three db modules
+- [Phase 18-03]: Direct jest.mock() in context test files (not via mockProviders) prevents side-effect conflicts from mockProviders.tsx
+- [Phase 18-03]: TestConsumer + onCtx callback ref pattern for accessing context methods without renderHook version concerns
+- [Phase 18-03]: jest.useFakeTimers() in beforeEach / useRealTimers() in afterEach keeps timer isolation clean per test
 
 ### Pending Todos
 
@@ -117,6 +121,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-15T23:08:53Z
-Stopped at: Completed 17-01-PLAN.md
+Last session: 2026-03-15T23:59:42.212Z
+Stopped at: Completed 18-03-PLAN.md
 Resume file: None
