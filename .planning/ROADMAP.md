@@ -225,12 +225,12 @@ Plans:
   2. Complex components and modals (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart) handle validation, empty state, and form submission
   3. SessionContext tests confirm session lifecycle transitions (start, add exercise, complete, toggle, delete) and loading state
   4. TimerContext tests confirm countdown ticks, haptic/sound triggers at countdown milestones, and timer cleanup on unmount
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 18-01: Simple component tests (10 components)
-- [ ] 18-02: Complex component and modal tests (6 components)
-- [ ] 18-03: SessionContext and TimerContext tests
+- [ ] 18-01-PLAN.md -- Simple component rendering and interaction tests (PrimaryButton, MealTypePills, QuickAddButtons, StreakAverageRow, GhostReference, RestTimerBanner, ProgramTargetReference, ExerciseCategoryTabs, SetListItem, MealListItem)
+- [ ] 18-02-PLAN.md -- Complex component and modal tests with validation (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart)
+- [ ] 18-03-PLAN.md -- SessionContext lifecycle and TimerContext countdown tests
 
 ### Phase 19: Screens Part 1
 **Goal**: All simpler screens and modal screens have tests confirming they render correctly, load data, and handle user interactions
@@ -293,7 +293,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 14. Superset Support | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 15. Test Infrastructure | 2/2 | Complete    | 2026-03-15 | - |
 | 16. Utility and Mapper Tests | 1/1 | Complete    | 2026-03-15 | - |
-| 17. DB Business Logic Tests | 3/3 | Complete   | 2026-03-15 | - |
+| 17. DB Business Logic Tests | 3/3 | Complete    | 2026-03-15 | - |
 | 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
 | 20. Screens Part 2 | v1.4 | 0/2 | Not started | - |
