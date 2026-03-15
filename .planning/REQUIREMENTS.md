@@ -17,8 +17,8 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 ### Unit Tests (UNIT)
 
-- [ ] **UNIT-01**: Date utility functions have tests covering format, zero-padding, and boundary edge cases
-- [ ] **UNIT-02**: All DB row mapper functions are exported and tested (~10 mappers across 5 DB modules)
+- [x] **UNIT-01**: Date utility functions have tests covering format, zero-padding, and boundary edge cases
+- [x] **UNIT-02**: All DB row mapper functions are exported and tested (~10 mappers across 5 DB modules)
 
 ### DB Business Logic (DBLG)
 
@@ -151,8 +151,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-03 | Phase 15 | Complete |
 | INFRA-04 | Phase 15 | Complete |
 | INFRA-05 | Phase 15 | Complete |
-| UNIT-01 | Phase 16 | Pending |
-| UNIT-02 | Phase 16 | Pending |
+| UNIT-01 | Phase 16 | Complete |
+| UNIT-02 | Phase 16 | Complete |
 | DBLG-01 | Phase 17 | Pending |
 | DBLG-02 | Phase 17 | Pending |
 | DBLG-03 | Phase 17 | Pending |

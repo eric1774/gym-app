@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 15-02-PLAN.md
-last_updated: "2026-03-15T20:03:21.455Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-15T21:53:25.576Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
-  completed_phases: 8
-  total_plans: 14
-  completed_plans: 14
+  completed_phases: 9
+  total_plans: 15
+  completed_plans: 15
   percent: 100
 ---
 
@@ -61,6 +61,7 @@ Progress: [█░░░░░░░░░] 7%
 
 *Updated after each plan completion*
 | Phase 15-test-infrastructure P02 | 2 | 2 tasks | 14 files |
+| Phase 16-utility-and-mapper-tests P01 | 15 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 15-02]: Used real SessionProvider/TimerProvider wrapped with jest.mock() for DB deps — avoids maintaining duplicate mock context value objects
 - [Phase 15-02]: BackgroundTimer mock delegates to global timers so jest.useFakeTimers() can control timer behavior in tests
 - [Phase 15-02]: renderWithProviders accepts withSession/withTimer booleans so pure component tests can opt out of provider overhead
+- [Phase 16-01]: jest.mock('../database') is sufficient to prevent SQLite initialization — dates.ts pure import in protein.ts requires no additional mocking
+- [Phase 16-01]: DB mapper test pattern: jest.mock('../database') as first statement, then import named mapper functions directly for pure function testing without async DB setup
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-15T19:59:48.838Z
-Stopped at: Completed 15-02-PLAN.md
+Last session: 2026-03-15T21:53:25.573Z
+Stopped at: Completed 16-01-PLAN.md
 Resume file: None

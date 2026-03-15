@@ -63,7 +63,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Reach 80%+ line coverage across the codebase with Jest, integrated with SonarQube for continuous quality tracking.
 
 - [x] **Phase 15: Test Infrastructure** - Jest config with coverage thresholds, native module mocks, and shared test utilities (completed 2026-03-15)
-- [ ] **Phase 16: Utility and Mapper Tests** - Pure date utility tests and DB row mapper tests across all database modules
+- [x] **Phase 16: Utility and Mapper Tests** - Pure date utility tests and DB row mapper tests across all database modules (completed 2026-03-15)
 - [ ] **Phase 17: DB Business Logic Tests** - Full test coverage for all 8 database modules (exercises, sessions, sets, programs, protein, dashboard, calendar, seed)
 - [ ] **Phase 18: Component and Context Tests** - Rendering and interaction tests for simple and complex components, modals, and context providers
 - [ ] **Phase 19: Screens Part 1** - Tests for simpler screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, Library, Settings) and modal screens
@@ -292,7 +292,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 14. Superset Support | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 15. Test Infrastructure | 2/2 | Complete    | 2026-03-15 | - |
-| 16. Utility and Mapper Tests | v1.4 | 0/1 | Not started | - |
+| 16. Utility and Mapper Tests | 1/1 | Complete   | 2026-03-15 | - |
 | 17. DB Business Logic Tests | v1.4 | 0/3 | Not started | - |
 | 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
