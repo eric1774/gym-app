@@ -35,33 +35,40 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ User can see a rolling 7-day average of daily protein intake — v1.1
 - ✓ User can manage a meal library organized by type with add/delete — v1.2
 - ✓ User can one-tap a library meal to log it to today's protein tracking — v1.2
+- ✓ Weight steppers, auto-fill fix, haptic feedback for set logging — v1.3
+- ✓ PR detection with animated toast and double haptic — v1.3
+- ✓ Running volume total in workout header — v1.3
+- ✓ Quick-start next workout from dashboard — v1.3
+- ✓ Per-exercise rest timer configuration — v1.3
+- ✓ Workout completion summary screen — v1.3
+- ✓ Monthly calendar view with session details — v1.3
+- ✓ Superset grouping with DB migration v7 — v1.3
 
-## Current Milestone: v1.3 Workout Intelligence & Speed
+## Current Milestone: v1.4 Test Coverage
 
-**Goal:** Reduce friction on set logging, add motivation through PR detection, and surface workout intelligence (volume, summaries, calendar, supersets).
+**Goal:** Reach 80%+ line coverage across the codebase with Jest, integrated with SonarQube for continuous quality tracking.
 
 **Target features:**
-- Weight increment buttons and auto-fill fix for faster set logging
-- PR detection with celebration toast and haptic feedback
-- Running volume total during workouts
-- Quick-start "Next Workout" card on dashboard
-- Per-exercise rest timer configuration
-- Workout notes (session and exercise level)
-- Workout completion summary screen
-- Calendar view of training history
-- Superset grouping and alternating set flow
+- Jest infrastructure setup with mocks, test utilities, and coverage config
+- Unit tests for pure utility functions and DB row mappers
+- Integration tests for DB business logic layer
+- Component tests for simple and complex UI components
+- Context provider tests (SessionContext, TimerContext)
+- Screen tests for all app screens
+- Gap-closing pass to ensure 80%+ global threshold
+- SonarQube coverage integration via lcov reports
 
 ### Active
 
-- [ ] Weight steppers, auto-fill fix, haptic feedback for set logging
-- [ ] PR detection with animated toast and double haptic
-- [ ] Running volume total in workout header
-- [ ] Quick-start next workout from dashboard
-- [ ] Per-exercise rest timer configuration
-- [ ] Session and exercise notes with DB migration v5
-- [ ] Workout completion summary screen
-- [ ] Monthly calendar view with session details
-- [ ] Superset grouping with DB migration v6
+- [ ] Jest config with coverage thresholds, mocks, and test utilities
+- [ ] Pure utility and DB row mapper tests
+- [ ] DB business logic tests (exercises, sessions, sets, programs, protein, dashboard, calendar)
+- [ ] Simple component tests (buttons, pills, list items, banners)
+- [ ] Complex component and modal tests
+- [ ] Context provider tests (SessionContext, TimerContext)
+- [ ] Screen tests part 1 (simpler screens)
+- [ ] Screen tests part 2 (complex screens — WorkoutScreen, ProgramDetail, DayDetail, SetLogging)
+- [ ] Gap-closing pass to reach 80%+ threshold
 
 ### Out of Scope
 
@@ -99,4 +106,4 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Export to file for backup | Simple, no cloud needed, user controls their data | — Pending |
 
 ---
-*Last updated: 2026-03-10 after milestone v1.3 started*
+*Last updated: 2026-03-15 after milestone v1.4 started*

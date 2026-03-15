@@ -1,73 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Workout Intelligence & Speed
-status: ready_to_plan
-stopped_at: Completed 14-02-PLAN.md
-last_updated: "2026-03-14T12:53:02.691Z"
-last_activity: 2026-03-14 — Phase 13 completed
+milestone: v1.4
+milestone_name: Test Coverage
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-15"
+last_activity: 2026-03-15 — Milestone v1.4 started
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 12
-  completed_plans: 12
----
-
----
-gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: Workout Intelligence & Speed
-status: ready_to_plan
-stopped_at: Phase 13 complete — Phase 14 ready for discussion
-last_updated: "2026-03-14"
-last_activity: 2026-03-14 — Phase 13 completed
-progress:
-  total_phases: 6
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 83
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-10)
+See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** v1.3 Workout Intelligence & Speed — Phase 14: Superset Support (next)
+**Current focus:** v1.4 Test Coverage — Defining requirements
 
 ## Current Position
 
-Phase: 13 of 14 (Calendar View) — COMPLETE
-Next: Phase 14 (Superset Support) — NOT STARTED
-Last activity: 2026-03-14 — Phase 13 completed
-
-Progress: [████████░░] 83% (5/6 phases complete)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-15 — Milestone v1.4 started
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (this milestone)
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 09-faster-set-logging | 1 | ~25min | ~25min |
-
-*Updated after each plan completion*
-| Phase 09-faster-set-logging P01 | ~25min | 3 tasks | 2 files |
-| Phase 10-pr-detection-volume-tracking P01 | 2min | 2 tasks | 3 files |
-| Phase 10-pr-detection-volume-tracking P02 | 5min | 1 tasks | 1 files |
-| Phase 11-quick-start-rest-timer P01 | 18min | 2 tasks | 3 files |
-| Phase 11-quick-start-rest-timer P02 | 4min | 2 tasks | 3 files |
-| Phase 12-workout-summary P01 | 2min | 2 tasks | 1 files |
-| Phase 13-calendar-view P01 | 3min | 2 tasks | 4 files |
-| Phase 13-calendar-view P02 | 5min | 2 tasks | 2 files |
-| Phase 14-superset-support P01 | 3min | 2 tasks | 6 files |
-| Phase 14-superset-support P02 | 3.5min | 2 tasks | 1 files |
+- Total plans completed: 0 (this milestone)
 
 ## Accumulated Context
 
@@ -114,6 +80,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-14T12:49:41.196Z
-Stopped at: Completed 14-02-PLAN.md
+Last session: 2026-03-15
+Stopped at: Milestone v1.4 initialization
 Resume file: None

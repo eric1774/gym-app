@@ -5,7 +5,8 @@
 - **v1.0 MVP** - Phases 1-3 (shipped)
 - **v1.1 Protein Tracking** - Phases 4-7 (shipped)
 - **v1.2 Meal Library** - Phase 8 (shipped)
-- **v1.3 Workout Intelligence & Speed** - Phases 9-14 (in progress)
+- **v1.3 Workout Intelligence & Speed** - Phases 9-14 (shipped)
+- **v1.4 Test Coverage** - Phases 15-21 (in progress)
 
 ## Phases
 
@@ -43,7 +44,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 </details>
 
-### v1.3 Workout Intelligence & Speed
+<details>
+<summary>v1.3 Workout Intelligence & Speed (Phases 9-14) - SHIPPED</summary>
 
 **Milestone Goal:** Reduce friction on set logging, add motivation through PR detection, and surface workout intelligence (volume, summaries, calendar, supersets).
 
@@ -53,6 +55,20 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 12: Workout Summary** - Completion summary screen shown after ending a workout (completed 2026-03-12)
 - [x] **Phase 13: Calendar View** - Monthly calendar grid showing training history with day detail view (completed 2026-03-14)
 - [x] **Phase 14: Superset Support** - Superset grouping in programs, alternating set flow in workouts (DB migration v7) (completed 2026-03-14)
+
+</details>
+
+### v1.4 Test Coverage
+
+**Milestone Goal:** Reach 80%+ line coverage across the codebase with Jest, integrated with SonarQube for continuous quality tracking.
+
+- [ ] **Phase 15: Test Infrastructure** - Jest config with coverage thresholds, native module mocks, and shared test utilities
+- [ ] **Phase 16: Utility and Mapper Tests** - Pure date utility tests and DB row mapper tests across all database modules
+- [ ] **Phase 17: DB Business Logic Tests** - Full test coverage for all 8 database modules (exercises, sessions, sets, programs, protein, dashboard, calendar, seed)
+- [ ] **Phase 18: Component and Context Tests** - Rendering and interaction tests for simple and complex components, modals, and context providers
+- [ ] **Phase 19: Screens Part 1** - Tests for simpler screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, Library, Settings) and modal screens
+- [ ] **Phase 20: Screens Part 2** - Tests for complex screens (WorkoutScreen, ProgramDetailScreen, DayDetailScreen, SetLoggingPanel)
+- [ ] **Phase 21: Gap Closing** - Coverage report analysis, targeted tests for files below 80%, threshold verification
 
 ## Phase Details
 
@@ -153,13 +169,114 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01-PLAN.md -- Data layer (migration v7, types, DB functions) and DayDetailScreen superset creation/removal UI
-- [ ] 14-02-PLAN.md -- WorkoutScreen superset container, auto-advance logic, and rest timer suppression
+- [x] 14-01-PLAN.md -- Data layer (migration v7, types, DB functions) and DayDetailScreen superset creation/removal UI
+- [x] 14-02-PLAN.md -- WorkoutScreen superset container, auto-advance logic, and rest timer suppression
+
+### Phase 15: Test Infrastructure
+**Goal**: The Jest test environment is fully configured with coverage thresholds, mocks for all native modules, and shared test utilities that all subsequent test phases can rely on
+**Depends on**: Phase 14 (v1.3 complete — source code is stable)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05
+**Success Criteria** (what must be TRUE):
+  1. Running `npm run test:coverage` generates a `coverage/lcov.info` report without errors
+  2. Jest config enforces 80% global line coverage threshold — the test run fails if coverage drops below this
+  3. All 7 native module mocks exist and `npx jest --showConfig` resolves them without module-not-found errors
+  4. `renderWithProviders` wraps any component with mocked contexts and navigation so screen tests can mount without errors
+  5. `mockResultSet` generates fake SQL result objects that the DB test layer can use without real SQLite
+**Plans**: 2 plans
+
+Plans:
+- [ ] 15-01-PLAN.md -- Jest config with coverage thresholds, lcov reporter, jest.setup.js, and test:coverage npm script
+- [ ] 15-02-PLAN.md -- Native module mocks (8 mocks in __mocks__/) and test utilities (dbMock.ts, renderWithProviders.tsx)
+
+### Phase 16: Utility and Mapper Tests
+**Goal**: All pure date utility functions and DB row mapper functions are tested in isolation, confirming correct data transformations
+**Depends on**: Phase 15 (test infrastructure in place)
+**Requirements**: UNIT-01, UNIT-02
+**Success Criteria** (what must be TRUE):
+  1. Date utility tests cover format correctness, zero-padding, month/year boundary cases, and local-vs-UTC behavior
+  2. All ~10 rowToX mapper functions across the 5 DB modules are exported and have tests verifying field mapping and type coercion (snake_case to camelCase, integer booleans, null handling)
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: Date utility tests and DB row mapper tests (exercises, sessions, sets, programs, protein)
+
+### Phase 17: DB Business Logic Tests
+**Goal**: All database business logic functions have tests with mocked SQL results, covering CRUD operations, edge cases, and complex queries
+**Depends on**: Phase 16 (mappers tested, mock patterns established)
+**Requirements**: DBLG-01, DBLG-02, DBLG-03, DBLG-04, DBLG-05, DBLG-06, DBLG-07, DBLG-08
+**Success Criteria** (what must be TRUE):
+  1. exercises.ts, sessions.ts, sets.ts, and programs.ts functions each have tests covering both happy path and error/edge cases (empty results, no prior sets for PR check, superset group remapping)
+  2. protein.ts streak and average calculations are tested with consecutive-day, gap, and today-boundary scenarios
+  3. dashboard.ts complex query functions (progress, history, completion, export) have tests with representative mocked result sets
+  4. calendar.ts and seed.ts functions are tested including the seedIfEmpty empty vs non-empty distinction
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: exercises.ts, sessions.ts, sets.ts business logic tests
+- [ ] 17-02: programs.ts (including superset operations) and protein.ts tests
+- [ ] 17-03: dashboard.ts, calendar.ts, and seed.ts tests
+
+### Phase 18: Component and Context Tests
+**Goal**: All UI components and context providers have tests verifying rendering, user interaction, state transitions, and side effects
+**Depends on**: Phase 15 (renderWithProviders available)
+**Requirements**: COMP-01, COMP-02, CTX-01, CTX-02
+**Success Criteria** (what must be TRUE):
+  1. Simple components (PrimaryButton, MealTypePills, QuickAddButtons, StreakAverageRow, GhostReference, RestTimerBanner, ProgramTargetReference, ExerciseCategoryTabs, SetListItem, MealListItem) render correctly and invoke callbacks when interacted with
+  2. Complex components and modals (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart) handle validation, empty state, and form submission
+  3. SessionContext tests confirm session lifecycle transitions (start, add exercise, complete, toggle, delete) and loading state
+  4. TimerContext tests confirm countdown ticks, haptic/sound triggers at countdown milestones, and timer cleanup on unmount
+**Plans**: TBD
+
+Plans:
+- [ ] 18-01: Simple component tests (10 components)
+- [ ] 18-02: Complex component and modal tests (6 components)
+- [ ] 18-03: SessionContext and TimerContext tests
+
+### Phase 19: Screens Part 1
+**Goal**: All simpler screens and modal screens have tests confirming they render correctly, load data, and handle user interactions
+**Depends on**: Phase 18 (context mocks verified, component patterns established)
+**Requirements**: SCRN-01, SCRN-02
+**Success Criteria** (what must be TRUE):
+  1. Dashboard, Protein, Programs, ExerciseProgress, Calendar, CalendarDayDetail, Library, Settings, and MealLibrary screens each render without errors given mocked navigation and context
+  2. Each simpler screen's primary data-loading path and at least one user interaction (tap, delete, create) are covered by tests
+  3. Modal screens (AddMeal, EditMeal, AddExercise, etc.) have form validation tests confirming empty inputs are rejected and valid inputs trigger the correct submit callback
+**Plans**: TBD
+
+Plans:
+- [ ] 19-01: Dashboard, Protein, Programs, ExerciseProgress screen tests
+- [ ] 19-02: Calendar, CalendarDayDetail, Library, Settings, MealLibrary screen tests and modal screen tests
+
+### Phase 20: Screens Part 2
+**Goal**: The four most complex screens — WorkoutScreen, ProgramDetailScreen, DayDetailScreen, and SetLoggingPanel — have tests covering their core flows including superset-specific behavior
+**Depends on**: Phase 19 (screen test patterns established)
+**Requirements**: SCRN-03, SCRN-04, SCRN-05, SCRN-06
+**Success Criteria** (what must be TRUE):
+  1. WorkoutScreen tests cover: starting a workout, rendering the exercise list, superset grouping display, rest timer interaction, and ending the session
+  2. ProgramDetailScreen tests cover: day list rendering, adding/removing a day, and superset group display
+  3. DayDetailScreen tests cover: exercise list rendering, adding/removing an exercise, and the superset multi-select flow
+  4. SetLoggingPanel tests cover: reps mode, timed mode, weight stepper increments/decrements, and the confirm-set action
+**Plans**: TBD
+
+Plans:
+- [ ] 20-01: WorkoutScreen tests (start session, exercise flow, superset, rest timer, end session)
+- [ ] 20-02: ProgramDetailScreen, DayDetailScreen, and SetLoggingPanel tests
+
+### Phase 21: Gap Closing
+**Goal**: The full test suite passes with 80%+ global line coverage confirmed by the Jest coverage report
+**Depends on**: Phase 20 (all planned tests written)
+**Requirements**: GAP-01, GAP-02
+**Success Criteria** (what must be TRUE):
+  1. `npm run test:coverage` completes with the global line coverage threshold met — no threshold failure in the Jest output
+  2. The lcov HTML report confirms no individual source file critical to the app's behavior is below 80% coverage
+**Plans**: TBD
+
+Plans:
+- [ ] 21-01: Run coverage report, identify sub-80% files, write targeted gap-closing tests
 
 ## Progress
 
 **Execution Order:**
-Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
+Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -173,4 +290,11 @@ Phase 9 -> 10 -> 11 -> 12 -> 13 -> 14
 | 11. Quick-Start & Rest Timer | v1.3 | 2/2 | Complete | 2026-03-12 |
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
-| 14. Superset Support | 2/2 | Complete    | 2026-03-14 | - |
+| 14. Superset Support | v1.3 | 2/2 | Complete | 2026-03-14 |
+| 15. Test Infrastructure | v1.4 | 0/2 | Not started | - |
+| 16. Utility and Mapper Tests | v1.4 | 0/1 | Not started | - |
+| 17. DB Business Logic Tests | v1.4 | 0/3 | Not started | - |
+| 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |
+| 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
+| 20. Screens Part 2 | v1.4 | 0/2 | Not started | - |
+| 21. Gap Closing | v1.4 | 0/1 | Not started | - |
