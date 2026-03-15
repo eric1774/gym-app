@@ -24,6 +24,11 @@ module.exports = {
 
   coverageDirectory: 'coverage',
 
+  moduleNameMapper: {
+    '^@test-utils$': '<rootDir>/src/test-utils',
+    '^@test-utils/(.*)$': '<rootDir>/src/test-utils/$1',
+  },
+
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
 
   testMatch: [
