@@ -185,8 +185,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md -- Jest config with coverage thresholds, lcov reporter, jest.setup.js, and test:coverage npm script
-- [ ] 15-02-PLAN.md -- Native module mocks (8 mocks in __mocks__/) and test utilities (dbMock.ts, renderWithProviders.tsx)
+- [x] 15-01-PLAN.md -- Jest config with coverage thresholds, lcov reporter, jest.setup.js, and test:coverage npm script
+- [x] 15-02-PLAN.md -- Native module mocks (8 mocks in __mocks__/) and test utilities (dbMock.ts, renderWithProviders.tsx)
 
 ### Phase 16: Utility and Mapper Tests
 **Goal**: All pure date utility functions and DB row mapper functions are tested in isolation, confirming correct data transformations
@@ -195,10 +195,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Date utility tests cover format correctness, zero-padding, month/year boundary cases, and local-vs-UTC behavior
   2. All ~10 rowToX mapper functions across the 5 DB modules are exported and have tests verifying field mapping and type coercion (snake_case to camelCase, integer booleans, null handling)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: Date utility tests and DB row mapper tests (exercises, sessions, sets, programs, protein)
+- [ ] 16-01-PLAN.md -- Date utility tests and DB row mapper export + tests (exercises, sessions, sets, programs, protein)
 
 ### Phase 17: DB Business Logic Tests
 **Goal**: All database business logic functions have tests with mocked SQL results, covering CRUD operations, edge cases, and complex queries
