@@ -198,7 +198,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01-PLAN.md -- Date utility tests and DB row mapper export + tests (exercises, sessions, sets, programs, protein)
+- [x] 16-01-PLAN.md -- Date utility tests and DB row mapper export + tests (exercises, sessions, sets, programs, protein)
 
 ### Phase 17: DB Business Logic Tests
 **Goal**: All database business logic functions have tests with mocked SQL results, covering CRUD operations, edge cases, and complex queries
@@ -209,12 +209,12 @@ Plans:
   2. protein.ts streak and average calculations are tested with consecutive-day, gap, and today-boundary scenarios
   3. dashboard.ts complex query functions (progress, history, completion, export) have tests with representative mocked result sets
   4. calendar.ts and seed.ts functions are tested including the seedIfEmpty empty vs non-empty distinction
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 17-01: exercises.ts, sessions.ts, sets.ts business logic tests
-- [ ] 17-02: programs.ts (including superset operations) and protein.ts tests
-- [ ] 17-03: dashboard.ts, calendar.ts, and seed.ts tests
+- [ ] 17-01-PLAN.md -- exercises.ts, sessions.ts, sets.ts business logic tests
+- [ ] 17-02-PLAN.md -- programs.ts (including superset operations) and protein.ts tests
+- [ ] 17-03-PLAN.md -- dashboard.ts, calendar.ts, and seed.ts tests
 
 ### Phase 18: Component and Context Tests
 **Goal**: All UI components and context providers have tests verifying rendering, user interaction, state transitions, and side effects
