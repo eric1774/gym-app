@@ -29,6 +29,9 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# Test coverage output
+coverage/
+
 # OS
 .DS_Store
 .env

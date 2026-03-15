@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'react-native',
 
-  setupFilesAfterFramework: ['./jest.setup.js'],
+  setupFilesAfterEnv: ['./jest.setup.js'],
 
   coverageReporters: ['lcov', 'text-summary'],
 
