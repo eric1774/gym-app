@@ -11,9 +11,9 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 - [x] **INFRA-01**: Jest config has coverage thresholds set to 80% lines globally
 - [x] **INFRA-02**: npm script `test:coverage` generates lcov report in coverage/ directory
-- [ ] **INFRA-03**: Native module mocks exist for all RN deps (sqlite-storage, haptic, sound, svg, safe-area, notifee, background-timer)
-- [ ] **INFRA-04**: Test utility `renderWithProviders` wraps components with mocked contexts and navigation
-- [ ] **INFRA-05**: Test utility `mockResultSet` helper generates fake SQL results for DB tests
+- [x] **INFRA-03**: Native module mocks exist for all RN deps (sqlite-storage, haptic, sound, svg, safe-area, notifee, background-timer)
+- [x] **INFRA-04**: Test utility `renderWithProviders` wraps components with mocked contexts and navigation
+- [x] **INFRA-05**: Test utility `mockResultSet` helper generates fake SQL results for DB tests
 
 ### Unit Tests (UNIT)
 
@@ -148,9 +148,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | INFRA-01 | Phase 15 | Complete |
 | INFRA-02 | Phase 15 | Complete |
-| INFRA-03 | Phase 15 | Pending |
-| INFRA-04 | Phase 15 | Pending |
-| INFRA-05 | Phase 15 | Pending |
+| INFRA-03 | Phase 15 | Complete |
+| INFRA-04 | Phase 15 | Complete |
+| INFRA-05 | Phase 15 | Complete |
 | UNIT-01 | Phase 16 | Pending |
 | UNIT-02 | Phase 16 | Pending |
 | DBLG-01 | Phase 17 | Pending |
