@@ -292,7 +292,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 14. Superset Support | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 15. Test Infrastructure | 2/2 | Complete    | 2026-03-15 | - |
-| 16. Utility and Mapper Tests | 1/1 | Complete   | 2026-03-15 | - |
+| 16. Utility and Mapper Tests | 1/1 | Complete    | 2026-03-15 | - |
 | 17. DB Business Logic Tests | v1.4 | 0/3 | Not started | - |
 | 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
