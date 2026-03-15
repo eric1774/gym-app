@@ -22,9 +22,9 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 ### DB Business Logic (DBLG)
 
-- [ ] **DBLG-01**: exercises.ts CRUD and search functions have tests with mocked SQL results
-- [ ] **DBLG-02**: sessions.ts lifecycle functions (create, get, complete, toggle, delete) have tests
-- [ ] **DBLG-03**: sets.ts functions (logSet, getSets, getLastSessionSets, deleteSet, checkForPR) have tests
+- [x] **DBLG-01**: exercises.ts CRUD and search functions have tests with mocked SQL results
+- [x] **DBLG-02**: sessions.ts lifecycle functions (create, get, complete, toggle, delete) have tests
+- [x] **DBLG-03**: sets.ts functions (logSet, getSets, getLastSessionSets, deleteSet, checkForPR) have tests
 - [x] **DBLG-04**: programs.ts CRUD including superset group operations have tests
 - [x] **DBLG-05**: protein.ts functions (meals, goals, streaks, averages) have tests
 - [x] **DBLG-06**: dashboard.ts query functions (progress, history, completion, export) have tests
@@ -153,9 +153,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-05 | Phase 15 | Complete |
 | UNIT-01 | Phase 16 | Complete |
 | UNIT-02 | Phase 16 | Complete |
-| DBLG-01 | Phase 17 | Pending |
-| DBLG-02 | Phase 17 | Pending |
-| DBLG-03 | Phase 17 | Pending |
+| DBLG-01 | Phase 17 | Complete |
+| DBLG-02 | Phase 17 | Complete |
+| DBLG-03 | Phase 17 | Complete |
 | DBLG-04 | Phase 17 | Complete |
 | DBLG-05 | Phase 17 | Complete |
 | DBLG-06 | Phase 17 | Complete |

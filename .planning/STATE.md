@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 17-02-PLAN.md
-last_updated: "2026-03-15T22:37:29.476Z"
+stopped_at: Completed 17-01-PLAN.md
+last_updated: "2026-03-15T23:08:53Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
@@ -88,6 +88,9 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 17-03]: getDaySessionDetails PR detection: isPR=false when priorMax is null (first-ever session, no baseline)
 - [Phase 17-02]: Object.defineProperty pattern required for db export override — cast assignment fails at runtime with 'db is read-only'
 - [Phase 17-02]: getLocalDateString mocked with Date-arg-aware implementation to support streak loop's getLocalDateString(expectedDate) calls
+- [Phase 17-01]: jest.mock('../database') auto-mock (no factory) required for exercises/sessions/sets — factory mock is lazy and doesn't intercept module imports; auto-mock ensures shared function reference
+- [Phase 17-01]: Import mockResultSet from @test-utils/dbMock not @test-utils — @test-utils/index loads mockProviders.tsx which calls jest.mock('../db/exercises') and jest.mock('../db/sessions') as side effects, overriding auto-mocks
+- [Phase 17-01]: Object.defineProperty(dbModule, 'db', { value: Promise.resolve(mockDb) }) after require('../database') correctly overrides the db Promise for all three db modules
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-15T22:37:29.472Z
-Stopped at: Completed 17-02-PLAN.md
+Last session: 2026-03-15T23:08:53Z
+Stopped at: Completed 17-01-PLAN.md
 Resume file: None
