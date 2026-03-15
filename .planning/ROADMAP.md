@@ -291,7 +291,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 12. Workout Summary | v1.3 | 1/1 | Complete | 2026-03-12 |
 | 13. Calendar View | v1.3 | 2/2 | Complete | 2026-03-14 |
 | 14. Superset Support | v1.3 | 2/2 | Complete | 2026-03-14 |
-| 15. Test Infrastructure | v1.4 | 0/2 | Not started | - |
+| 15. Test Infrastructure | 1/2 | In Progress|  | - |
 | 16. Utility and Mapper Tests | v1.4 | 0/1 | Not started | - |
 | 17. DB Business Logic Tests | v1.4 | 0/3 | Not started | - |
 | 18. Component and Context Tests | v1.4 | 0/3 | Not started | - |

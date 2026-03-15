@@ -1,54 +1,87 @@
 # Requirements: GymTrack
 
-**Defined:** 2026-03-10
+**Defined:** 2026-03-15
 **Core Value:** Fast, frictionless set logging mid-workout — log weight + reps in two taps, start your rest timer, and get back to lifting.
 
-## v1.3 Requirements
+## v1.4 Requirements
 
-Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap phases.
+Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
-### Set Logging
+### Infrastructure (INFRA)
+
+- [x] **INFRA-01**: Jest config has coverage thresholds set to 80% lines globally
+- [x] **INFRA-02**: npm script `test:coverage` generates lcov report in coverage/ directory
+- [ ] **INFRA-03**: Native module mocks exist for all RN deps (sqlite-storage, haptic, sound, svg, safe-area, notifee, background-timer)
+- [ ] **INFRA-04**: Test utility `renderWithProviders` wraps components with mocked contexts and navigation
+- [ ] **INFRA-05**: Test utility `mockResultSet` helper generates fake SQL results for DB tests
+
+### Unit Tests (UNIT)
+
+- [ ] **UNIT-01**: Date utility functions have tests covering format, zero-padding, and boundary edge cases
+- [ ] **UNIT-02**: All DB row mapper functions are exported and tested (~10 mappers across 5 DB modules)
+
+### DB Business Logic (DBLG)
+
+- [ ] **DBLG-01**: exercises.ts CRUD and search functions have tests with mocked SQL results
+- [ ] **DBLG-02**: sessions.ts lifecycle functions (create, get, complete, toggle, delete) have tests
+- [ ] **DBLG-03**: sets.ts functions (logSet, getSets, getLastSessionSets, deleteSet, checkForPR) have tests
+- [ ] **DBLG-04**: programs.ts CRUD including superset group operations have tests
+- [ ] **DBLG-05**: protein.ts functions (meals, goals, streaks, averages) have tests
+- [ ] **DBLG-06**: dashboard.ts query functions (progress, history, completion, export) have tests
+- [ ] **DBLG-07**: calendar.ts functions (workout days, first session date, day details) have tests
+- [ ] **DBLG-08**: seed.ts seedIfEmpty has tests for empty and non-empty cases
+
+### Components (COMP)
+
+- [ ] **COMP-01**: Simple components (PrimaryButton, MealTypePills, QuickAddButtons, StreakAverageRow, GhostReference, RestTimerBanner, ProgramTargetReference, ExerciseCategoryTabs, SetListItem, MealListItem) have rendering and interaction tests
+- [ ] **COMP-02**: Complex components and modals (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart) have tests including validation
+
+### Context Providers (CTX)
+
+- [ ] **CTX-01**: SessionContext has tests for session lifecycle and loading state
+- [ ] **CTX-02**: TimerContext has tests for countdown, haptic/sound triggers, and cleanup
+
+### Screens (SCRN)
+
+- [ ] **SCRN-01**: Simple screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, CalendarDayDetail, Library, Settings, MealLibrary) have rendering and interaction tests
+- [ ] **SCRN-02**: Modal screens have form validation and submit callback tests
+- [ ] **SCRN-03**: WorkoutScreen has tests for workout flow, superset grouping, rest timer
+- [ ] **SCRN-04**: ProgramDetailScreen has tests for day management and superset groups
+- [ ] **SCRN-05**: DayDetailScreen has tests for exercise management and superset multi-select
+- [ ] **SCRN-06**: SetLoggingPanel has tests for reps/timed modes and weight stepper
+
+### Gap Closing (GAP)
+
+- [ ] **GAP-01**: Coverage report confirms 80%+ global line coverage
+- [ ] **GAP-02**: Files below 80% have targeted tests added to close gaps
+
+## Previous Milestones (Shipped)
+
+<details>
+<summary>v1.3 Workout Intelligence & Speed — 20 requirements complete</summary>
 
 - [x] **LOG-01**: User can tap +/-5 buttons to increment/decrement weight without typing
 - [x] **LOG-02**: User sees weight input pre-filled from most recent intra-session set when re-expanding the logging panel
 - [x] **LOG-03**: User feels haptic feedback on set confirm, exercise complete, and end workout
-
-### Records
-
 - [x] **REC-01**: User sees an animated PR toast when logging a set that exceeds all previous weight+reps for that exercise
 - [x] **REC-02**: User feels double haptic feedback when a PR is detected
 - [x] **REC-03**: User can see running total volume (weight x reps) in the workout header during a session
-
-### Navigation
-
 - [x] **NAV-01**: User can see a "Next Workout" card on the dashboard showing the next unfinished program day
 - [x] **NAV-02**: User can tap the Next Workout card to start a workout session in one tap
-
-### Rest Timer
-
 - [x] **REST-01**: User can see the configured rest duration per exercise during a workout
 - [x] **REST-02**: User can edit rest duration per exercise during a workout
 - [x] **REST-03**: Rest timer uses the exercise-specific duration when started
-
-### Summary
-
 - [x] **SUM-01**: User sees a workout completion summary after ending a workout (duration, sets, volume, exercises, PRs)
 - [x] **SUM-02**: User can dismiss the summary to return to the workout screen
-
-### Calendar
-
 - [x] **CAL-01**: User can view a monthly calendar grid showing which days had workouts
 - [x] **CAL-02**: User can navigate between months
-- [ ] **CAL-03**: User can tap a day to see session details (duration, exercise count, volume, program day)
-
-### Supersets
-
+- [x] **CAL-03**: User can tap a day to see session details (duration, exercise count, volume, program day)
 - [x] **SUP-01**: User can group 2-3 exercises as a superset within a program day
 - [x] **SUP-02**: User can see superset grouping visually during a workout
 - [x] **SUP-03**: After logging a set in a superset, the next exercise in the group auto-expands
 - [x] **SUP-04**: Rest timer starts after the last exercise in a superset group
 
-## Previous Milestones (Shipped)
+</details>
 
 <details>
 <summary>v1.2 Meal Library — 5 requirements complete</summary>
@@ -100,14 +133,12 @@ Requirements for Workout Intelligence & Speed milestone. Each maps to roadmap ph
 
 | Feature | Reason |
 |---------|--------|
+| SonarQube integration | Excluded per user decision — can add later |
+| E2E / integration tests | Unit + component coverage sufficient for 80% target |
+| Snapshot tests | Low value, high maintenance for this codebase |
 | Social/sharing features | Solo personal use only |
 | Cloud sync or internet | Fully local app |
 | iOS support | Android only for now |
-| AI program suggestions | User builds their own programs |
-| Workout notes (v1.3) | Deferred — not critical for workout intelligence |
-| Food database / barcode scanning | Violates local-only constraint |
-| AI photo meal logging | Requires cloud services |
-| Meal planning / recipes | Out of domain — this is tracking, not planning |
 
 ## Traceability
 
@@ -115,32 +146,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOG-01 | Phase 9 | Complete |
-| LOG-02 | Phase 9 | Complete |
-| LOG-03 | Phase 9 | Complete |
-| REC-01 | Phase 10 | Complete |
-| REC-02 | Phase 10 | Complete |
-| REC-03 | Phase 10 | Complete |
-| NAV-01 | Phase 11 | Complete |
-| NAV-02 | Phase 11 | Complete |
-| REST-01 | Phase 11 | Complete |
-| REST-02 | Phase 11 | Complete |
-| REST-03 | Phase 11 | Complete |
-| SUM-01 | Phase 12 | Complete |
-| SUM-02 | Phase 12 | Complete |
-| CAL-01 | Phase 13 | Complete |
-| CAL-02 | Phase 13 | Complete |
-| CAL-03 | Phase 13 | Pending |
-| SUP-01 | Phase 14 | Complete |
-| SUP-02 | Phase 14 | Complete |
-| SUP-03 | Phase 14 | Complete |
-| SUP-04 | Phase 14 | Complete |
+| INFRA-01 | Phase 15 | Complete |
+| INFRA-02 | Phase 15 | Complete |
+| INFRA-03 | Phase 15 | Pending |
+| INFRA-04 | Phase 15 | Pending |
+| INFRA-05 | Phase 15 | Pending |
+| UNIT-01 | Phase 16 | Pending |
+| UNIT-02 | Phase 16 | Pending |
+| DBLG-01 | Phase 17 | Pending |
+| DBLG-02 | Phase 17 | Pending |
+| DBLG-03 | Phase 17 | Pending |
+| DBLG-04 | Phase 17 | Pending |
+| DBLG-05 | Phase 17 | Pending |
+| DBLG-06 | Phase 17 | Pending |
+| DBLG-07 | Phase 17 | Pending |
+| DBLG-08 | Phase 17 | Pending |
+| COMP-01 | Phase 18 | Pending |
+| COMP-02 | Phase 18 | Pending |
+| CTX-01 | Phase 18 | Pending |
+| CTX-02 | Phase 18 | Pending |
+| SCRN-01 | Phase 19 | Pending |
+| SCRN-02 | Phase 19 | Pending |
+| SCRN-03 | Phase 20 | Pending |
+| SCRN-04 | Phase 20 | Pending |
+| SCRN-05 | Phase 20 | Pending |
+| SCRN-06 | Phase 20 | Pending |
+| GAP-01 | Phase 21 | Pending |
+| GAP-02 | Phase 21 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 20 total
-- Mapped to phases: 20
-- Unmapped: 0 ✓
+- v1.4 requirements: 27 total
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
-*Requirements defined: 2026-03-10*
-*Last updated: 2026-03-10 after v1.3 roadmap creation*
+*Requirements defined: 2026-03-15*
+*Last updated: 2026-03-15 after v1.4 roadmap creation (Phases 15-21)*
