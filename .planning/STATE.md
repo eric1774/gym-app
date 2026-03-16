@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 20-02-PLAN.md
-last_updated: "2026-03-16T00:12:02.348Z"
+stopped_at: Completed 19-02-PLAN.md
+last_updated: "2026-03-16T00:12:12.573Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
@@ -85,6 +85,7 @@ Progress: [█░░░░░░░░░] 7%
 | Phase 20-screens-part-2 P01 | 8 | 1 tasks | 1 files |
 | Phase 19-screens-part-1 P01 | 9 | 2 tasks | 4 files |
 | Phase 20-screens-part-2 P02 | 3 | 2 tasks | 3 files |
+| Phase 19-screens-part-1 P02 | 25 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 20-02]: DayDetailScreen mock of SessionContext must include sessionExercises — ExercisePickerSheet child component uses it immediately on mount
 - [Phase 20-02]: db/exercises mock for DayDetailScreen must include getExercisesByCategory and searchExercises — child component ExercisePickerSheet imports them
 - [Phase 20-02]: Disabled button state tested behaviorally (press and verify no callback) rather than parent.props.disabled which resolves to Animated.View not TouchableOpacity
+- [Phase 19-02]: LibraryScreen avoids renderWithProviders due to mockProviders.tsx overriding db/exercises mock — uses NavigationContainer directly with jest.mock factories
+- [Phase 19-02]: Modal title tests use getAllByText() not getByText() because title text and submit button text are identical strings (Add Meal, Add Exercise, Create Program, Add Day)
 
 ### Pending Todos
 
@@ -137,6 +140,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-16T00:11:46.545Z
-Stopped at: Completed 20-02-PLAN.md
+Last session: 2026-03-16T00:12:12.570Z
+Stopped at: Completed 19-02-PLAN.md
 Resume file: None

@@ -44,7 +44,7 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 ### Screens (SCRN)
 
 - [x] **SCRN-01**: Simple screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, CalendarDayDetail, Library, Settings, MealLibrary) have rendering and interaction tests
-- [ ] **SCRN-02**: Modal screens have form validation and submit callback tests
+- [x] **SCRN-02**: Modal screens have form validation and submit callback tests
 - [x] **SCRN-03**: WorkoutScreen has tests for workout flow, superset grouping, rest timer
 - [x] **SCRN-04**: ProgramDetailScreen has tests for day management and superset groups
 - [x] **SCRN-05**: DayDetailScreen has tests for exercise management and superset multi-select
@@ -166,7 +166,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTX-01 | Phase 18 | Complete |
 | CTX-02 | Phase 18 | Complete |
 | SCRN-01 | Phase 19 | Complete |
-| SCRN-02 | Phase 19 | Pending |
+| SCRN-02 | Phase 19 | Complete |
 | SCRN-03 | Phase 20 | Complete |
 | SCRN-04 | Phase 20 | Complete |
 | SCRN-05 | Phase 20 | Complete |
