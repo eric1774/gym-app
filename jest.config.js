@@ -36,6 +36,12 @@ module.exports = {
     '**/*.(test|spec).(ts|tsx)',
   ],
 
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.claude/worktrees/',
+    '/.scannerwork/',
+  ],
+
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|@notifee|react-native-.*|@react-navigation)/)',
   ],
