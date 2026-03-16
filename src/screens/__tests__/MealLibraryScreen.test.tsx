@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../test-utils';
 import { MealLibraryScreen } from '../MealLibraryScreen';
@@ -111,5 +112,96 @@ describe('MealLibraryScreen', () => {
     await waitFor(() => {
       expect(getByText('Add to Library')).toBeTruthy();
     });
+  });
+
+  it('logs a meal when tapped', async () => {
+    const { addMeal } = require('../../db');
+    mockGetLibraryMealsByType.mockResolvedValue({
+      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      lunch: [],
+      dinner: [],
+      snack: [],
+    });
+
+    const { getByText } = renderWithProviders(<MealLibraryScreen />, {
+      withSession: false,
+      withTimer: false,
+    });
+
+    await waitFor(() => getByText('Eggs'));
+    fireEvent.press(getByText('Eggs'));
+
+    await waitFor(() => expect(addMeal).toHaveBeenCalledWith(18, 'Eggs', 'breakfast'));
+  });
+
+  it('shows delete confirmation when Delete is pressed', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    mockGetLibraryMealsByType.mockResolvedValue({
+      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      lunch: [],
+      dinner: [],
+      snack: [],
+    });
+
+    const { getByText } = renderWithProviders(<MealLibraryScreen />, {
+      withSession: false,
+      withTimer: false,
+    });
+
+    await waitFor(() => getByText('Eggs'));
+    fireEvent.press(getByText('Delete'));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete Library Meal',
+      expect.stringContaining('Eggs'),
+      expect.any(Array),
+    );
+    alertSpy.mockRestore();
+  });
+
+  it('deletes a meal when Delete confirmed in alert', async () => {
+    const { deleteLibraryMeal } = require('../../db');
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+      (_title, _msg, buttons) => {
+        const deleteBtn = (buttons as any[])?.find(b => b.text === 'Delete');
+        deleteBtn?.onPress?.();
+      },
+    );
+    mockGetLibraryMealsByType.mockResolvedValue({
+      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      lunch: [],
+      dinner: [],
+      snack: [],
+    });
+
+    const { getByText } = renderWithProviders(<MealLibraryScreen />, {
+      withSession: false,
+      withTimer: false,
+    });
+
+    await waitFor(() => getByText('Eggs'));
+    fireEvent.press(getByText('Delete'));
+
+    await waitFor(() => expect(deleteLibraryMeal).toHaveBeenCalledWith(1));
+    alertSpy.mockRestore();
+  });
+
+  it('shows toast message after logging a meal', async () => {
+    mockGetLibraryMealsByType.mockResolvedValue({
+      lunch: [{ id: 2, name: 'Chicken', proteinGrams: 35, mealType: 'lunch', createdAt: '' }],
+      breakfast: [],
+      dinner: [],
+      snack: [],
+    });
+
+    const { getByText } = renderWithProviders(<MealLibraryScreen />, {
+      withSession: false,
+      withTimer: false,
+    });
+
+    await waitFor(() => getByText('Chicken'));
+    fireEvent.press(getByText('Chicken'));
+
+    await waitFor(() => expect(getByText('Chicken 35g logged')).toBeTruthy());
   });
 });

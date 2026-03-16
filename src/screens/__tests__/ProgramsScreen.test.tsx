@@ -9,6 +9,7 @@ jest.mock('../../db/dashboard', () => ({
 }));
 
 import React from 'react';
+import { Alert } from 'react-native';
 import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../test-utils';
 import { ProgramsScreen } from '../ProgramsScreen';
@@ -71,5 +72,63 @@ describe('ProgramsScreen', () => {
     fireEvent.press(getByText('+'));
     await waitFor(() => getAllByText('Create Program'));
     expect(getAllByText('Create Program').length).toBeGreaterThan(0);
+  });
+
+  it('shows ACTIVE PROGRAMS section when programs exist', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockResolvedValue([]);
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('ACTIVE PROGRAMS'));
+    expect(getByText('ACTIVE PROGRAMS')).toBeTruthy();
+  });
+
+  it('shows PAST PROGRAMS section when completed programs exist', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'Old Program', weeks: 2, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    // 1 day * 2 weeks = 2 total workouts, completed = 2 → past
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(2);
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('PAST PROGRAMS'));
+    expect(getByText('PAST PROGRAMS')).toBeTruthy();
+  });
+
+  it('shows delete confirmation alert on long press', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockResolvedValue([]);
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('PPL'));
+    fireEvent(getByText('PPL'), 'longPress');
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete Program',
+      expect.stringContaining('PPL'),
+      expect.any(Array),
+    );
+    alertSpy.mockRestore();
+  });
+
+  it('deletes program when Delete is confirmed in alert', async () => {
+    const { deleteProgram } = require('../../db/programs');
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+      (_title, _msg, buttons) => {
+        const deleteBtn = (buttons as any[])?.find(b => b.text === 'Delete');
+        deleteBtn?.onPress?.();
+      },
+    );
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockResolvedValue([]);
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('PPL'));
+    fireEvent(getByText('PPL'), 'longPress');
+    await waitFor(() => expect(deleteProgram).toHaveBeenCalledWith(1));
+    alertSpy.mockRestore();
   });
 });

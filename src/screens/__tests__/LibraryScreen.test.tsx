@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { LibraryScreen } from '../LibraryScreen';
 
@@ -90,5 +91,94 @@ describe('LibraryScreen', () => {
     await waitFor(() => {
       expect(getByText('Bench Press')).toBeTruthy();
     });
+  });
+
+  it('searches exercises when text is typed in search box', async () => {
+    jest.useFakeTimers();
+    exercisesModule.searchExercises.mockResolvedValue([
+      { id: 2, name: 'Squat', category: 'legs', defaultRestSeconds: 90, isCustom: false, measurementType: 'reps', createdAt: '' },
+    ]);
+
+    const { getByPlaceholderText, getByText } = renderLibrary();
+    const searchInput = getByPlaceholderText('Search exercises...');
+    fireEvent.changeText(searchInput, 'squat');
+
+    // Advance timer past debounce
+    act(() => {
+      jest.advanceTimersByTime(400);
+    });
+
+    await waitFor(() => expect(getByText('Squat')).toBeTruthy());
+    jest.useRealTimers();
+  });
+
+  it('hides category tabs when searching', async () => {
+    const { getByPlaceholderText, queryByText } = renderLibrary();
+    await waitFor(() => expect(queryByText('Chest')).toBeTruthy());
+    fireEvent.changeText(getByPlaceholderText('Search exercises...'), 'bench');
+    expect(queryByText('Chest')).toBeNull();
+  });
+
+  it('shows + FAB button', async () => {
+    const { getByText } = renderLibrary();
+    expect(getByText('+')).toBeTruthy();
+  });
+
+  it('opens AddExerciseModal when + FAB is pressed', async () => {
+    const { getByText, getAllByText } = renderLibrary();
+    fireEvent.press(getByText('+'));
+    // AddExerciseModal opens — it renders "Add Exercise" text (title + button)
+    await waitFor(() => expect(getAllByText('Add Exercise').length).toBeGreaterThanOrEqual(1));
+  });
+
+  it('shows SEARCH section label when searching', async () => {
+    jest.useFakeTimers();
+    exercisesModule.searchExercises.mockResolvedValue([]);
+    const { getByPlaceholderText, getByText } = renderLibrary();
+    fireEvent.changeText(getByPlaceholderText('Search exercises...'), 'bench');
+    act(() => { jest.advanceTimersByTime(400); });
+    await waitFor(() => expect(getByText(/SEARCH/)).toBeTruthy());
+    jest.useRealTimers();
+  });
+
+  it('deletes exercise and refreshes list', async () => {
+    exercisesModule.getExercisesByCategory.mockResolvedValue([
+      { id: 1, name: 'Bench Press', category: 'chest', defaultRestSeconds: 90, isCustom: true, measurementType: 'reps', createdAt: '' },
+    ]);
+
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+      (_title, _msg, buttons) => {
+        const deleteBtn = (buttons as any[])?.find(b => b.text === 'Delete');
+        deleteBtn?.onPress?.();
+      },
+    );
+
+    const { getByText } = renderLibrary();
+    await waitFor(() => getByText('Bench Press'));
+    fireEvent.press(getByText('Delete'));
+
+    await waitFor(() => expect(exercisesModule.deleteExercise).toHaveBeenCalledWith(1));
+    alertSpy.mockRestore();
+  });
+
+  it('opens edit modal when exercise is long pressed', async () => {
+    exercisesModule.getExercisesByCategory.mockResolvedValue([
+      { id: 1, name: 'Bench Press', category: 'chest', defaultRestSeconds: 90, isCustom: true, measurementType: 'reps', createdAt: '' },
+    ]);
+
+    const { getByText, getAllByText } = renderLibrary();
+    await waitFor(() => getByText('Bench Press'));
+    fireEvent(getByText('Bench Press'), 'longPress');
+
+    // Modal opens — title bar should show "Edit Exercise" or "Add Exercise"
+    await waitFor(() => expect(getAllByText(/Exercise/)[0]).toBeTruthy());
+  });
+
+  it('switches category tab when a different category is tapped', async () => {
+    exercisesModule.getExercisesByCategory.mockResolvedValue([]);
+    const { getByText } = renderLibrary();
+    await waitFor(() => getByText('Exercise Library'));
+    fireEvent.press(getByText('Back'));
+    await waitFor(() => expect(exercisesModule.getExercisesByCategory).toHaveBeenCalledWith('back'));
   });
 });

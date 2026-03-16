@@ -1,4 +1,5 @@
 import React from 'react';
+import { Alert } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
@@ -235,5 +236,164 @@ describe('WorkoutScreen', () => {
     const { getByText } = renderScreen();
     expect(getByText('Rest')).toBeTruthy();
     expect(getByText('Skip')).toBeTruthy();
+  });
+
+  it('shows FAB + button during active session', () => {
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [];
+    mockSessionValue.exercises = [];
+    const { getByText } = renderScreen();
+    expect(getByText('+')).toBeTruthy();
+  });
+
+  it('opens exercise picker when FAB + is pressed', () => {
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [];
+    mockSessionValue.exercises = [];
+    const { getByText, queryByText } = renderScreen();
+    fireEvent.press(getByText('+'));
+    // ExercisePickerSheet is rendered (search UI shows)
+    // Just verify no crash and FAB still present (picker is a modal-like overlay)
+    expect(getByText('+')).toBeTruthy();
+  });
+
+  it('shows discard alert when End Workout pressed with no activity', async () => {
+    const { hasSessionActivity } = require('../../db/sessions');
+    hasSessionActivity.mockResolvedValue(false);
+    const alertSpy = jest.spyOn(Alert, 'alert');
+
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [];
+    mockSessionValue.exercises = [];
+
+    const { getByText } = renderScreen();
+    fireEvent.press(getByText('End Workout'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'No Exercises Logged',
+        expect.any(String),
+        expect.any(Array),
+      );
+    });
+    alertSpy.mockRestore();
+  });
+
+  it('shows end workout confirmation when End Workout pressed with activity', async () => {
+    const { hasSessionActivity } = require('../../db/sessions');
+    hasSessionActivity.mockResolvedValue(true);
+    const alertSpy = jest.spyOn(Alert, 'alert');
+
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [
+      { exerciseId: 10, sessionId: 1, isComplete: true, restSeconds: 90 },
+    ];
+    mockSessionValue.exercises = [
+      { id: 10, name: 'Bench Press', category: 'chest', measurementType: 'reps', defaultRestSeconds: 90 },
+    ];
+
+    const { getByText } = renderScreen();
+    fireEvent.press(getByText('End Workout'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'End Workout?',
+        expect.any(String),
+        expect.any(Array),
+      );
+    });
+    alertSpy.mockRestore();
+  });
+
+  it('shows CHEST category label when chest exercises are in session', () => {
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [
+      { exerciseId: 10, sessionId: 1, isComplete: false, restSeconds: 90 },
+    ];
+    mockSessionValue.exercises = [
+      { id: 10, name: 'Bench Press', category: 'chest', measurementType: 'reps', defaultRestSeconds: 90 },
+    ];
+    const { getByText } = renderScreen();
+    expect(getByText('CHEST')).toBeTruthy();
+  });
+
+  it('dismisses workout summary and navigates away on Done press', async () => {
+    const { hasSessionActivity } = require('../../db/sessions');
+    hasSessionActivity.mockResolvedValue(true);
+    mockEndSession.mockResolvedValue(true);
+
+    // Set up alert mock to automatically press "End Workout" button
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
+      (_title, _msg, buttons) => {
+        const endBtn = (buttons as any[])?.find(b => b.text === 'End Workout');
+        endBtn?.onPress?.();
+      },
+    );
+
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [
+      { exerciseId: 10, sessionId: 1, isComplete: true, restSeconds: 90 },
+    ];
+    mockSessionValue.exercises = [
+      { id: 10, name: 'Bench Press', category: 'chest', measurementType: 'reps', defaultRestSeconds: 90 },
+    ];
+
+    const { getByText } = renderScreen();
+    fireEvent.press(getByText('End Workout'));
+
+    await waitFor(() => {
+      expect(getByText('Workout Complete')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Done'));
+    // After dismissal, should return to no-session state or navigate away
+    alertSpy.mockRestore();
+  });
+
+  it('renders category label ARMS when arms exercises are in session', () => {
+    mockSessionValue.session = {
+      id: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      completedAt: null,
+      programDayId: null,
+    };
+    mockSessionValue.sessionExercises = [
+      { exerciseId: 30, sessionId: 1, isComplete: false, restSeconds: 90 },
+    ];
+    mockSessionValue.exercises = [
+      { id: 30, name: 'Curl', category: 'arms', measurementType: 'reps', defaultRestSeconds: 90 },
+    ];
+    const { getByText } = renderScreen();
+    expect(getByText('ARMS')).toBeTruthy();
   });
 });

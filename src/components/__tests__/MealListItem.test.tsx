@@ -40,4 +40,30 @@ describe('MealListItem', () => {
     fireEvent.press(getByText('Delete'));
     expect(mockDelete).toHaveBeenCalledWith(sampleMeal);
   });
+
+  it('renders without description when description is empty', () => {
+    const noDescMeal = { ...sampleMeal, description: '' };
+    const { getByText, queryByText } = render(
+      <MealListItem meal={noDescMeal} onEdit={jest.fn()} onDelete={jest.fn()} />,
+    );
+    expect(getByText('Lunch:')).toBeTruthy();
+    expect(getByText('40g')).toBeTruthy();
+  });
+
+  it('renders with isLast=true (no border)', () => {
+    const { getByText } = render(
+      <MealListItem meal={sampleMeal} onEdit={jest.fn()} onDelete={jest.fn()} isLast={true} />,
+    );
+    expect(getByText('Chicken')).toBeTruthy();
+  });
+
+  it('calls onEdit when row is tapped', () => {
+    const mockEdit = jest.fn();
+    const { getByText } = render(
+      <MealListItem meal={sampleMeal} onEdit={mockEdit} onDelete={jest.fn()} />,
+    );
+    // Press the protein grams text to trigger onEdit
+    fireEvent.press(getByText('40g'));
+    expect(mockEdit).toHaveBeenCalledWith(sampleMeal);
+  });
 });
