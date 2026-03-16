@@ -33,8 +33,8 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 ### Components (COMP)
 
-- [ ] **COMP-01**: Simple components (PrimaryButton, MealTypePills, QuickAddButtons, StreakAverageRow, GhostReference, RestTimerBanner, ProgramTargetReference, ExerciseCategoryTabs, SetListItem, MealListItem) have rendering and interaction tests
-- [ ] **COMP-02**: Complex components and modals (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart) have tests including validation
+- [x] **COMP-01**: Simple components (PrimaryButton, MealTypePills, QuickAddButtons, StreakAverageRow, GhostReference, RestTimerBanner, ProgramTargetReference, ExerciseCategoryTabs, SetListItem, MealListItem) have rendering and interaction tests
+- [x] **COMP-02**: Complex components and modals (RenameModal, EditTargetsModal, GoalSetupForm, ProteinProgressBar, PRToast, ProteinChart) have tests including validation
 
 ### Context Providers (CTX)
 
@@ -161,8 +161,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBLG-06 | Phase 17 | Complete |
 | DBLG-07 | Phase 17 | Complete |
 | DBLG-08 | Phase 17 | Complete |
-| COMP-01 | Phase 18 | Pending |
-| COMP-02 | Phase 18 | Pending |
+| COMP-01 | Phase 18 | Complete |
+| COMP-02 | Phase 18 | Complete |
 | CTX-01 | Phase 18 | Complete |
 | CTX-02 | Phase 18 | Complete |
 | SCRN-01 | Phase 19 | Pending |

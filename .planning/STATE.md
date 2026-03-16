@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 18-03-PLAN.md
-last_updated: "2026-03-15T23:59:42.217Z"
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-03-16T00:00:38.120Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
-  completed_phases: 10
-  total_plans: 21
-  completed_plans: 19
+  completed_phases: 11
+  total_plans: 23
+  completed_plans: 21
 ---
 
 ---
@@ -80,6 +80,8 @@ Progress: [█░░░░░░░░░] 7%
 | Phase 17-db-business-logic-tests P03 | 3 | 2 tasks | 3 files |
 | Phase 17-db-business-logic-tests P02 | 4 | 2 tasks | 2 files |
 | Phase 18-component-and-context-tests P03 | 1 | 2 tasks | 2 files |
+| Phase 18-component-and-context-tests P02 | 10 | 2 tasks | 6 files |
+| Phase 18-component-and-context-tests P01 | 12 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -110,6 +112,11 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 18-03]: Direct jest.mock() in context test files (not via mockProviders) prevents side-effect conflicts from mockProviders.tsx
 - [Phase 18-03]: TestConsumer + onCtx callback ref pattern for accessing context methods without renderHook version concerns
 - [Phase 18-03]: jest.useFakeTimers() in beforeEach / useRealTimers() in afterEach keeps timer isolation clean per test
+- [Phase 18-02]: jest.mock('../../db') declared before imports ensures hoisting works correctly for DB function mocks in component tests
+- [Phase 18-02]: NavigationContainer wrap for ProteinChart: useFocusEffect requires navigation context; wrapping provides it without needing to mock the hook
+- [Phase 18-02]: PRToast test uses act() around ref.current\!.showPR() to flush state updates from the imperative call before asserting rendered content
+- [Phase 18-01]: Pure component tests use direct import with no providers — none of these components access context or navigation
+- [Phase 18-01]: SetListItem Delete button tested via text search despite Animated.View opacity=0 — RNTL finds elements regardless of visual opacity
 
 ### Pending Todos
 
@@ -121,6 +128,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-15T23:59:42.212Z
-Stopped at: Completed 18-03-PLAN.md
+Last session: 2026-03-16T00:00:38.117Z
+Stopped at: Completed 18-01-PLAN.md
 Resume file: None

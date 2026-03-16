@@ -65,7 +65,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 15: Test Infrastructure** - Jest config with coverage thresholds, native module mocks, and shared test utilities (completed 2026-03-15)
 - [x] **Phase 16: Utility and Mapper Tests** - Pure date utility tests and DB row mapper tests across all database modules (completed 2026-03-15)
 - [x] **Phase 17: DB Business Logic Tests** - Full test coverage for all 8 database modules (exercises, sessions, sets, programs, protein, dashboard, calendar, seed) (completed 2026-03-15)
-- [ ] **Phase 18: Component and Context Tests** - Rendering and interaction tests for simple and complex components, modals, and context providers
+- [x] **Phase 18: Component and Context Tests** - Rendering and interaction tests for simple and complex components, modals, and context providers (completed 2026-03-16)
 - [ ] **Phase 19: Screens Part 1** - Tests for simpler screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, Library, Settings) and modal screens
 - [ ] **Phase 20: Screens Part 2** - Tests for complex screens (WorkoutScreen, ProgramDetailScreen, DayDetailScreen, SetLoggingPanel)
 - [ ] **Phase 21: Gap Closing** - Coverage report analysis, targeted tests for files below 80%, threshold verification
@@ -240,11 +240,11 @@ Plans:
   1. Dashboard, Protein, Programs, ExerciseProgress, Calendar, CalendarDayDetail, Library, Settings, and MealLibrary screens each render without errors given mocked navigation and context
   2. Each simpler screen's primary data-loading path and at least one user interaction (tap, delete, create) are covered by tests
   3. Modal screens (AddMeal, EditMeal, AddExercise, etc.) have form validation tests confirming empty inputs are rejected and valid inputs trigger the correct submit callback
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 19-01: Dashboard, Protein, Programs, ExerciseProgress screen tests
-- [ ] 19-02: Calendar, CalendarDayDetail, Library, Settings, MealLibrary screen tests and modal screen tests
+- [ ] 19-01-PLAN.md -- Dashboard, Protein, Programs, ExerciseProgress screen tests
+- [ ] 19-02-PLAN.md -- Calendar, CalendarDayDetail, Library, Settings, MealLibrary screen tests and modal screen tests
 
 ### Phase 20: Screens Part 2
 **Goal**: The four most complex screens — WorkoutScreen, ProgramDetailScreen, DayDetailScreen, and SetLoggingPanel — have tests covering their core flows including superset-specific behavior
@@ -255,11 +255,11 @@ Plans:
   2. ProgramDetailScreen tests cover: day list rendering, adding/removing a day, and superset group display
   3. DayDetailScreen tests cover: exercise list rendering, adding/removing an exercise, and the superset multi-select flow
   4. SetLoggingPanel tests cover: reps mode, timed mode, weight stepper increments/decrements, and the confirm-set action
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 20-01: WorkoutScreen tests (start session, exercise flow, superset, rest timer, end session)
-- [ ] 20-02: ProgramDetailScreen, DayDetailScreen, and SetLoggingPanel tests
+- [ ] 20-01-PLAN.md -- WorkoutScreen tests (start session, exercise flow, superset, rest timer, end session)
+- [ ] 20-02-PLAN.md -- ProgramDetailScreen, DayDetailScreen, and SetLoggingPanel tests
 
 ### Phase 21: Gap Closing
 **Goal**: The full test suite passes with 80%+ global line coverage confirmed by the Jest coverage report
@@ -268,10 +268,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `npm run test:coverage` completes with the global line coverage threshold met — no threshold failure in the Jest output
   2. The lcov HTML report confirms no individual source file critical to the app's behavior is below 80% coverage
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 21-01: Run coverage report, identify sub-80% files, write targeted gap-closing tests
+- [ ] 21-01-PLAN.md -- Run coverage report, identify sub-80% files, write targeted gap-closing tests
 
 ## Progress
 
@@ -294,7 +294,7 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 15. Test Infrastructure | 2/2 | Complete    | 2026-03-15 | - |
 | 16. Utility and Mapper Tests | 1/1 | Complete    | 2026-03-15 | - |
 | 17. DB Business Logic Tests | 3/3 | Complete    | 2026-03-15 | - |
-| 18. Component and Context Tests | 2/3 | In Progress|  | - |
+| 18. Component and Context Tests | 3/3 | Complete   | 2026-03-16 | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
 | 20. Screens Part 2 | v1.4 | 0/2 | Not started | - |
 | 21. Gap Closing | v1.4 | 0/1 | Not started | - |
