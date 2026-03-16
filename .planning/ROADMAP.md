@@ -296,5 +296,5 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 17. DB Business Logic Tests | 3/3 | Complete    | 2026-03-15 | - |
 | 18. Component and Context Tests | 3/3 | Complete   | 2026-03-16 | - |
 | 19. Screens Part 1 | v1.4 | 0/2 | Not started | - |
-| 20. Screens Part 2 | v1.4 | 0/2 | Not started | - |
+| 20. Screens Part 2 | 1/2 | In Progress|  | - |
 | 21. Gap Closing | v1.4 | 0/1 | Not started | - |
