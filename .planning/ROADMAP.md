@@ -67,7 +67,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 17: DB Business Logic Tests** - Full test coverage for all 8 database modules (exercises, sessions, sets, programs, protein, dashboard, calendar, seed) (completed 2026-03-15)
 - [x] **Phase 18: Component and Context Tests** - Rendering and interaction tests for simple and complex components, modals, and context providers (completed 2026-03-16)
 - [ ] **Phase 19: Screens Part 1** - Tests for simpler screens (Dashboard, Protein, Programs, ExerciseProgress, Calendar, Library, Settings) and modal screens
-- [ ] **Phase 20: Screens Part 2** - Tests for complex screens (WorkoutScreen, ProgramDetailScreen, DayDetailScreen, SetLoggingPanel)
+- [x] **Phase 20: Screens Part 2** - Tests for complex screens (WorkoutScreen, ProgramDetailScreen, DayDetailScreen, SetLoggingPanel) (completed 2026-03-16)
 - [ ] **Phase 21: Gap Closing** - Coverage report analysis, targeted tests for files below 80%, threshold verification
 
 ## Phase Details
@@ -296,5 +296,5 @@ Phase 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21
 | 17. DB Business Logic Tests | 3/3 | Complete    | 2026-03-15 | - |
 | 18. Component and Context Tests | 3/3 | Complete   | 2026-03-16 | - |
 | 19. Screens Part 1 | 1/2 | In Progress|  | - |
-| 20. Screens Part 2 | 1/2 | In Progress|  | - |
+| 20. Screens Part 2 | 2/2 | Complete   | 2026-03-16 | - |
 | 21. Gap Closing | v1.4 | 0/1 | Not started | - |
