@@ -52,8 +52,8 @@ Requirements for Test Coverage milestone. Each maps to roadmap phases.
 
 ### Gap Closing (GAP)
 
-- [ ] **GAP-01**: Coverage report confirms 80%+ global line coverage
-- [ ] **GAP-02**: Files below 80% have targeted tests added to close gaps
+- [x] **GAP-01**: Coverage report confirms 80%+ global line coverage
+- [x] **GAP-02**: Files below 80% have targeted tests added to close gaps
 
 ## Previous Milestones (Shipped)
 
@@ -171,8 +171,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCRN-04 | Phase 20 | Complete |
 | SCRN-05 | Phase 20 | Complete |
 | SCRN-06 | Phase 20 | Complete |
-| GAP-01 | Phase 21 | Pending |
-| GAP-02 | Phase 21 | Pending |
+| GAP-01 | Phase 21 | Complete |
+| GAP-02 | Phase 21 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 27 total

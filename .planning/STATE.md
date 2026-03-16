@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Test Coverage
 status: in_progress
-stopped_at: Completed 19-02-PLAN.md
-last_updated: "2026-03-16T00:12:12.573Z"
+stopped_at: Completed 21-01-PLAN.md
+last_updated: "2026-03-16T00:55:26.863Z"
 last_activity: 2026-03-15 — Completed 15-01 (Jest coverage infrastructure)
 progress:
   total_phases: 14
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 26
-  completed_plans: 25
+  completed_plans: 26
 ---
 
 ---
@@ -86,6 +86,7 @@ Progress: [█░░░░░░░░░] 7%
 | Phase 19-screens-part-1 P01 | 9 | 2 tasks | 4 files |
 | Phase 20-screens-part-2 P02 | 3 | 2 tasks | 3 files |
 | Phase 19-screens-part-1 P02 | 25 | 2 tasks | 10 files |
+| Phase 21-gap-closing P01 | 180 | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Key decisions from v1.3 relevant to test writing:
 - [Phase 20-02]: Disabled button state tested behaviorally (press and verify no callback) rather than parent.props.disabled which resolves to Animated.View not TouchableOpacity
 - [Phase 19-02]: LibraryScreen avoids renderWithProviders due to mockProviders.tsx overriding db/exercises mock — uses NavigationContainer directly with jest.mock factories
 - [Phase 19-02]: Modal title tests use getAllByText() not getByText() because title text and submit button text are identical strings (Add Meal, Add Exercise, Create Program, Add Day)
+- [Phase 21-01]: PanResponder callbacks are permanently untestable via RNTL — accepted coverage gap in ExerciseListItem and MealListItem
+- [Phase 21-01]: initDatabase dynamic import() is not testable in Jest without --experimental-vm-modules; lines 46-57 of database.ts remain uncovered
 
 ### Pending Todos
 
@@ -140,6 +143,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-16T00:12:12.570Z
-Stopped at: Completed 19-02-PLAN.md
+Last session: 2026-03-16T00:55:26.859Z
+Stopped at: Completed 21-01-PLAN.md
 Resume file: None
