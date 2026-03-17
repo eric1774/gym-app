@@ -49,7 +49,7 @@ This milestone is complete only when all are true:
 
 ## Slices
 
-- [ ] **S01: Data Layer — DB Queries & Types** `risk:medium` `depends:[]`
+- [x] **S01: Data Layer — DB Queries & Types** `risk:medium` `depends:[]`
   > After this: `getCategorySummaries()` and `getCategoryExerciseProgress()` return correct data from SQLite; types are defined and exported
 - [ ] **S02: MiniSparkline & CategorySummaryCard Components** `risk:low` `depends:[S01]`
   > After this: MiniSparkline renders SVG trend lines from data arrays; CategorySummaryCard renders a complete category card with sparkline, delta, stale dimming
