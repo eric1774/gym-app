@@ -42,6 +42,8 @@ export {
   getProgramWeekCompletion,
   getSessionTimeSummary,
   exportAllData,
+  getCategorySummaries,
+  getCategoryExerciseProgress,
 } from './dashboard';
 export {
   addMeal,

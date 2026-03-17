@@ -32,7 +32,7 @@
 
 ## Tasks
 
-- [ ] **T01: Add category types and implement both DB query functions** `est:45m`
+- [x] **T01: Add category types and implement both DB query functions** `est:45m`
   - Why: This is the core implementation — adds the two new interfaces and both query functions that S02–S04 depend on. Bundled together because the functions share types and follow the same established pattern.
   - Files: `src/types/index.ts`, `src/db/dashboard.ts`, `src/db/index.ts`
   - Do: Add `CategorySummary` and `CategoryExerciseProgress` interfaces to types. Implement `getCategorySummaries()` with one SQL query + JS grouping. Implement `getCategoryExerciseProgress(category, timeRange?)` with optional date filtering. Re-export both from `src/db/index.ts`. Follow existing `executeSql` + row iteration pattern exactly.
@@ -45,6 +45,13 @@
   - Do: Add describe blocks for both functions using the existing `mockExecuteSql` / `mockResultSet` pattern. Test: happy path with multiple categories, empty results, timed vs reps exercises, null measurement_type coalescing, sparkline point ordering (oldest-first), time range filtering for getCategoryExerciseProgress.
   - Verify: `npx jest src/db/__tests__/dashboard.test.ts --verbose` — all new tests pass
   - Done when: All new test sections pass and existing tests remain green
+
+## Observability / Diagnostics
+
+- **Runtime signals:** Both query functions log nothing on success (pure data retrieval). Errors propagate as rejected promises from `executeSql()` — callers handle with try/catch.
+- **Inspection surfaces:** Functions return typed arrays (`CategorySummary[]`, `CategoryExerciseProgress[]`). Shape can be verified via `console.log(JSON.stringify(result))` in React Native debugger or Flipper.
+- **Failure visibility:** SQL errors surface as unhandled promise rejections if not caught by the calling screen. Empty results (no training data) return empty arrays, not errors — callers must handle empty state.
+- **Redaction constraints:** No PII in workout data. No secrets. All data is local SQLite — no network calls.
 
 ## Files Likely Touched
 

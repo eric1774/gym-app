@@ -130,6 +130,12 @@ Add two new TypeScript interfaces (`CategorySummary`, `CategoryExerciseProgress`
 - [ ] Null `measurement_type` coalesced to `'reps'`
 - [ ] Both functions re-exported from `src/db/index.ts`
 
+## Observability Impact
+
+- **Signals changed:** Two new async functions become available. No new logging or metrics — follows existing silent-success pattern.
+- **Inspection:** Future agents can verify function output by calling them in a test or debug screen and checking the returned array shapes match `CategorySummary[]` / `CategoryExerciseProgress[]`.
+- **Failure visibility:** SQL query errors propagate as promise rejections. Empty training data returns `[]` (not null/error). Null `measurement_type` is silently coalesced to `'reps'`.
+
 ## Verification
 
 - `npx tsc --noEmit` — no type errors

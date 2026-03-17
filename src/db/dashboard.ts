@@ -14,6 +14,8 @@ import {
   ProgramDay,
   ProgramDayExercise,
   NextWorkoutInfo,
+  CategorySummary,
+  CategoryExerciseProgress,
 } from '../types';
 
 // ── Exercise Progress ───────────────────────────────────────────────
@@ -448,6 +450,208 @@ export async function getSessionTimeSummary(
   const restSeconds = Math.max(0, totalSeconds - activeSeconds);
 
   return { totalSeconds, activeSeconds, restSeconds };
+}
+
+// ── Category Summaries ──────────────────────────────────────────────
+
+/**
+ * For each category that has training data, return a summary with
+ * exercise count, sparkline of per-session max best values, last trained
+ * date, and dominant measurement type. Uses a single SQL query with
+ * JS-side grouping — no N+1 loops over categories.
+ */
+export async function getCategorySummaries(): Promise<CategorySummary[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT e.id AS exercise_id, e.category, e.measurement_type,
+            ws.session_id, wss.completed_at AS completed_at,
+            ws.weight_kg, ws.reps
+     FROM workout_sets ws
+     INNER JOIN exercises e ON e.id = ws.exercise_id
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE wss.completed_at IS NOT NULL
+       AND ws.id = (
+         SELECT ws2.id FROM workout_sets ws2
+         WHERE ws2.session_id = ws.session_id
+           AND ws2.exercise_id = ws.exercise_id
+         ORDER BY CASE WHEN e.measurement_type = 'timed' THEN ws2.reps ELSE ws2.weight_kg END DESC,
+                  ws2.reps DESC
+         LIMIT 1
+       )
+     GROUP BY ws.exercise_id, ws.session_id
+     ORDER BY wss.completed_at ASC`,
+  );
+
+  // Group rows by category
+  const categoryMap = new Map<string, {
+    exerciseIds: Set<number>;
+    sessions: Map<number, { completedAt: string; bestValue: number }>;
+    measurementTypes: Map<string, number>;
+  }>();
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const category: string = row.category;
+    const measurementType: string = row.measurement_type ?? 'reps';
+    const bestValue = measurementType === 'timed' ? row.reps : row.weight_kg;
+
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, {
+        exerciseIds: new Set(),
+        sessions: new Map(),
+        measurementTypes: new Map(),
+      });
+    }
+
+    const cat = categoryMap.get(category)!;
+    cat.exerciseIds.add(row.exercise_id);
+
+    // Track measurement type counts for majority rule
+    cat.measurementTypes.set(
+      measurementType,
+      (cat.measurementTypes.get(measurementType) ?? 0) + 1,
+    );
+
+    // Per-session: keep the max best value across all exercises in this category
+    const sessionId: number = row.session_id;
+    const existing = cat.sessions.get(sessionId);
+    if (!existing || bestValue > existing.bestValue) {
+      cat.sessions.set(sessionId, {
+        completedAt: row.completed_at,
+        bestValue,
+      });
+    }
+  }
+
+  const summaries: CategorySummary[] = [];
+  for (const [category, data] of categoryMap) {
+    // Sparkline: one point per session, ordered oldest-first (already ordered by SQL)
+    const sparklinePoints: number[] = [];
+    let lastTrainedAt = '';
+    for (const session of data.sessions.values()) {
+      sparklinePoints.push(session.bestValue);
+      lastTrainedAt = session.completedAt;
+    }
+
+    // Majority rule for measurement type
+    let dominantType: 'reps' | 'timed' = 'reps';
+    let maxCount = 0;
+    for (const [type, count] of data.measurementTypes) {
+      if (count > maxCount) {
+        maxCount = count;
+        dominantType = type as 'reps' | 'timed';
+      }
+    }
+
+    summaries.push({
+      category: category as ExerciseCategory,
+      exerciseCount: data.exerciseIds.size,
+      sparklinePoints,
+      lastTrainedAt,
+      measurementType: dominantType,
+    });
+  }
+
+  return summaries;
+}
+
+// ── Category Exercise Progress ──────────────────────────────────────
+
+/**
+ * For a single category, return per-exercise progress with sparkline,
+ * current/previous bests, and last trained date. Supports optional time
+ * range filtering. Uses a single SQL query with JS-side grouping.
+ */
+export async function getCategoryExerciseProgress(
+  category: ExerciseCategory,
+  timeRange?: '1M' | '3M' | '6M' | 'All',
+): Promise<CategoryExerciseProgress[]> {
+  const database = await db;
+
+  let dateFilter = '';
+  const params: (string | number)[] = [category];
+
+  if (timeRange && timeRange !== 'All') {
+    const now = new Date();
+    const months = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : 6;
+    now.setMonth(now.getMonth() - months);
+    dateFilter = 'AND wss.completed_at >= ?';
+    params.push(now.toISOString());
+  }
+
+  const result = await executeSql(
+    database,
+    `SELECT e.id AS exercise_id, e.name AS exercise_name, e.measurement_type,
+            ws.session_id, wss.completed_at,
+            ws.weight_kg, ws.reps
+     FROM workout_sets ws
+     INNER JOIN exercises e ON e.id = ws.exercise_id
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE e.category = ?
+       AND wss.completed_at IS NOT NULL
+       ${dateFilter}
+       AND ws.id = (
+         SELECT ws2.id FROM workout_sets ws2
+         WHERE ws2.session_id = ws.session_id
+           AND ws2.exercise_id = ws.exercise_id
+         ORDER BY CASE WHEN e.measurement_type = 'timed' THEN ws2.reps ELSE ws2.weight_kg END DESC,
+                  ws2.reps DESC
+         LIMIT 1
+       )
+     GROUP BY ws.exercise_id, ws.session_id
+     ORDER BY wss.completed_at ASC`,
+    params,
+  );
+
+  // Group rows by exercise_id
+  const exerciseMap = new Map<number, {
+    exerciseName: string;
+    measurementType: 'reps' | 'timed';
+    points: { completedAt: string; bestValue: number }[];
+  }>();
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const exerciseId: number = row.exercise_id;
+    const measurementType = (row.measurement_type ?? 'reps') as 'reps' | 'timed';
+    const bestValue = measurementType === 'timed' ? row.reps : row.weight_kg;
+
+    if (!exerciseMap.has(exerciseId)) {
+      exerciseMap.set(exerciseId, {
+        exerciseName: row.exercise_name,
+        measurementType,
+        points: [],
+      });
+    }
+
+    exerciseMap.get(exerciseId)!.points.push({
+      completedAt: row.completed_at,
+      bestValue,
+    });
+  }
+
+  const progressList: CategoryExerciseProgress[] = [];
+  for (const [exerciseId, data] of exerciseMap) {
+    const sparklinePoints = data.points.map(p => p.bestValue);
+    const currentBest = sparklinePoints[sparklinePoints.length - 1];
+    const previousBest = sparklinePoints.length >= 2
+      ? sparklinePoints[sparklinePoints.length - 2]
+      : null;
+    const lastTrainedAt = data.points[data.points.length - 1].completedAt;
+
+    progressList.push({
+      exerciseId,
+      exerciseName: data.exerciseName,
+      measurementType: data.measurementType,
+      sparklinePoints,
+      currentBest,
+      previousBest,
+      lastTrainedAt,
+    });
+  }
+
+  return progressList;
 }
 
 // ── Full Data Export ────────────────────────────────────────────────
