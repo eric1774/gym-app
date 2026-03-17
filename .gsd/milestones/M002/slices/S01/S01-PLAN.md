@@ -39,7 +39,7 @@
   - Verify: `npx tsc --noEmit` passes with no errors
   - Done when: Both functions exist, compile, and are importable from `src/db/index.ts`
 
-- [ ] **T02: Add unit tests for getCategorySummaries and getCategoryExerciseProgress** `est:30m`
+- [x] **T02: Add unit tests for getCategorySummaries and getCategoryExerciseProgress** `est:30m`
   - Why: Tests prove the contract — correct data shapes, edge cases (empty data, timed exercises, null measurement_type), and time range filtering. These tests are the slice's primary verification mechanism.
   - Files: `src/db/__tests__/dashboard.test.ts`
   - Do: Add describe blocks for both functions using the existing `mockExecuteSql` / `mockResultSet` pattern. Test: happy path with multiple categories, empty results, timed vs reps exercises, null measurement_type coalescing, sparkline point ordering (oldest-first), time range filtering for getCategoryExerciseProgress.

@@ -79,6 +79,12 @@ Row shape from the SQL (both functions return similar columns):
 - `src/db/dashboard.ts` — the functions from T01 (signatures, return types, SQL structure)
 - `src/types/index.ts` — `CategorySummary` and `CategoryExerciseProgress` interfaces from T01
 
+## Observability Impact
+
+- **Test signals:** 14 new test cases (6 for getCategorySummaries, 8 for getCategoryExerciseProgress) added to `src/db/__tests__/dashboard.test.ts`. Run `npx jest src/db/__tests__/dashboard.test.ts --verbose` to verify all pass.
+- **Future agent inspection:** Test names describe the exact contract being verified (sparkline ordering, null coalescing, time range filtering, N+1 prevention). If a downstream change breaks a contract, the failing test name identifies which invariant was violated.
+- **Failure visibility:** Jest output shows per-test pass/fail with assertion details. A regression in the query functions will surface as a specific test failure naming the broken contract.
+
 ## Expected Output
 
 - `src/db/__tests__/dashboard.test.ts` — two new `describe` blocks with comprehensive test cases, all passing
