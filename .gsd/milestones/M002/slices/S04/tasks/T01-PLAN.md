@@ -103,6 +103,12 @@ Create the `CategoryProgressScreen` component and replace the placeholder in `Ta
 - `src/utils/formatRelativeTime.ts` — `formatRelativeTime(dateStr: string): string` returns e.g. "3d ago".
 - Theme files: `src/theme/colors.ts` (`colors.background`, `colors.surface`, `colors.surfaceElevated`, `colors.border`, `colors.accent`, `colors.secondary`, `colors.primary`), `src/theme/spacing.ts`, `src/theme/typography.ts` (`fontSize`, `weightBold`, `weightSemiBold`, `weightMedium`).
 
+## Observability Impact
+
+- **Signals changed:** New `CategoryProgressScreen` component fetches `getCategoryExerciseProgress(category, timeRange)` on focus and on time range change. Fetch errors are silently swallowed (consistent with ExerciseProgressScreen pattern).
+- **Inspection surfaces:** Exercise rows have `testID="exercise-row"` for test automation. Empty state text "No exercises found" is queryable.
+- **Failure visibility:** If the screen receives an invalid category param, the DB query returns `[]` and the empty state renders — no crash. If navigation params are missing entirely, React Navigation throws at route access.
+
 ## Expected Output
 
 - `src/screens/CategoryProgressScreen.tsx` — New screen component, ~150-200 lines, fully functional with data loading, rendering, and navigation

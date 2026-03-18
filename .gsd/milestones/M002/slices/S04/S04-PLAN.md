@@ -35,7 +35,7 @@
 
 ## Tasks
 
-- [ ] **T01: Create CategoryProgressScreen and wire into navigation** `est:25m`
+- [x] **T01: Create CategoryProgressScreen and wire into navigation** `est:25m`
   - Why: This is the entire functional deliverable — the new screen that displays per-exercise progress within a category, with time range filtering and navigation to ExerciseProgressScreen
   - Files: `src/screens/CategoryProgressScreen.tsx`, `src/navigation/TabNavigator.tsx`
   - Do: Create `CategoryProgressScreen.tsx` following ExerciseProgressScreen's structure (SafeAreaView, header with back button, ScrollView, time range pills). Load data via `getCategoryExerciseProgress(category, timeRange)` using both `useFocusEffect` (on focus) and `useEffect` (on timeRange change). Render exercise rows with MiniSparkline, delta formatting adapted from CategorySummaryCard (but using `currentBest`/`previousBest` fields, handling `previousBest: null`), and formatRelativeTime. Wire exercise row press to navigate to ExerciseProgress. In TabNavigator, replace `CategoryProgressPlaceholder` with import of the real screen.
@@ -48,6 +48,13 @@
   - Do: Create test file following ExerciseProgressScreen.test.tsx pattern — mock `getCategoryExerciseProgress` from `../../db/dashboard`, render with `NavigationContainer` + `createNativeStackNavigator` + `initialParams: { category: 'chest' }`. Write tests for: title rendering ("Chest"), time range pills present, exercise rows with names, delta formatting for reps/timed/non-positive/null previousBest, empty state, back button press, exercise row press navigation, time range pill press triggers re-fetch.
   - Verify: `npx jest src/screens/__tests__/CategoryProgressScreen.test.tsx --verbose` — all tests pass; `npx jest --verbose` — full suite passes
   - Done when: All CategoryProgressScreen tests pass and no regressions in full suite
+
+## Observability / Diagnostics
+
+- **Runtime signals:** `getCategoryExerciseProgress` fetch failures are silently caught — future improvement could surface a retry/error banner. Data loading uses a cancellation flag to prevent stale state updates.
+- **Inspection surfaces:** Each exercise row carries `testID="exercise-row"` for automated test targeting. Time range pills have no explicit testID but can be queried by text content in tests.
+- **Failure visibility:** Empty state ("No exercises found") renders when the DB query returns zero rows or when no exercises exist for the selected time range. Navigation failures (missing params) would throw a runtime error surfaced by React Navigation's error boundary.
+- **Redaction constraints:** No user secrets or PII involved — exercise names and category names are user-generated content but not sensitive.
 
 ## Files Likely Touched
 
