@@ -130,6 +130,7 @@ export function CategoryProgressScreen() {
                   <View style={styles.exerciseMeta}>
                     {delta !== null && (
                       <Text
+                        testID="delta-text"
                         style={[
                           styles.deltaText,
                           isPositiveDelta ? styles.deltaPositive : styles.deltaNeutral,

@@ -95,6 +95,12 @@ Write comprehensive tests for `CategoryProgressScreen` following the established
   - Use `queryByTestId` (returns null) for asserting elements are NOT present
   - Use `queryByText` for negative assertions
 
+## Observability Impact
+
+- **Test coverage signals:** 12 test cases cover all CategoryProgressScreen runtime paths — title rendering, time range filtering, delta formatting (reps/timed/negative/null), empty state, data fetch invocation, and navigation. Run `npx jest src/screens/__tests__/CategoryProgressScreen.test.tsx --verbose` to inspect.
+- **testID surface added:** `testID="delta-text"` added to the delta Text element in CategoryProgressScreen for automated test targeting of delta visibility.
+- **Failure visibility:** Test failures surface specific behavioral regressions — e.g. delta formatting changes, empty state text changes, or navigation breakages show as named test failures in CI output.
+
 ## Expected Output
 
 - `src/screens/__tests__/CategoryProgressScreen.test.tsx` — New test file with ~12 tests covering all CategoryProgressScreen behaviors, following established test patterns

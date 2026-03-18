@@ -42,7 +42,7 @@
   - Verify: `npx tsc --noEmit` — no new type errors
   - Done when: CategoryProgressScreen compiles, TabNavigator imports it, placeholder is removed
 
-- [ ] **T02: Write tests for CategoryProgressScreen** `est:20m`
+- [x] **T02: Write tests for CategoryProgressScreen** `est:20m`
   - Why: Proves the screen renders correctly, time range pills work, exercise rows display data, delta formatting is correct, navigation fires, and empty state shows
   - Files: `src/screens/__tests__/CategoryProgressScreen.test.tsx`
   - Do: Create test file following ExerciseProgressScreen.test.tsx pattern — mock `getCategoryExerciseProgress` from `../../db/dashboard`, render with `NavigationContainer` + `createNativeStackNavigator` + `initialParams: { category: 'chest' }`. Write tests for: title rendering ("Chest"), time range pills present, exercise rows with names, delta formatting for reps/timed/non-positive/null previousBest, empty state, back button press, exercise row press navigation, time range pill press triggers re-fetch.
