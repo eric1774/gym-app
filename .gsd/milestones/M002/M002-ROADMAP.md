@@ -51,7 +51,7 @@ This milestone is complete only when all are true:
 
 - [x] **S01: Data Layer — DB Queries & Types** `risk:medium` `depends:[]`
   > After this: `getCategorySummaries()` and `getCategoryExerciseProgress()` return correct data from SQLite; types are defined and exported
-- [ ] **S02: MiniSparkline & CategorySummaryCard Components** `risk:low` `depends:[S01]`
+- [x] **S02: MiniSparkline & CategorySummaryCard Components** `risk:low` `depends:[S01]`
   > After this: MiniSparkline renders SVG trend lines from data arrays; CategorySummaryCard renders a complete category card with sparkline, delta, stale dimming
 - [ ] **S03: Dashboard Redesign — Category Cards** `risk:medium` `depends:[S01,S02]`
   > After this: Dashboard shows ~7 category cards with sparklines instead of flat exercise list; Next Workout card unchanged; stale categories dimmed
