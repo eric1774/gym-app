@@ -1,7 +1,7 @@
 # GSD State
 
 **Active Milestone:** M002: Exercise Progression Dashboard Redesign — Category Drill-Down
-**Active Slice:** S02: MiniSparkline & CategorySummaryCard Components
+**Active Slice:** S03: Dashboard Redesign — Category Cards
 **Phase:** executing
 **Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope
 
@@ -16,4 +16,4 @@
 - None
 
 ## Next Action
-Execute S02-T01: Build MiniSparkline component with SVG mock fix and tests.
+Execute T01 of slice S03 (Wire CategoryProgress route and rewrite Dashboard to render category cards).
