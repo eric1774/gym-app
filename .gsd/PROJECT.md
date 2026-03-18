@@ -52,7 +52,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-- M002: Exercise Progression Dashboard Redesign — Category Drill-Down (S01–S03 complete, S04 remaining)
+- M002: Exercise Progression Dashboard Redesign — Category Drill-Down (all 4 slices complete, awaiting on-device UAT)
 
 ### Out of Scope
 
@@ -98,4 +98,4 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Object.defineProperty for db mock | Required because db export is read-only const | ✓ Good |
 
 ---
-*Last updated: 2026-03-17 after M002-S03 complete*
+*Last updated: 2026-03-17 after M002-S04 complete (all slices done)*
