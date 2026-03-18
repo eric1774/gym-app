@@ -120,6 +120,13 @@ Create the `CategorySummaryCard` component — a pressable card that displays a 
 - `src/theme/typography.ts` — `fontSize.base` (15), `fontSize.sm` (13), `fontSize.xs` (11), `weightSemiBold`, `weightBold`
 - Dark Mint Card design system skill — card styling rules: surfaceElevated background, borderRadius 14, subtle border
 
+## Observability Impact
+
+- **Test surface:** `npx jest src/components/__tests__/CategorySummaryCard.test.tsx --verbose` — 9 tests cover rendering, press, stale dimming, delta formatting, and relative time. Test names describe exact invariants.
+- **TypeScript signals:** `npx tsc --noEmit` catches type regressions on the `CategorySummary` prop interface and theme token imports.
+- **No runtime logging:** Component is pure presentational with no async or side effects. Failures surface as test failures or TypeScript errors only.
+- **Extracted utility:** `formatRelativeTime` is now independently testable at `src/utils/formatRelativeTime.ts` — future agents can add unit tests for edge cases without touching component tests.
+
 ## Expected Output
 
 - `src/utils/formatRelativeTime.ts` — new file, extracted utility function

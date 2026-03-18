@@ -43,7 +43,7 @@
   - Verify: `npx jest src/components/__tests__/MiniSparkline.test.tsx --verbose` — all pass; `npx tsc --noEmit` — no new errors
   - Done when: MiniSparkline renders Polyline from data arrays, handles all edge cases, tests pass, TypeScript clean
 
-- [ ] **T02: Build CategorySummaryCard component with utility extraction and tests** `est:30m`
+- [x] **T02: Build CategorySummaryCard component with utility extraction and tests** `est:30m`
   - Why: CategorySummaryCard is the card component S03 will use in the dashboard. It composes MiniSparkline and renders the full category card UI including delta formatting and stale dimming.
   - Files: `src/utils/formatRelativeTime.ts`, `src/screens/DashboardScreen.tsx`, `src/components/CategorySummaryCard.tsx`, `src/components/__tests__/CategorySummaryCard.test.tsx`
   - Do: Extract `formatRelativeTime` from DashboardScreen to `src/utils/formatRelativeTime.ts` and re-import in DashboardScreen. Build CategorySummaryCard as a pressable card following Dark Mint Card design system. It takes `summary: CategorySummary`, `isStale: boolean`, `onPress: () => void`. Renders category name, exercise count, MiniSparkline, delta text (weight vs duration based on measurementType), relative time. Applies `opacity: 0.4` for stale. Write comprehensive tests. **Load skill: `dark-mint-card-ui`** for styling rules.
