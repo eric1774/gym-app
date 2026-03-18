@@ -53,7 +53,7 @@ This milestone is complete only when all are true:
   > After this: `getCategorySummaries()` and `getCategoryExerciseProgress()` return correct data from SQLite; types are defined and exported
 - [x] **S02: MiniSparkline & CategorySummaryCard Components** `risk:low` `depends:[S01]`
   > After this: MiniSparkline renders SVG trend lines from data arrays; CategorySummaryCard renders a complete category card with sparkline, delta, stale dimming
-- [ ] **S03: Dashboard Redesign — Category Cards** `risk:medium` `depends:[S01,S02]`
+- [x] **S03: Dashboard Redesign — Category Cards** `risk:medium` `depends:[S01,S02]`
   > After this: Dashboard shows ~7 category cards with sparklines instead of flat exercise list; Next Workout card unchanged; stale categories dimmed
 - [ ] **S04: CategoryProgressScreen & Navigation** `risk:low` `depends:[S01,S02,S03]`
   > After this: Tapping a category card opens CategoryProgressScreen with exercise list, sparklines, deltas, time range filter; tapping exercise navigates to ExerciseProgressScreen; full navigation chain works on device
