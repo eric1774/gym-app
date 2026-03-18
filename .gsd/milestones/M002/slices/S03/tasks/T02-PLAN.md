@@ -85,6 +85,12 @@ Rewrite `DashboardScreen.test.tsx` to mock `getCategorySummaries` instead of the
 - `src/types/index.ts` — `CategorySummary` type with fields: `category: string`, `exerciseCount: number`, `sparklinePoints: number[]`, `lastTrainedAt: string`, `measurementType: 'reps' | 'timed'`, `currentBest: number`, `previousBest: number`
 - Prior task summary for T01 (will describe the final state of DashboardScreen)
 
+## Observability Impact
+
+- **Test coverage signal:** `npx jest --verbose` output now includes 9 named DashboardScreen test cases covering category cards, stale dimming, empty state, Next Workout, Active Workout, and CategoryProgress navigation. Any future regression in these areas surfaces as a named test failure.
+- **Inspection surface:** Tests query `testID="category-card"` elements — the same surface available in React DevTools at runtime. Style assertions (opacity 0.4 vs 1) validate the stale-dimming behavior that's otherwise only visually observable.
+- **Failure visibility:** If `getCategorySummaries()` mock contract drifts from the real implementation (e.g. field renames in `CategorySummary`), the mock factory in the test file will produce type errors or render failures — visible in `npx jest` output.
+
 ## Expected Output
 
 - `src/screens/__tests__/DashboardScreen.test.tsx` — fully rewritten test file with ~9 tests covering category cards, stale dimming, empty state, Next Workout preservation, and navigation

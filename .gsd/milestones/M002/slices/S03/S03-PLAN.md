@@ -42,7 +42,7 @@
   - Verify: `npx tsc --noEmit` shows no new type errors
   - Done when: DashboardScreen imports `getCategorySummaries`, renders `CategorySummaryCard` components, navigates to `CategoryProgress` on press, dead code is gone, and TypeScript compiles clean
 
-- [ ] **T02: Rewrite DashboardScreen tests for category card rendering** `est:25m`
+- [x] **T02: Rewrite DashboardScreen tests for category card rendering** `est:25m`
   - Why: The existing 13 tests mock `getRecentlyTrainedExercises` which is no longer imported — tests must be rewritten to mock `getCategorySummaries` and verify the new card-based rendering
   - Files: `src/screens/__tests__/DashboardScreen.test.tsx`
   - Do: (1) Update the `jest.mock('../../db/dashboard')` block to export `getCategorySummaries` (replacing `getRecentlyTrainedExercises`) alongside `getNextWorkoutDay`. (2) Rewrite test data to use `CategorySummary` objects (with `category`, `exerciseCount`, `sparklinePoints`, `lastTrainedAt`, `measurementType`, `currentBest`, `previousBest`). (3) Test cases: renders Dashboard title, shows empty state when `getCategorySummaries` returns `[]`, renders category cards (check for capitalized category name and exercise count text), stale dimming (card with `lastTrainedAt` > 30 days ago has opacity 0.4), non-stale card has opacity 1, Next Workout card still renders, Active Workout card still renders, pressing a category card triggers navigation to CategoryProgress, multiple categories render multiple cards. (4) Remove all old exercise-specific tests (relative time tests, STRENGTH TRAINING group tests, exercise navigation tests).
