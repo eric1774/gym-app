@@ -35,7 +35,7 @@
 
 ## Tasks
 
-- [ ] **T01: Wire CategoryProgress route and rewrite Dashboard to render category cards** `est:30m`
+- [x] **T01: Wire CategoryProgress route and rewrite Dashboard to render category cards** `est:30m`
   - Why: This is the core slice work — replaces the flat exercise list with category cards, adds the navigation route, and removes dead code
   - Files: `src/navigation/TabNavigator.tsx`, `src/screens/DashboardScreen.tsx`
   - Do: (1) Add `CategoryProgress: { category: string }` to `DashboardStackParamList` in TabNavigator, register a minimal placeholder screen in `DashboardStackNavigator`. (2) In DashboardScreen: swap `getRecentlyTrainedExercises` import with `getCategorySummaries`, import `CategorySummaryCard` and `CategorySummary`, replace `exercises` state with `categories: CategorySummary[]`, update `useFocusEffect` to fetch `getCategorySummaries()`, replace the grouped ScrollView body with a flat map of `CategorySummaryCard` components with `marginBottom: spacing.sm`, compute `isStale` inline from `lastTrainedAt` (30-day threshold), wire `onPress` to `navigation.navigate('CategoryProgress', { category: summary.category })`. (3) Remove dead code: `RecentExercise`/`SubCategory`/`GroupData` interfaces, `CATEGORY_GROUP_ORDER`, `groupByCategory()`, `handlePress`, and all group/subCategory/exerciseCard styles. Preserve all Next Workout code, empty state, active session timer, `handleQuickStart`, and their styles.
@@ -48,6 +48,13 @@
   - Do: (1) Update the `jest.mock('../../db/dashboard')` block to export `getCategorySummaries` (replacing `getRecentlyTrainedExercises`) alongside `getNextWorkoutDay`. (2) Rewrite test data to use `CategorySummary` objects (with `category`, `exerciseCount`, `sparklinePoints`, `lastTrainedAt`, `measurementType`, `currentBest`, `previousBest`). (3) Test cases: renders Dashboard title, shows empty state when `getCategorySummaries` returns `[]`, renders category cards (check for capitalized category name and exercise count text), stale dimming (card with `lastTrainedAt` > 30 days ago has opacity 0.4), non-stale card has opacity 1, Next Workout card still renders, Active Workout card still renders, pressing a category card triggers navigation to CategoryProgress, multiple categories render multiple cards. (4) Remove all old exercise-specific tests (relative time tests, STRENGTH TRAINING group tests, exercise navigation tests).
   - Verify: `npx jest src/screens/__tests__/DashboardScreen.test.tsx --verbose` — all tests pass; `npx jest --verbose` — full suite passes
   - Done when: All new DashboardScreen tests pass, no references to `getRecentlyTrainedExercises` in test file, S02 CategorySummaryCard tests still pass
+
+## Observability / Diagnostics
+
+- **Runtime signals:** Dashboard logs `catch` block silently on fetch failure; in dev builds, `console.error` should surface `getCategorySummaries()` errors. Empty-state rendering ("No exercises trained yet") is the primary observable indicator of no data.
+- **Inspection surfaces:** `categories.length` in the DashboardScreen state array — visible via React DevTools or `console.log` in the `useFocusEffect` callback. Each `CategorySummaryCard` has `testID="category-card"` for automated test queries.
+- **Failure visibility:** If `getCategorySummaries()` throws, the dashboard falls through to `categories.length === 0` and renders the empty state. No crash, but no data shown. Navigation failures (missing `CategoryProgress` route) surface as a React Navigation runtime error in the console.
+- **Redaction constraints:** No PII or secrets in this slice — exercise names and category labels are user-generated but non-sensitive.
 
 ## Files Likely Touched
 

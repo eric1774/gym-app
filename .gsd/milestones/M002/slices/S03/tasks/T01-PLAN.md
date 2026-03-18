@@ -67,6 +67,12 @@ Replace the flat exercise list in DashboardScreen with CategorySummaryCard compo
 - Visually inspect `src/screens/DashboardScreen.tsx` — no references to `RecentExercise`, `SubCategory`, `GroupData`, `CATEGORY_GROUP_ORDER`, `groupByCategory`, or `handlePress`
 - Visually inspect `src/navigation/TabNavigator.tsx` — `CategoryProgress` present in type and navigator
 
+## Observability Impact
+
+- **Signals changed:** Dashboard data fetch switches from `getRecentlyTrainedExercises()` to `getCategorySummaries()`. The `exercises` state variable is replaced by `categories`. Failed fetches still silently swallow errors and show empty state.
+- **Inspection:** Future agents can verify the dashboard renders `CategorySummaryCard` components by querying `testID="category-card"`. The `CategoryProgress` route is inspectable via React Navigation's linking config or TypeScript type checking (`DashboardStackParamList`).
+- **Failure state:** If the CategoryProgress route is missing from `DashboardStackParamList`, pressing a category card triggers a React Navigation runtime error. This surfaces in the console immediately. TypeScript compilation (`tsc --noEmit`) catches the mismatch at build time.
+
 ## Inputs
 
 - `src/screens/DashboardScreen.tsx` — current dashboard with flat exercise list to be replaced

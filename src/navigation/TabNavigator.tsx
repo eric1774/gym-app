@@ -47,6 +47,7 @@ export type DashboardStackParamList = {
   DashboardHome: undefined;
   ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
   Settings: undefined;
+  CategoryProgress: { category: string };
 };
 
 export type ProteinStackParamList = {
@@ -157,12 +158,21 @@ function WorkoutStackNavigator() {
   );
 }
 
+function CategoryProgressPlaceholder() {
+  return (
+    <View style={{ flex: 1, backgroundColor: '#0D1117', justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: '#8B949E' }}>Category Progress — Coming Soon</Text>
+    </View>
+  );
+}
+
 function DashboardStackNavigator() {
   return (
     <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
       <DashboardStack.Screen name="DashboardHome" component={DashboardScreen} />
       <DashboardStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
+      <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressPlaceholder} />
     </DashboardStack.Navigator>
   );
 }
