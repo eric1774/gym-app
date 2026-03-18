@@ -36,7 +36,7 @@
 
 ## Tasks
 
-- [ ] **T01: Build MiniSparkline component with SVG mock fix and tests** `est:25m`
+- [x] **T01: Build MiniSparkline component with SVG mock fix and tests** `est:25m`
   - Why: MiniSparkline is a dependency of CategorySummaryCard and needs the SVG Polyline mock to be testable. Building this first unblocks T02.
   - Files: `__mocks__/react-native-svg.js`, `src/components/MiniSparkline.tsx`, `src/components/__tests__/MiniSparkline.test.tsx`
   - Do: Add `Polyline` to SVG mock. Build MiniSparkline as a pure presentational component using `Svg` + `Polyline` from `react-native-svg`. Normalize `number[]` data to SVG coordinate string with y-axis inversion and edge-case handling (empty, single-point, all-same-values). Write comprehensive tests. **Load skill: `dark-mint-card-ui`** for color token reference.
@@ -49,6 +49,14 @@
   - Do: Extract `formatRelativeTime` from DashboardScreen to `src/utils/formatRelativeTime.ts` and re-import in DashboardScreen. Build CategorySummaryCard as a pressable card following Dark Mint Card design system. It takes `summary: CategorySummary`, `isStale: boolean`, `onPress: () => void`. Renders category name, exercise count, MiniSparkline, delta text (weight vs duration based on measurementType), relative time. Applies `opacity: 0.4` for stale. Write comprehensive tests. **Load skill: `dark-mint-card-ui`** for styling rules.
   - Verify: `npx jest src/components/__tests__/CategorySummaryCard.test.tsx --verbose` — all pass; `npx jest src/screens/__tests__/ --verbose` — existing tests still pass; `npx tsc --noEmit` — no new errors
   - Done when: CategorySummaryCard renders complete card UI, stale dimming works, onPress fires, delta formatting correct for both measurement types, formatRelativeTime extracted without breaking DashboardScreen, all tests pass
+
+## Observability / Diagnostics
+
+- **Test output:** `npx jest src/components/__tests__/MiniSparkline.test.tsx --verbose` and `npx jest src/components/__tests__/CategorySummaryCard.test.tsx --verbose` — primary inspection surface for component behavior
+- **TypeScript diagnostics:** `npx tsc --noEmit` — catches type-level regressions across components and theme imports
+- **Runtime signals:** Components are pure presentational; no async, no side effects, no logging needed. Failures surface as test failures or TypeScript errors.
+- **Failure visibility:** Test runner output with `--verbose` flag shows per-assertion pass/fail. Failed tests print expected vs received values for rapid diagnosis.
+- **Redaction:** No secrets, PII, or sensitive data involved in these components.
 
 ## Files Likely Touched
 

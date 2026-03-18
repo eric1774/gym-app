@@ -77,6 +77,13 @@ Create the `MiniSparkline` component — a pure presentational SVG polyline that
 - `src/theme/colors.ts` — provides `colors.accent` ('#8DC28A') for default sparkline color
 - `src/types/index.ts` — `CategorySummary.sparklinePoints: number[]` defines the data shape this component will receive (reference only, component takes raw `number[]`)
 
+## Observability Impact
+
+- **New test surface:** 8 unit tests added to `src/components/__tests__/MiniSparkline.test.tsx` — covers normal rendering, edge cases (empty, single-point, all-same), color defaults, and y-axis inversion.
+- **Inspection:** Run `npx jest src/components/__tests__/MiniSparkline.test.tsx --verbose` to verify all sparkline behaviors. Test names describe the exact invariant being checked.
+- **Failure state:** If the SVG mock is missing `Polyline`, tests fail with "Element type is invalid" errors. If y-axis inversion is broken, the "y-axis is inverted" test catches it explicitly.
+- **No runtime logging:** Pure presentational component with no side effects — no runtime signals needed.
+
 ## Expected Output
 
 - `__mocks__/react-native-svg.js` — modified with `Polyline` export added

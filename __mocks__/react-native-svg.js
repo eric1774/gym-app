@@ -16,4 +16,5 @@ module.exports = {
   Circle: createMockComponent('Circle'),
   G: createMockComponent('G'),
   Text: createMockComponent('SvgText'),
+  Polyline: createMockComponent('Polyline'),
 };
