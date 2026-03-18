@@ -94,6 +94,24 @@ export interface ExerciseProgressPoint {
   bestReps: number;
 }
 
+export interface CategorySummary {
+  category: ExerciseCategory;
+  exerciseCount: number;
+  sparklinePoints: number[];
+  lastTrainedAt: string;
+  measurementType: 'reps' | 'timed';
+}
+
+export interface CategoryExerciseProgress {
+  exerciseId: number;
+  exerciseName: string;
+  measurementType: 'reps' | 'timed';
+  sparklinePoints: number[];
+  currentBest: number;
+  previousBest: number | null;
+  lastTrainedAt: string;
+}
+
 export interface ExerciseHistorySession {
   sessionId: number;
   date: string;

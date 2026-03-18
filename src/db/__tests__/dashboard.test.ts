@@ -14,6 +14,8 @@ import {
   unmarkDayCompletion,
   getSessionTimeSummary,
   exportAllData,
+  getCategorySummaries,
+  getCategoryExerciseProgress,
 } from '../dashboard';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -486,5 +488,203 @@ describe('exportAllData', () => {
     expect(result.exercises[0].measurementType).toBe('reps'); // defaults from ??
     expect(result.sessions).toHaveLength(0);
     expect(result.programs).toHaveLength(0);
+  });
+});
+
+// ── getCategorySummaries ─────────────────────────────────────────────
+
+describe('getCategorySummaries', () => {
+  it('groups rows by category and returns correct summaries', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // chest: 2 exercises, 2 sessions
+        { exercise_id: 1, category: 'chest', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', weight_kg: 80, reps: 8 },
+        { exercise_id: 2, category: 'chest', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', weight_kg: 60, reps: 12 },
+        { exercise_id: 1, category: 'chest', measurement_type: 'reps', session_id: 11, completed_at: '2026-01-17T10:00:00Z', weight_kg: 85, reps: 6 },
+        // legs: 1 exercise, 1 session
+        { exercise_id: 3, category: 'legs', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', weight_kg: 100, reps: 5 },
+      ]),
+    );
+
+    const result = await getCategorySummaries();
+
+    expect(result).toHaveLength(2);
+
+    const chest = result.find(s => s.category === 'chest')!;
+    expect(chest.exerciseCount).toBe(2);
+    // Session 10: max(80, 60) = 80; Session 11: 85
+    expect(chest.sparklinePoints).toEqual([80, 85]);
+    expect(chest.lastTrainedAt).toBe('2026-01-17T10:00:00Z');
+    expect(chest.measurementType).toBe('reps');
+
+    const legs = result.find(s => s.category === 'legs')!;
+    expect(legs.exerciseCount).toBe(1);
+    expect(legs.sparklinePoints).toEqual([100]);
+    expect(legs.lastTrainedAt).toBe('2026-01-10T10:00:00Z');
+  });
+
+  it('returns empty array when no training data', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    const result = await getCategorySummaries();
+    expect(result).toEqual([]);
+  });
+
+  it('uses reps (duration) as best value for timed exercises', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 5, category: 'core', measurement_type: 'timed', session_id: 20, completed_at: '2026-02-01T10:00:00Z', weight_kg: 0, reps: 60 },
+        { exercise_id: 5, category: 'core', measurement_type: 'timed', session_id: 21, completed_at: '2026-02-08T10:00:00Z', weight_kg: 0, reps: 90 },
+      ]),
+    );
+
+    const result = await getCategorySummaries();
+    expect(result).toHaveLength(1);
+    expect(result[0].sparklinePoints).toEqual([60, 90]);
+    expect(result[0].measurementType).toBe('timed');
+  });
+
+  it('coalesces null measurement_type to reps', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 6, category: 'arms', measurement_type: null, session_id: 30, completed_at: '2026-03-01T10:00:00Z', weight_kg: 20, reps: 10 },
+      ]),
+    );
+
+    const result = await getCategorySummaries();
+    expect(result).toHaveLength(1);
+    expect(result[0].measurementType).toBe('reps');
+    // Uses weight_kg for reps-type
+    expect(result[0].sparklinePoints).toEqual([20]);
+  });
+
+  it('determines measurementType by majority rule', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // 2 timed exercises, 1 reps exercise in conditioning
+        { exercise_id: 7, category: 'conditioning', measurement_type: 'timed', session_id: 40, completed_at: '2026-03-01T10:00:00Z', weight_kg: 0, reps: 120 },
+        { exercise_id: 8, category: 'conditioning', measurement_type: 'timed', session_id: 40, completed_at: '2026-03-01T10:00:00Z', weight_kg: 0, reps: 60 },
+        { exercise_id: 9, category: 'conditioning', measurement_type: 'reps', session_id: 40, completed_at: '2026-03-01T10:00:00Z', weight_kg: 30, reps: 15 },
+      ]),
+    );
+
+    const result = await getCategorySummaries();
+    expect(result[0].measurementType).toBe('timed');
+  });
+
+  it('calls executeSql exactly once (no N+1)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategorySummaries();
+    expect(mockExecuteSql).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getCategoryExerciseProgress ──────────────────────────────────────
+
+describe('getCategoryExerciseProgress', () => {
+  it('returns per-exercise progress with sparklines and bests', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // Exercise 1: 3 sessions
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', weight_kg: 80, reps: 8 },
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 11, completed_at: '2026-01-17T10:00:00Z', weight_kg: 82.5, reps: 7 },
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 12, completed_at: '2026-01-24T10:00:00Z', weight_kg: 85, reps: 6 },
+        // Exercise 2: 1 session
+        { exercise_id: 2, exercise_name: 'Incline DB', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', weight_kg: 30, reps: 10 },
+      ]),
+    );
+
+    const result = await getCategoryExerciseProgress('chest');
+
+    expect(result).toHaveLength(2);
+
+    const bench = result.find(e => e.exerciseId === 1)!;
+    expect(bench.exerciseName).toBe('Bench Press');
+    expect(bench.sparklinePoints).toEqual([80, 82.5, 85]);
+    expect(bench.currentBest).toBe(85);
+    expect(bench.previousBest).toBe(82.5);
+    expect(bench.lastTrainedAt).toBe('2026-01-24T10:00:00Z');
+    expect(bench.measurementType).toBe('reps');
+
+    const incline = result.find(e => e.exerciseId === 2)!;
+    expect(incline.sparklinePoints).toEqual([30]);
+    expect(incline.currentBest).toBe(30);
+    expect(incline.previousBest).toBeNull();
+  });
+
+  it('returns empty array when no data for category', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    const result = await getCategoryExerciseProgress('shoulders');
+    expect(result).toEqual([]);
+  });
+
+  it('uses reps as best value for timed exercises', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 5, exercise_name: 'Plank', measurement_type: 'timed', session_id: 20, completed_at: '2026-02-01T10:00:00Z', weight_kg: 0, reps: 60 },
+        { exercise_id: 5, exercise_name: 'Plank', measurement_type: 'timed', session_id: 21, completed_at: '2026-02-08T10:00:00Z', weight_kg: 0, reps: 90 },
+      ]),
+    );
+
+    const result = await getCategoryExerciseProgress('core');
+    expect(result[0].sparklinePoints).toEqual([60, 90]);
+    expect(result[0].currentBest).toBe(90);
+    expect(result[0].previousBest).toBe(60);
+    expect(result[0].measurementType).toBe('timed');
+  });
+
+  it('coalesces null measurement_type to reps', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 6, exercise_name: 'Old Exercise', measurement_type: null, session_id: 30, completed_at: '2026-03-01T10:00:00Z', weight_kg: 50, reps: 8 },
+      ]),
+    );
+
+    const result = await getCategoryExerciseProgress('arms');
+    expect(result[0].measurementType).toBe('reps');
+    expect(result[0].sparklinePoints).toEqual([50]);
+  });
+
+  it('adds date filter when timeRange is not All', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    await getCategoryExerciseProgress('chest', '3M');
+
+    expect(mockExecuteSql).toHaveBeenCalledTimes(1);
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain('AND wss.completed_at >= ?');
+    // Should have 2 params: category + date threshold
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toHaveLength(2);
+    expect(params[0]).toBe('chest');
+    expect(typeof params[1]).toBe('string'); // ISO date string
+  });
+
+  it('does not add date filter when timeRange is All', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    await getCategoryExerciseProgress('chest', 'All');
+
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).not.toContain('AND wss.completed_at >= ?');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toHaveLength(1);
+    expect(params[0]).toBe('chest');
+  });
+
+  it('does not add date filter when timeRange is omitted', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    await getCategoryExerciseProgress('legs');
+
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).not.toContain('AND wss.completed_at >= ?');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toHaveLength(1);
+  });
+
+  it('calls executeSql exactly once (no N+1)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryExerciseProgress('back');
+    expect(mockExecuteSql).toHaveBeenCalledTimes(1);
   });
 });

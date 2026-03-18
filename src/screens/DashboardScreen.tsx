@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,78 +9,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getRecentlyTrainedExercises, getNextWorkoutDay } from '../db/dashboard';
+import { getCategorySummaries, getNextWorkoutDay } from '../db/dashboard';
 import { getProgramDayExercises } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
+import { fontSize, weightBold } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
-import { ExerciseCategory, NextWorkoutInfo, Exercise } from '../types';
+import { CategorySummary, NextWorkoutInfo, Exercise } from '../types';
 import { useSession } from '../context/SessionContext';
+import { formatRelativeTime } from '../utils/formatRelativeTime';
+import { CategorySummaryCard } from '../components/CategorySummaryCard';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
-
-interface RecentExercise {
-  exerciseId: number;
-  exerciseName: string;
-  category: string;
-  lastTrainedAt: string;
-  measurementType: string;
-}
-
-interface SubCategory {
-  name: string;
-  exercises: RecentExercise[];
-}
-
-interface GroupData {
-  title: string;
-  subCategories: SubCategory[];
-}
-
-const CATEGORY_GROUP_ORDER: { title: string; categories: ExerciseCategory[] }[] = [
-  { title: 'STRENGTH TRAINING', categories: ['chest', 'back', 'legs', 'shoulders', 'arms'] },
-  { title: 'CORE & STABILITY', categories: ['core'] },
-  { title: 'CARDIO & CONDITIONING', categories: ['conditioning'] },
-];
-
-function groupByCategory(exercises: RecentExercise[]): GroupData[] {
-  const groups: GroupData[] = [];
-  for (const group of CATEGORY_GROUP_ORDER) {
-    const subCategories: SubCategory[] = [];
-    for (const cat of group.categories) {
-      const data = exercises.filter(ex => ex.category === cat);
-      if (data.length > 0) {
-        subCategories.push({
-          name: cat.charAt(0).toUpperCase() + cat.slice(1),
-          exercises: data,
-        });
-      }
-    }
-    if (subCategories.length > 0) {
-      groups.push({ title: group.title, subCategories });
-    }
-  }
-  return groups;
-}
-
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) { return 'just now'; }
-  if (diffMin < 60) { return diffMin + 'm ago'; }
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) { return diffHrs + 'h ago'; }
-  const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 7) { return diffDays + 'd ago'; }
-  const diffWeeks = Math.floor(diffDays / 7);
-  if (diffWeeks < 5) { return diffWeeks + 'w ago'; }
-  const diffMonths = Math.floor(diffDays / 30);
-  return diffMonths + 'mo ago';
-}
 
 function formatElapsed(s: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -89,7 +30,7 @@ function formatElapsed(s: number): string {
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { session, startSessionFromProgramDay } = useSession();
-  const [exercises, setExercises] = useState<RecentExercise[]>([]);
+  const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
   const [activeElapsed, setActiveElapsed] = useState(0);
 
@@ -110,11 +51,11 @@ export function DashboardScreen() {
       (async () => {
         try {
           const [result, nextDay] = await Promise.all([
-            getRecentlyTrainedExercises(),
+            getCategorySummaries(),
             getNextWorkoutDay(),
           ]);
           if (!cancelled) {
-            setExercises(result);
+            setCategories(result);
             setNextWorkout(nextDay);
           }
         } catch {
@@ -123,19 +64,6 @@ export function DashboardScreen() {
       })();
       return () => { cancelled = true; };
     }, []),
-  );
-
-  const groups = useMemo(() => groupByCategory(exercises), [exercises]);
-
-  const handlePress = useCallback(
-    (item: RecentExercise) => {
-      navigation.navigate('ExerciseProgress', {
-        exerciseId: item.exerciseId,
-        exerciseName: item.exerciseName,
-        measurementType: item.measurementType as 'reps' | 'timed',
-      });
-    },
-    [navigation],
   );
 
   const handleQuickStart = useCallback(async () => {
@@ -206,7 +134,7 @@ export function DashboardScreen() {
         </View>
       )}
 
-      {exercises.length === 0 ? (
+      {categories.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
             No exercises trained yet. Start a workout to see your progress here.
@@ -214,46 +142,18 @@ export function DashboardScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
-          {groups.map(group => (
-            <View key={group.title} style={styles.groupWrapper}>
-              {/* Group header strip */}
-              <View style={styles.groupHeaderStrip}>
-                <Text style={styles.groupHeader}>{group.title}</Text>
+          {categories.map(summary => {
+            const isStale = Date.now() - new Date(summary.lastTrainedAt).getTime() > 30 * 24 * 60 * 60 * 1000;
+            return (
+              <View key={summary.category} style={{ marginBottom: spacing.sm }}>
+                <CategorySummaryCard
+                  summary={summary}
+                  isStale={isStale}
+                  onPress={() => navigation.navigate('CategoryProgress', { category: summary.category })}
+                />
               </View>
-
-              {/* Surface container with all sub-categories */}
-              <View style={styles.surfaceContainer}>
-                {group.subCategories.map((sub, subIdx) => (
-                  <View key={sub.name}>
-                    {/* Sub-category label */}
-                    <Text style={[
-                      styles.subCategoryHeader,
-                      subIdx > 0 && styles.subCategorySpacing,
-                    ]}>
-                      {sub.name}
-                    </Text>
-
-                    {/* Exercise cards */}
-                    {sub.exercises.map(item => (
-                      <TouchableOpacity
-                        key={item.exerciseId}
-                        style={styles.card}
-                        activeOpacity={0.7}
-                        onPress={() => handlePress(item)}>
-                        <View style={styles.cardRow}>
-                          <Text style={styles.exerciseName}>{item.exerciseName}</Text>
-                          <Text style={styles.timeAgo}>
-                            {formatRelativeTime(item.lastTrainedAt)}
-                          </Text>
-                        </View>
-                        <Text style={styles.category}>{item.category}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -348,76 +248,5 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
     fontSize: fontSize.base,
     fontWeight: weightBold,
-  },
-
-  /* ── Group ──────────────────────────────────────────────── */
-  groupWrapper: {
-    marginBottom: spacing.lg,
-  },
-  groupHeaderStrip: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  groupHeader: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    letterSpacing: 1.2,
-  },
-
-  /* ── Surface container ──────────────────────────────────── */
-  surfaceContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.base,
-  },
-
-  /* ── Sub-category ───────────────────────────────────────── */
-  subCategoryHeader: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-  },
-  subCategorySpacing: {
-    marginTop: spacing.base,
-  },
-
-  /* ── Exercise card ──────────────────────────────────────── */
-  card: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: spacing.base,
-    marginBottom: spacing.sm,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  exerciseName: {
-    color: colors.primary,
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    flex: 1,
-  },
-  timeAgo: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    marginLeft: spacing.sm,
-  },
-  category: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    textTransform: 'capitalize',
   },
 });

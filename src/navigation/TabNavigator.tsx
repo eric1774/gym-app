@@ -17,6 +17,7 @@ import { ProteinScreen } from '../screens/ProteinScreen';
 import { MealLibraryScreen } from '../screens/MealLibraryScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
+import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -47,6 +48,7 @@ export type DashboardStackParamList = {
   DashboardHome: undefined;
   ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
   Settings: undefined;
+  CategoryProgress: { category: string };
 };
 
 export type ProteinStackParamList = {
@@ -163,6 +165,7 @@ function DashboardStackNavigator() {
       <DashboardStack.Screen name="DashboardHome" component={DashboardScreen} />
       <DashboardStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
+      <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressScreen} />
     </DashboardStack.Navigator>
   );
 }
