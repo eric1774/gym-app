@@ -1,7 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { deleteProgram, getProgramDays, getPrograms } from '../db/programs';
 import { getProgramTotalCompleted } from '../db/dashboard';
+import { exportProgramData } from '../db';
+import { ExportToast, ExportToastHandle } from '../components/ExportToast';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
@@ -78,20 +84,48 @@ const circleStyles = StyleSheet.create({
   },
 });
 
+function PopupMenu({
+  visible,
+  onClose,
+  anchorPosition,
+  children,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  anchorPosition: { top: number; right: number };
+  children: React.ReactNode;
+}) {
+  if (!visible) return null;
+  return (
+    <Modal transparent animationType="none" visible={visible} onRequestClose={onClose}>
+      <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose}>
+        <View
+          style={[
+            menuStyles.container,
+            { position: 'absolute', top: anchorPosition.top, right: anchorPosition.right },
+          ]}
+        >
+          {children}
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function ProgramCard({
   program,
   isDeleting,
   completedWorkouts,
   dayCount,
   onTap,
-  onLongPress,
+  onMenuPress,
 }: {
   program: Program;
   isDeleting: boolean;
   completedWorkouts: number;
   dayCount: number;
   onTap: () => void;
-  onLongPress: () => void;
+  onMenuPress: (position: { top: number; right: number }) => void;
 }) {
   const isActivated = program.startDate !== null;
   const totalWorkouts = dayCount * program.weeks;
@@ -103,12 +137,21 @@ function ProgramCard({
     <TouchableOpacity
       style={[styles.programCard, isDeleting && styles.cardDeleting]}
       onPress={onTap}
-      onLongPress={onLongPress}
       activeOpacity={0.7}>
-      {/* Top row: name + completion circle */}
+      {/* Top row: name + completion circle + menu button */}
       <View style={styles.programCardHeader}>
         <Text style={styles.programName}>{program.name}</Text>
-        <CompletionCircle isComplete={isComplete} />
+        <View style={styles.headerRight}>
+          <CompletionCircle isComplete={isComplete} />
+          <TouchableOpacity
+            onPress={(e) => { onMenuPress({ top: e.nativeEvent.pageY + 8, right: 16 }); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={styles.menuButton}
+            testID="menu-button"
+          >
+            <Text style={styles.menuDots}>{'\u22EE'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {isActivated && !isComplete && (
@@ -159,6 +202,14 @@ export function ProgramsScreen() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Menu state
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 16 });
+  const [menuProgram, setMenuProgram] = useState<Program | null>(null);
+  const [menuProgramHasData, setMenuProgramHasData] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportToastRef = useRef<ExportToastHandle>(null);
+
   const loadPrograms = useCallback(async () => {
     try {
       const result = await getPrograms();
@@ -195,29 +246,77 @@ export function ProgramsScreen() {
     setPrograms(prev => [program, ...prev]);
   }, []);
 
-  const handleLongPress = useCallback((program: Program) => {
-    setDeletingId(program.id);
+  const confirmDeleteProgram = useCallback(async (programId: number) => {
+    try {
+      await deleteProgram(programId);
+      setPrograms(prev => prev.filter(p => p.id !== programId));
+    } catch {
+      // ignore
+    }
+    setDeletingId(null);
+  }, []);
+
+  const handleMenuPress = useCallback((program: Program, position: { top: number; right: number }) => {
+    const stats = programStats[program.id];
+    const hasData = (stats?.completed ?? 0) > 0;
+    setMenuProgram(program);
+    setMenuPosition(position);
+    setMenuProgramHasData(hasData);
+    setMenuVisible(true);
+  }, [programStats]);
+
+  const handleExport = useCallback(async () => {
+    if (!menuProgram) return;
+    setIsExporting(true);
+    try {
+      const data = await exportProgramData(menuProgram.id);
+      if (!data) {
+        setMenuVisible(false);
+        setIsExporting(false);
+        exportToastRef.current?.show('Export failed', 'error');
+        return;
+      }
+      const jsonString = JSON.stringify(data, null, 2);
+      const safeName = menuProgram.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `${safeName}_${today}.json`;
+
+      setMenuVisible(false);
+      setIsExporting(false);
+
+      const result = await Share.share({
+        message: jsonString,
+        title: filename,
+      });
+
+      if (result.action === Share.sharedAction) {
+        exportToastRef.current?.show('Export saved', 'success');
+      }
+      // Per D-14: cancel = no toast (silent dismiss)
+    } catch {
+      setMenuVisible(false);
+      setIsExporting(false);
+      exportToastRef.current?.show('Export failed', 'error');
+    }
+  }, [menuProgram]);
+
+  const handleDeleteFromMenu = useCallback(() => {
+    if (!menuProgram) return;
+    setMenuVisible(false);
+    setDeletingId(menuProgram.id);
     Alert.alert(
       'Delete Program',
-      `Delete "${program.name}"? This cannot be undone.`,
+      `Delete "${menuProgram.name}"? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel', onPress: () => setDeletingId(null) },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProgram(program.id);
-              setPrograms(prev => prev.filter(p => p.id !== program.id));
-            } catch {
-              // ignore
-            }
-            setDeletingId(null);
-          },
+          onPress: () => { confirmDeleteProgram(menuProgram.id); },
         },
       ],
     );
-  }, []);
+  }, [menuProgram, confirmDeleteProgram]);
 
   const handleTap = useCallback(
     (program: Program) => {
@@ -281,7 +380,7 @@ export function ProgramsScreen() {
                   completedWorkouts={programStats[program.id]?.completed ?? 0}
                   dayCount={programStats[program.id]?.dayCount ?? 0}
                   onTap={() => handleTap(program)}
-                  onLongPress={() => handleLongPress(program)}
+                  onMenuPress={(position) => handleMenuPress(program, position)}
                 />
               ))}
             </>
@@ -301,13 +400,53 @@ export function ProgramsScreen() {
                   completedWorkouts={programStats[program.id]?.completed ?? 0}
                   dayCount={programStats[program.id]?.dayCount ?? 0}
                   onTap={() => handleTap(program)}
-                  onLongPress={() => handleLongPress(program)}
+                  onMenuPress={(position) => handleMenuPress(program, position)}
                 />
               ))}
             </>
           )}
         </ScrollView>
       )}
+
+      <PopupMenu
+        visible={menuVisible}
+        onClose={() => { setMenuVisible(false); setIsExporting(false); }}
+        anchorPosition={menuPosition}
+      >
+        {/* Export menu item */}
+        <TouchableOpacity
+          style={[menuStyles.menuItem, !menuProgramHasData && menuStyles.menuItemDisabled]}
+          onPress={menuProgramHasData && !isExporting ? handleExport : undefined}
+          disabled={!menuProgramHasData || isExporting}
+          activeOpacity={0.7}
+        >
+          {isExporting ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <Text style={[menuStyles.menuItemText, !menuProgramHasData && menuStyles.menuItemTextDisabled]}>
+                Export
+              </Text>
+              {!menuProgramHasData && (
+                <Text style={menuStyles.menuItemSubtext}>No workout data</Text>
+              )}
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={menuStyles.menuSeparator} />
+
+        {/* Delete menu item */}
+        <TouchableOpacity
+          style={menuStyles.menuItem}
+          onPress={handleDeleteFromMenu}
+          activeOpacity={0.7}
+        >
+          <Text style={[menuStyles.menuItemText, menuStyles.menuItemDanger]}>Delete</Text>
+        </TouchableOpacity>
+      </PopupMenu>
+
+      <ExportToast ref={exportToastRef} />
 
       <CreateProgramModal
         visible={modalVisible}
@@ -392,6 +531,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.sm,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  menuButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuDots: {
+    fontSize: fontSize.lg,
+    color: colors.secondary,
+    fontWeight: weightBold,
+  },
   programSubtitle: {
     fontSize: fontSize.sm,
     fontWeight: weightMedium,
@@ -443,5 +598,51 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
+  },
+});
+
+const menuStyles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 8,
+    paddingVertical: spacing.xs,
+    minWidth: 180,
+    borderWidth: 1,
+    borderColor: colors.border,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  menuItemDisabled: {
+    opacity: 0.4,
+  },
+  menuItemText: {
+    fontSize: fontSize.base,
+    color: colors.primary,
+    fontWeight: weightMedium,
+  },
+  menuItemTextDisabled: {
+    color: colors.secondary,
+  },
+  menuItemSubtext: {
+    fontSize: fontSize.xs,
+    color: colors.secondary,
+    marginLeft: spacing.sm,
+  },
+  menuItemDanger: {
+    color: colors.danger,
+  },
+  menuSeparator: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.sm,
   },
 });
