@@ -73,7 +73,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Let users export a program's completed workout data as a structured JSON file saved directly to their phone.
 
 - [x] **Phase 22: Export Data Layer** — DB query and JSON assembly for completed workout data, structured by week/day with program metadata (completed 2026-03-22)
-- [ ] **Phase 23: Export UI & File Delivery** — Three-dot menu trigger, loading indicator, Android share/save dialog, descriptive filename, and result toast
+- [x] **Phase 23: Export UI & File Delivery** — Three-dot menu trigger, loading indicator, Android share/save dialog, descriptive filename, and result toast (completed 2026-03-22)
 
 ## Phase Details
 
@@ -101,9 +101,9 @@ Plans:
   3. Android's native share/save dialog appears so the user can choose where to save the file
   4. The suggested filename follows the pattern ProgramName_YYYY-MM-DD.json
   5. After the dialog is dismissed, a success or error toast confirms the outcome
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 23-01-PLAN.md — ExportToast component, three-dot menu with Export/Delete, share flow, and tests
+- [x] 23-01-PLAN.md — ExportToast component, three-dot menu with Export/Delete, share flow, and tests
 
 ## Progress
 
@@ -129,4 +129,4 @@ Plans:
 | 20. Screens Part 2 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
 | 22. Export Data Layer | v1.5 | 1/1 | Complete    | 2026-03-22 |
-| 23. Export UI & File Delivery | v1.5 | 0/1 | Not started | - |
+| 23. Export UI & File Delivery | v1.5 | 1/1 | Complete   | 2026-03-22 |
