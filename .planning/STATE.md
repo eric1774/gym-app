@@ -1,39 +1,51 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.4
-milestone_name: Test Coverage
-status: complete
-stopped_at: Milestone v1.4 archived
-last_updated: "2026-03-17"
-last_activity: 2026-03-17 — Milestone v1.4 Test Coverage completed and archived
+milestone: v1.5
+milestone_name: Program Data Export
+status: unknown
+stopped_at: Completed 22-export-data-layer/22-01-PLAN.md
+last_updated: "2026-03-22T14:11:08.663Z"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_phases: 2
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-17)
+See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** Planning next milestone — use `/gsd:new-milestone`
+**Current focus:** Phase 22 — export-data-layer
 
 ## Current Position
 
-Milestone: v1.4 Test Coverage — COMPLETE
-All 7 phases (15-21), 14 plans shipped.
-Coverage: 82.26% lines, all Jest thresholds passing.
+Phase: 22 (export-data-layer) — EXECUTING
+Plan: 1 of 1
+
+## Performance Metrics
+
+| Metric | Value |
+|--------|-------|
+| Phases defined | 2 |
+| Phases complete | 0 |
+| Requirements mapped | 10/10 |
+| Coverage | 100% |
+| Phase 22-export-data-layer P01 | 6 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-Archived to .planning/milestones/v1.4-ROADMAP.md
+- Two-phase structure: data layer first (Phase 22), then UI + file delivery (Phase 23)
+- Export triggers from program card three-dot menu on Programs page (not program detail screen)
+- JSON-only format (CSV/XML deferred as out of scope)
+- Android share/save dialog handles file destination — no custom file picker needed
+- [Phase 22-export-data-layer]: Map.forEach() used instead of for...of Map iteration for ES5 TypeScript target compatibility
+- [Phase 22-export-data-layer]: Completion % uses DISTINCT (program_day_id, program_week) pairs to avoid inflation from duplicate sessions
 
 ### Pending Todos
 
@@ -45,6 +57,7 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Milestone v1.4 archived
+Last session: 2026-03-22T14:11:08.660Z
+Stopped at: Completed 22-export-data-layer/22-01-PLAN.md
 Resume file: None
+Next step: `/gsd:plan-phase 22`

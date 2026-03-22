@@ -72,7 +72,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Let users export a program's completed workout data as a structured JSON file saved directly to their phone.
 
-- [ ] **Phase 22: Export Data Layer** — DB query and JSON assembly for completed workout data, structured by week/day with program metadata
+- [x] **Phase 22: Export Data Layer** — DB query and JSON assembly for completed workout data, structured by week/day with program metadata (completed 2026-03-22)
 - [ ] **Phase 23: Export UI & File Delivery** — Three-dot menu trigger, loading indicator, Android share/save dialog, descriptive filename, and result toast
 
 ## Phase Details
@@ -87,9 +87,9 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
   3. Days that were not completed are absent from the export output
   4. The JSON object includes program-level metadata: name, total weeks, and completion percentage
   5. A partially-completed program produces a partial export containing only its completed days
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 22-01-PLAN.md — Export types, DB query function, and comprehensive tests
+- [x] 22-01-PLAN.md — Export types, DB query function, and comprehensive tests
 
 ### Phase 23: Export UI & File Delivery
 **Goal**: Users can trigger an export from the Programs page and receive a saved JSON file on their phone
@@ -126,5 +126,5 @@ Plans:
 | 19. Screens Part 1 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 20. Screens Part 2 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
-| 22. Export Data Layer | v1.5 | 0/1 | Not started | - |
+| 22. Export Data Layer | v1.5 | 1/1 | Complete   | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 0/TBD | Not started | - |
