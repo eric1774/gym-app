@@ -7,14 +7,18 @@ jest.mock('../../db/programs', () => ({
 jest.mock('../../db/dashboard', () => ({
   getProgramTotalCompleted: jest.fn().mockResolvedValue(0),
 }));
+jest.mock('../../db/export', () => ({
+  exportProgramData: jest.fn().mockResolvedValue(null),
+}));
 
 import React from 'react';
-import { Alert } from 'react-native';
+import { Alert, Share } from 'react-native';
 import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../test-utils';
 import { ProgramsScreen } from '../ProgramsScreen';
 import { getPrograms, getProgramDays } from '../../db/programs';
 import { getProgramTotalCompleted } from '../../db/dashboard';
+import { exportProgramData } from '../../db/export';
 
 describe('ProgramsScreen', () => {
   beforeEach(() => {
@@ -96,15 +100,27 @@ describe('ProgramsScreen', () => {
     expect(getByText('PAST PROGRAMS')).toBeTruthy();
   });
 
-  it('shows delete confirmation alert on long press', async () => {
+  it('renders three-dot menu button on program card', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockResolvedValue([]);
+    const { getAllByTestId } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    expect(getAllByTestId('menu-button').length).toBeGreaterThan(0);
+  });
+
+  it('shows delete confirmation alert via menu Delete option', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     (getPrograms as jest.Mock).mockResolvedValue([
       { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
     ]);
     (getProgramDays as jest.Mock).mockResolvedValue([]);
-    const { getByText } = renderWithProviders(<ProgramsScreen />);
-    await waitFor(() => getByText('PPL'));
-    fireEvent(getByText('PPL'), 'longPress');
+    const { getAllByTestId, getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    fireEvent.press(getAllByTestId('menu-button')[0]);
+    await waitFor(() => getByText('Delete'));
+    fireEvent.press(getByText('Delete'));
     expect(alertSpy).toHaveBeenCalledWith(
       'Delete Program',
       expect.stringContaining('PPL'),
@@ -125,10 +141,68 @@ describe('ProgramsScreen', () => {
       { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
     ]);
     (getProgramDays as jest.Mock).mockResolvedValue([]);
-    const { getByText } = renderWithProviders(<ProgramsScreen />);
-    await waitFor(() => getByText('PPL'));
-    fireEvent(getByText('PPL'), 'longPress');
+    const { getAllByTestId, getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    fireEvent.press(getAllByTestId('menu-button')[0]);
+    await waitFor(() => getByText('Delete'));
+    fireEvent.press(getByText('Delete'));
     await waitFor(() => expect(deleteProgram).toHaveBeenCalledWith(1));
     alertSpy.mockRestore();
+  });
+
+  it('shows Export option in menu when three-dot pressed', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }, { id: 2 }]));
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(3);
+    const { getAllByTestId, getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    fireEvent.press(getAllByTestId('menu-button')[0]);
+    await waitFor(() => getByText('Export'));
+    expect(getByText('Export')).toBeTruthy();
+  });
+
+  it('shows disabled Export with No workout data when no completed workouts', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockResolvedValue([]);
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(0);
+    const { getAllByTestId, getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    fireEvent.press(getAllByTestId('menu-button')[0]);
+    await waitFor(() => getByText('No workout data'));
+    expect(getByText('No workout data')).toBeTruthy();
+  });
+
+  it('calls exportProgramData and Share.share on Export tap', async () => {
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    (exportProgramData as jest.Mock).mockResolvedValue({
+      programName: 'PPL',
+      totalWeeks: 4,
+      completionPercent: 50,
+      exportedAt: '2026-03-22T00:00:00.000Z',
+      weeks: [],
+    });
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(3);
+
+    const { getAllByTestId, getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getAllByTestId('menu-button'));
+    fireEvent.press(getAllByTestId('menu-button')[0]);
+    await waitFor(() => getByText('Export'));
+    fireEvent.press(getByText('Export'));
+
+    await waitFor(() => expect(exportProgramData).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringMatching(/^PPL_.*\.json$/),
+      }),
+    ));
+    shareSpy.mockRestore();
   });
 });

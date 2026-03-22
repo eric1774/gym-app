@@ -144,7 +144,7 @@ function ProgramCard({
         <View style={styles.headerRight}>
           <CompletionCircle isComplete={isComplete} />
           <TouchableOpacity
-            onPress={(e) => { onMenuPress({ top: e.nativeEvent.pageY + 8, right: 16 }); }}
+            onPress={(e) => { onMenuPress({ top: (e?.nativeEvent?.pageY ?? 0) + 8, right: 16 }); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={styles.menuButton}
             testID="menu-button"
