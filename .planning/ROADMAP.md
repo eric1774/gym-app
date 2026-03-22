@@ -7,6 +7,7 @@
 - ✅ **v1.2 Meal Library** — Phase 8 (shipped 2026-03-09)
 - ✅ **v1.3 Workout Intelligence & Speed** — Phases 9-14 (shipped 2026-03-14)
 - ✅ **v1.4 Test Coverage** — Phases 15-21 (shipped 2026-03-17)
+- 🚧 **v1.5 Program Data Export** — Phases 22-23 (in progress)
 
 ## Phases
 
@@ -67,6 +68,41 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 </details>
 
+### 🚧 v1.5 Program Data Export (In Progress)
+
+**Milestone Goal:** Let users export a program's completed workout data as a structured JSON file saved directly to their phone.
+
+- [ ] **Phase 22: Export Data Layer** — DB query and JSON assembly for completed workout data, structured by week/day with program metadata
+- [ ] **Phase 23: Export UI & File Delivery** — Three-dot menu trigger, loading indicator, Android share/save dialog, descriptive filename, and result toast
+
+## Phase Details
+
+### Phase 22: Export Data Layer
+**Goal**: Program workout data can be queried and assembled into a complete, correctly-structured JSON export
+**Depends on**: Phase 21 (v1.4 complete)
+**Requirements**: EXPD-01, EXPD-02, EXPD-03, EXPD-04, EXPD-05
+**Success Criteria** (what must be TRUE):
+  1. Calling the export function for a program returns a JSON object structured as weeks containing days
+  2. Each day entry lists every exercise with the actual sets, reps, and weights the user completed
+  3. Days that were not completed are absent from the export output
+  4. The JSON object includes program-level metadata: name, total weeks, and completion percentage
+  5. A partially-completed program produces a partial export containing only its completed days
+**Plans:** 1 plan
+Plans:
+- [ ] 22-01-PLAN.md — Export types, DB query function, and comprehensive tests
+
+### Phase 23: Export UI & File Delivery
+**Goal**: Users can trigger an export from the Programs page and receive a saved JSON file on their phone
+**Depends on**: Phase 22
+**Requirements**: UI-01, UI-02, UI-03, FILE-01, FILE-02
+**Success Criteria** (what must be TRUE):
+  1. Tapping the three-dot menu on a program card shows an Export option
+  2. After tapping Export, a loading indicator is visible while the data is prepared
+  3. Android's native share/save dialog appears so the user can choose where to save the file
+  4. The suggested filename follows the pattern ProgramName_YYYY-MM-DD.json
+  5. After the dialog is dismissed, a success or error toast confirms the outcome
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans | Status | Completed |
@@ -90,3 +126,5 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 | 19. Screens Part 1 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 20. Screens Part 2 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
+| 22. Export Data Layer | v1.5 | 0/1 | Not started | - |
+| 23. Export UI & File Delivery | v1.5 | 0/TBD | Not started | - |

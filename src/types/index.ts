@@ -238,3 +238,36 @@ export interface CalendarSetDetail {
   isWarmup: boolean;
   isPR: boolean;
 }
+
+// -- Program Export types (Phase 22) --
+
+export interface ProgramExportSet {
+  setNumber: number;
+  weightKg: number;
+  reps: number;
+  isWarmup: boolean;
+}
+
+export interface ProgramExportExercise {
+  exerciseName: string;
+  sets: ProgramExportSet[];
+}
+
+export interface ProgramExportDay {
+  dayName: string;
+  completedAt: string;
+  exercises: ProgramExportExercise[];
+}
+
+export interface ProgramExportWeek {
+  weekNumber: number;
+  days: ProgramExportDay[];
+}
+
+export interface ProgramExport {
+  programName: string;
+  totalWeeks: number;
+  completionPercent: number;
+  exportedAt: string;
+  weeks: ProgramExportWeek[];
+}

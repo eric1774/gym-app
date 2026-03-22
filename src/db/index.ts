@@ -61,3 +61,4 @@ export {
   getLibraryMealsByType,
   deleteLibraryMeal,
 } from './protein';
+export { exportProgramData } from './export';
