@@ -4,6 +4,34 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v1.5 — Program Data Export
+*March 22, 2026*
+
+### New
+
+- **Export Workout Data**: Export any program's completed workout history as a JSON file. The export includes every set, rep, and weight you logged, organized by week and day with an overall completion percentage.
+
+- **Program Card Menu**: Each program card now has a three-dot menu with Export and Delete options — no more long-press to delete.
+
+- **Export Feedback**: A mint-green toast confirms when your export is saved successfully, or a red toast lets you know if something went wrong.
+
+### Improved
+
+- **Smart Partial Exports**: Partially-finished programs export only the work you actually completed, with an accurate completion percentage that accounts for duplicate sessions correctly.
+
+- **Clean Filenames**: Exported files are automatically named with your program name and today's date (e.g., `Push_Pull_Legs_2026-03-22.json`) — special characters are sanitized.
+
+---
+
+## v1.4 — Test Coverage
+*March 15 – 17, 2026*
+
+### Improved
+
+- **App Reliability**: Added 358 automated tests covering every screen, component, and database operation in the app. Code coverage now sits at 82% with enforced quality thresholds — bugs are caught before they reach your phone.
+
+---
+
 ## v1.3 — Workout Intelligence & Speed
 *March 10 – 14, 2026*
 
@@ -18,6 +46,8 @@ All notable changes to GymTrack are documented here.
 - **Next Workout Card**: Your dashboard now shows which workout is up next with the program name, day name, and exercise count. One tap starts your session — no extra navigation needed.
 
 - **Per-Exercise Rest Timer**: Each exercise now shows its own rest duration. Tap the timer label during a workout to adjust rest time with +/- 15 second steppers. Your preference is saved for next time.
+
+- **Superset Support**: Group exercises into supersets when building your program. During a workout, supersets alternate automatically between exercises with a round counter, and rest timers are suppressed between superset exercises so you keep moving.
 
 ### Improved
 
