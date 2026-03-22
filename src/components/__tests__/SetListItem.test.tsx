@@ -34,4 +34,20 @@ describe('SetListItem', () => {
     const { getByText } = render(<SetListItem set={set} onDelete={jest.fn()} />);
     expect(getByText(/\(warmup\)/)).toBeTruthy();
   });
+
+  it('toggles delete button on long press', () => {
+    const set = makeSet();
+    const { getByText } = render(<SetListItem set={set} onDelete={jest.fn()} />);
+    fireEvent(getByText(/Set 1/), 'longPress');
+    expect(getByText('Delete')).toBeTruthy();
+  });
+
+  it('calls onDelete when delete button pressed', () => {
+    const onDelete = jest.fn();
+    const set = makeSet({ id: 42 });
+    const { getByText } = render(<SetListItem set={set} onDelete={onDelete} />);
+    fireEvent(getByText(/Set 1/), 'longPress');
+    fireEvent.press(getByText('Delete'));
+    expect(onDelete).toHaveBeenCalledWith(42);
+  });
 });

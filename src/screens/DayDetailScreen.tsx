@@ -109,6 +109,18 @@ export function DayDetailScreen() {
     [dayId, refresh],
   );
 
+  const confirmRemoveExercise = useCallback(
+    async (pdeId: number) => {
+      try {
+        await removeExerciseFromProgramDay(pdeId);
+        setDayExercises(prev => prev.filter(d => d.id !== pdeId));
+      } catch {
+        // ignore
+      }
+    },
+    [],
+  );
+
   const handleRemoveExercise = useCallback(
     (pde: ProgramDayExercise) => {
       const ex = exerciseMap.get(pde.exerciseId);
@@ -118,18 +130,11 @@ export function DayDetailScreen() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeExerciseFromProgramDay(pde.id);
-              setDayExercises(prev => prev.filter(d => d.id !== pde.id));
-            } catch {
-              // ignore
-            }
-          },
+          onPress: () => { confirmRemoveExercise(pde.id); },
         },
       ]);
     },
-    [exerciseMap],
+    [exerciseMap, confirmRemoveExercise],
   );
 
   const handleMoveUp = useCallback(

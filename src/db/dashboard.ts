@@ -475,8 +475,7 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
          SELECT ws2.id FROM workout_sets ws2
          WHERE ws2.session_id = ws.session_id
            AND ws2.exercise_id = ws.exercise_id
-         ORDER BY CASE WHEN e.measurement_type = 'timed' THEN ws2.reps ELSE ws2.weight_kg END DESC,
-                  ws2.reps DESC
+         ORDER BY ws2.weight_kg DESC, ws2.reps DESC
          LIMIT 1
        )
      GROUP BY ws.exercise_id, ws.session_id
@@ -595,8 +594,7 @@ export async function getCategoryExerciseProgress(
          SELECT ws2.id FROM workout_sets ws2
          WHERE ws2.session_id = ws.session_id
            AND ws2.exercise_id = ws.exercise_id
-         ORDER BY CASE WHEN e.measurement_type = 'timed' THEN ws2.reps ELSE ws2.weight_kg END DESC,
-                  ws2.reps DESC
+         ORDER BY ws2.weight_kg DESC, ws2.reps DESC
          LIMIT 1
        )
      GROUP BY ws.exercise_id, ws.session_id

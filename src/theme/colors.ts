@@ -18,3 +18,18 @@ export const colors = {
 } as const;
 
 export type ColorKey = keyof typeof colors;
+
+/** Per-category accent colors for visual differentiation */
+export const categoryColors: Record<string, string> = {
+  chest: '#E8845C',
+  back: '#5B9BF0',
+  legs: '#B57AE0',
+  shoulders: '#4ECDC4',
+  arms: '#8DC28A',
+  core: '#F0B830',
+  conditioning: '#E0697E',
+};
+
+export function getCategoryColor(category: string): string {
+  return categoryColors[category] ?? colors.accent;
+}

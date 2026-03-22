@@ -3,7 +3,7 @@ jest.mock('../../db/dashboard', () => ({
 }));
 
 import React from 'react';
-import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { render, waitFor, fireEvent, act } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { CategoryProgressScreen } from '../CategoryProgressScreen';
@@ -37,6 +37,13 @@ const makeExercise = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/** Flush all pending microtasks (resolved promises) and React state updates */
+async function flushAsync() {
+  await act(async () => {
+    await new Promise(r => setTimeout(r, 0));
+  });
+}
+
 describe('CategoryProgressScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -65,7 +72,7 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { getByText } = renderWithParams({ category: 'chest' });
-    await waitFor(() => getByText('Bench Press'));
+    await flushAsync();
     expect(getByText('Bench Press')).toBeTruthy();
     expect(getByText('Incline Dumbbell Press')).toBeTruthy();
   });
@@ -76,8 +83,8 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { getByText } = renderWithParams({ category: 'chest' });
-    await waitFor(() => getByText('+15.0 kg'));
-    expect(getByText('+15.0 kg')).toBeTruthy();
+    await flushAsync();
+    expect(getByText('+15.0 lb')).toBeTruthy();
   });
 
   it('shows delta formatted as duration for timed type', async () => {
@@ -86,7 +93,7 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { getByText } = renderWithParams({ category: 'core' });
-    await waitFor(() => getByText('+30s'));
+    await flushAsync();
     expect(getByText('+30s')).toBeTruthy();
   });
 
@@ -96,7 +103,7 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { getByText } = renderWithParams({ category: 'chest' });
-    await waitFor(() => getByText('\u2013'));
+    await flushAsync();
     expect(getByText('\u2013')).toBeTruthy();
   });
 
@@ -106,7 +113,8 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { queryByTestId, getByText } = renderWithParams({ category: 'chest' });
-    await waitFor(() => getByText('Bench Press'));
+    await flushAsync();
+    expect(getByText('Bench Press')).toBeTruthy();
     expect(queryByTestId('delta-text')).toBeNull();
   });
 
@@ -138,7 +146,6 @@ describe('CategoryProgressScreen', () => {
     const { getByText } = renderWithParams({ category: 'chest' });
     await waitFor(() => getByText('Chest'));
     fireEvent.press(getByText('\u2190'));
-    // No crash — navigation absorbed by test navigator
     expect(true).toBe(true);
   });
 
@@ -148,9 +155,8 @@ describe('CategoryProgressScreen', () => {
     ]);
 
     const { getByTestId } = renderWithParams({ category: 'chest' });
-    await waitFor(() => getByTestId('exercise-row'));
+    await flushAsync();
     fireEvent.press(getByTestId('exercise-row'));
-    // No crash — navigation absorbed by test navigator
     expect(true).toBe(true);
   });
 });

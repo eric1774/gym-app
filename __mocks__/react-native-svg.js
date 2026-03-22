@@ -17,4 +17,8 @@ module.exports = {
   G: createMockComponent('G'),
   Text: createMockComponent('SvgText'),
   Polyline: createMockComponent('Polyline'),
+  Polygon: createMockComponent('Polygon'),
+  Defs: createMockComponent('Defs'),
+  LinearGradient: createMockComponent('LinearGradient'),
+  Stop: createMockComponent('Stop'),
 };

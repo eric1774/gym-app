@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "shannon": {
+      "source": "unicodeveloper/shannon",
+      "sourceType": "github",
+      "computedHash": "a63c0a99388e6ca1ecd553f59c11acf32acdb1201f7c899294397d8ee3cc8b5b"
+    },
     "sleek-design-mobile-apps": {
       "source": "sleekdotdesign/agent-skills",
       "sourceType": "github",

@@ -35,7 +35,7 @@ export type CalendarStackParamList = {
 
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
 };
 
 export type ProgramsStackParamList = {
@@ -46,7 +46,7 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
   Settings: undefined;
   CategoryProgress: { category: string };
 };

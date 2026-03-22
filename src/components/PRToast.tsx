@@ -69,6 +69,18 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
     setCurrentToast(next);
   }, [translateY]);
 
+  const slideOut = useCallback(() => {
+    Animated.timing(translateY, {
+      toValue: TOAST_TRANSLATE_Y_HIDDEN,
+      duration: SLIDE_OUT_DURATION,
+      easing: Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentToast(null);
+      dequeueAndShow();
+    });
+  }, [translateY, dequeueAndShow]);
+
   // Start slide-in animation AFTER the Animated.View has mounted.
   // This fixes a race condition where useNativeDriver animation starts
   // before the native view exists, causing the toast to stay off-screen.
@@ -81,17 +93,7 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(() => {
-      dismissTimerRef.current = setTimeout(() => {
-        Animated.timing(translateY, {
-          toValue: TOAST_TRANSLATE_Y_HIDDEN,
-          duration: SLIDE_OUT_DURATION,
-          easing: Easing.in(Easing.cubic),
-          useNativeDriver: true,
-        }).start(() => {
-          setCurrentToast(null);
-          dequeueAndShow();
-        });
-      }, DISPLAY_DURATION_MS);
+      dismissTimerRef.current = setTimeout(slideOut, DISPLAY_DURATION_MS);
     });
 
     return () => {
@@ -101,7 +103,7 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
         dismissTimerRef.current = null;
       }
     };
-  }, [currentToast, translateY, dequeueAndShow]);
+  }, [currentToast, translateY, slideOut]);
 
   useImperativeHandle(ref, () => ({
     showPR(exerciseName: string, reps: number, weightKg: number) {

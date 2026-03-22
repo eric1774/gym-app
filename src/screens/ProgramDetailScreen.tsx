@@ -107,6 +107,29 @@ function GripHandle({
   );
 }
 
+function findSwapTarget(
+  currentIndex: number,
+  draggedCenter: number,
+  heights: number[],
+  orderLength: number,
+): number {
+  if (currentIndex < orderLength - 1) {
+    let nextY = 0;
+    for (let i = 0; i <= currentIndex; i++) { nextY += heights[i]; }
+    const nextCenter = nextY + heights[currentIndex + 1] / 2;
+    if (draggedCenter > nextCenter) { return currentIndex + 1; }
+  }
+
+  if (currentIndex > 0) {
+    let prevY = 0;
+    for (let i = 0; i < currentIndex - 1; i++) { prevY += heights[i]; }
+    const prevCenter = prevY + heights[currentIndex - 1] / 2;
+    if (draggedCenter < prevCenter) { return currentIndex - 1; }
+  }
+
+  return currentIndex;
+}
+
 export function ProgramDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<DetailRoute>();
@@ -361,21 +384,7 @@ export function ProgramDetailScreen() {
     for (let i = 0; i < currentIndex; i++) yBefore += heights[i];
     const draggedCenter = yBefore + heights[currentIndex] / 2 + adjustedDy;
 
-    let targetIndex = currentIndex;
-
-    if (currentIndex < currentOrder.length - 1) {
-      let nextY = 0;
-      for (let i = 0; i <= currentIndex; i++) nextY += heights[i];
-      const nextCenter = nextY + heights[currentIndex + 1] / 2;
-      if (draggedCenter > nextCenter) targetIndex = currentIndex + 1;
-    }
-
-    if (currentIndex > 0) {
-      let prevY = 0;
-      for (let i = 0; i < currentIndex - 1; i++) prevY += heights[i];
-      const prevCenter = prevY + heights[currentIndex - 1] / 2;
-      if (draggedCenter < prevCenter) targetIndex = currentIndex - 1;
-    }
+    const targetIndex = findSwapTarget(currentIndex, draggedCenter, heights, currentOrder.length);
 
     if (targetIndex !== currentIndex) {
       const swappedHeight = heights[targetIndex];

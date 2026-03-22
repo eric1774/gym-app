@@ -746,6 +746,7 @@ export function WorkoutScreen() {
         exerciseId,
         exerciseName: exercise.name,
         measurementType: exercise.measurementType,
+        category: exercise.category,
       });
     },
     [exercises, navigation],

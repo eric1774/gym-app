@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
+  LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import { CategoryExerciseProgress } from '../types';
 import { DashboardStackParamList } from '../navigation/TabNavigator';
 import { MiniSparkline } from '../components/MiniSparkline';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 
@@ -23,6 +24,13 @@ type ScreenNavProp = NativeStackNavigationProp<DashboardStackParamList, 'Categor
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
+
+function formatBestValue(exercise: CategoryExerciseProgress): string {
+  if (exercise.measurementType === 'timed') {
+    return `${Math.round(exercise.currentBest)}s`;
+  }
+  return `${exercise.currentBest % 1 === 0 ? exercise.currentBest : exercise.currentBest.toFixed(1)} lb`;
+}
 
 function formatDelta(exercise: CategoryExerciseProgress): string | null {
   if (exercise.previousBest === null || exercise.sparklinePoints.length < 2) {
@@ -35,8 +43,91 @@ function formatDelta(exercise: CategoryExerciseProgress): string | null {
   if (exercise.measurementType === 'timed') {
     return `+${Math.round(delta)}s`;
   }
-  return `+${delta.toFixed(1)} kg`;
+  return `+${delta.toFixed(1)} lb`;
 }
+
+interface ExerciseRowProps {
+  exercise: CategoryExerciseProgress;
+  accentColor: string;
+  onPress: () => void;
+}
+
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPress }) => {
+  const delta = formatDelta(exercise);
+  const isPositiveDelta = delta !== null && delta !== '\u2013';
+  const bestValue = formatBestValue(exercise);
+  const sessionCount = exercise.sparklinePoints.length;
+  const [sparkWidth, setSparkWidth] = useState(0);
+
+  const onSparklineLayout = useCallback((e: LayoutChangeEvent) => {
+    setSparkWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  return (
+    <TouchableOpacity
+      testID="exercise-row"
+      style={styles.exerciseRow}
+      activeOpacity={0.7}
+      onPress={onPress}>
+      {/* Header: name + delta badge */}
+      <View style={styles.exerciseHeader}>
+        <Text style={styles.exerciseName} numberOfLines={1}>
+          {exercise.exerciseName}
+        </Text>
+        {delta !== null && (
+          <View
+            style={[
+              styles.deltaBadge,
+              {
+                backgroundColor: isPositiveDelta
+                  ? accentColor + '1A'
+                  : colors.surface,
+              },
+            ]}>
+            <Text
+              testID="delta-text"
+              style={[
+                styles.deltaText,
+                { color: isPositiveDelta ? accentColor : colors.secondary },
+              ]}>
+              {delta}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Stats row: best value, sessions, last trained */}
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: accentColor }]}>{bestValue}</Text>
+          <Text style={styles.statLabel}>best</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{sessionCount}</Text>
+          <Text style={styles.statLabel}>{sessionCount === 1 ? 'session' : 'sessions'}</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{formatRelativeTime(exercise.lastTrainedAt)}</Text>
+          <Text style={styles.statLabel}>last</Text>
+        </View>
+      </View>
+
+      {/* Sparkline with gradient fill */}
+      <View style={styles.sparklineContainer} onLayout={onSparklineLayout}>
+        <MiniSparkline
+          data={exercise.sparklinePoints}
+          width={sparkWidth || 280}
+          height={36}
+          color={accentColor}
+          strokeWidth={1.5}
+          showGradientFill
+        />
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export function CategoryProgressScreen() {
   const navigation = useNavigation<ScreenNavProp>();
@@ -45,6 +136,8 @@ export function CategoryProgressScreen() {
 
   const [exercises, setExercises] = useState<CategoryExerciseProgress[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('All');
+
+  const accentColor = getCategoryColor(category);
 
   useFocusEffect(
     useCallback(() => {
@@ -55,8 +148,8 @@ export function CategoryProgressScreen() {
           if (!cancelled) {
             setExercises(data);
           }
-        } catch {
-          // silently handle fetch errors
+        } catch (err) {
+          console.warn('CategoryProgress data fetch failed:', err);
         }
       })();
       return () => { cancelled = true; };
@@ -78,6 +171,9 @@ export function CategoryProgressScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {title}
         </Text>
+        <Text style={styles.exerciseCountBadge}>
+          {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'}
+        </Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -88,7 +184,10 @@ export function CategoryProgressScreen() {
               key={range}
               style={[
                 styles.filterButton,
-                timeRange === range && styles.filterButtonActive,
+                timeRange === range && [
+                  styles.filterButtonActive,
+                  { backgroundColor: accentColor },
+                ],
               ]}
               activeOpacity={0.7}
               onPress={() => setTimeRange(range)}>
@@ -109,46 +208,21 @@ export function CategoryProgressScreen() {
             <Text style={styles.emptyText}>No exercises found</Text>
           </View>
         ) : (
-          exercises.map(exercise => {
-            const delta = formatDelta(exercise);
-            const isPositiveDelta = delta !== null && delta !== '\u2013';
-            return (
-              <TouchableOpacity
-                key={exercise.exerciseId}
-                testID="exercise-row"
-                style={styles.exerciseRow}
-                activeOpacity={0.7}
-                onPress={() =>
-                  navigation.navigate('ExerciseProgress', {
-                    exerciseId: exercise.exerciseId,
-                    exerciseName: exercise.exerciseName,
-                    measurementType: exercise.measurementType,
-                  })
-                }>
-                <View style={styles.exerciseInfo}>
-                  <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
-                  <View style={styles.exerciseMeta}>
-                    {delta !== null && (
-                      <Text
-                        testID="delta-text"
-                        style={[
-                          styles.deltaText,
-                          isPositiveDelta ? styles.deltaPositive : styles.deltaNeutral,
-                        ]}>
-                        {delta}
-                      </Text>
-                    )}
-                    <Text style={styles.timeAgo}>
-                      {formatRelativeTime(exercise.lastTrainedAt)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.sparklineContainer}>
-                  <MiniSparkline data={exercise.sparklinePoints} />
-                </View>
-              </TouchableOpacity>
-            );
-          })
+          exercises.map(exercise => (
+            <ExerciseRow
+              key={exercise.exerciseId}
+              exercise={exercise}
+              accentColor={accentColor}
+              onPress={() =>
+                navigation.navigate('ExerciseProgress', {
+                  exerciseId: exercise.exerciseId,
+                  exerciseName: exercise.exerciseName,
+                  measurementType: exercise.measurementType,
+                  category,
+                })
+              }
+            />
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -170,6 +244,9 @@ const styles = StyleSheet.create({
   backButton: {
     marginRight: spacing.md,
     padding: spacing.xs,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   backArrow: {
     color: colors.primary,
@@ -180,6 +257,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: weightBold,
     flex: 1,
+  },
+  exerciseCountBadge: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
   },
   scrollView: {
     flex: 1,
@@ -219,6 +301,8 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     fontSize: fontSize.base,
   },
+
+  /* ── Exercise Row ──────────────────────────────────────────────── */
   exerciseRow: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: 14,
@@ -226,40 +310,55 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.base,
     marginBottom: spacing.sm,
+  },
+  exerciseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  exerciseInfo: {
-    flex: 1,
-    marginRight: spacing.md,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
   exerciseName: {
     color: colors.primary,
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
-    marginBottom: spacing.xs,
+    flex: 1,
+    marginRight: spacing.sm,
   },
-  exerciseMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
+  deltaBadge: {
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   deltaText: {
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  statValue: {
+    color: colors.primary,
     fontSize: fontSize.sm,
-    fontWeight: weightMedium,
+    fontWeight: weightSemiBold,
   },
-  deltaPositive: {
-    color: colors.accent,
-  },
-  deltaNeutral: {
+  statLabel: {
     color: colors.secondary,
+    fontSize: fontSize.xs,
   },
-  timeAgo: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
+  statDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing.sm,
   },
   sparklineContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    // sparkline fills full width
   },
 });

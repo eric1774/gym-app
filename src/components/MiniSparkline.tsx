@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, {Polyline} from 'react-native-svg';
+import Svg, {Polyline, Defs, LinearGradient, Stop, Polygon} from 'react-native-svg';
 import {colors} from '../theme/colors';
 
 interface MiniSparklineProps {
@@ -8,6 +8,7 @@ interface MiniSparklineProps {
   height?: number;
   color?: string;
   strokeWidth?: number;
+  showGradientFill?: boolean;
 }
 
 const PADDING = 2;
@@ -18,6 +19,7 @@ export const MiniSparkline: React.FC<MiniSparklineProps> = ({
   height = 30,
   color = colors.accent,
   strokeWidth = 2,
+  showGradientFill = false,
 }) => {
   if (data.length === 0) {
     return null;
@@ -26,7 +28,6 @@ export const MiniSparkline: React.FC<MiniSparklineProps> = ({
   let pointsString: string;
 
   if (data.length === 1) {
-    // Single point: horizontal line at mid-height
     const midY = height / 2;
     pointsString = `0,${midY} ${width},${midY}`;
   } else {
@@ -46,8 +47,23 @@ export const MiniSparkline: React.FC<MiniSparklineProps> = ({
     pointsString = points.join(' ');
   }
 
+  const firstX = PADDING;
+  const lastX = data.length <= 1 ? width : PADDING + ((data.length - 1) / (data.length - 1)) * (width - 2 * PADDING);
+  const fillPoints = `${pointsString} ${lastX},${height} ${firstX},${height}`;
+
   return (
     <Svg width={width} height={height}>
+      {showGradientFill && (
+        <>
+          <Defs>
+            <LinearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={color} stopOpacity="0.25" />
+              <Stop offset="1" stopColor={color} stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+          <Polygon points={fillPoints} fill="url(#sparkFill)" />
+        </>
+      )}
       <Polyline
         points={pointsString}
         fill="none"

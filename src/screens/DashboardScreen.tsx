@@ -58,8 +58,8 @@ export function DashboardScreen() {
             setCategories(result);
             setNextWorkout(nextDay);
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('Dashboard data fetch failed:', err);
         }
       })();
       return () => { cancelled = true; };

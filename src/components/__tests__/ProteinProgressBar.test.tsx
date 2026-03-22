@@ -85,4 +85,42 @@ describe('ProteinProgressBar', () => {
     await waitFor(() => expect(setProteinGoal).toHaveBeenCalledWith(250));
     expect(onGoalChanged).toHaveBeenCalledWith(250);
   });
+
+  it('shows validation error for invalid input', async () => {
+    const { getByText, getByDisplayValue } = render(
+      <ProteinProgressBar goal={200} current={100} average={null} onGoalChanged={jest.fn()} />,
+    );
+    fireEvent.press(getByText(/consumed/));
+    fireEvent.changeText(getByDisplayValue('200'), 'abc');
+    fireEvent.press(getByText('Save'));
+    await waitFor(() => expect(getByText('Please enter a number greater than 0')).toBeTruthy());
+  });
+
+  it('shows error when setProteinGoal fails', async () => {
+    (setProteinGoal as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+    const { getByText, getByDisplayValue } = render(
+      <ProteinProgressBar goal={200} current={100} average={null} onGoalChanged={jest.fn()} />,
+    );
+    fireEvent.press(getByText(/consumed/));
+    fireEvent.changeText(getByDisplayValue('200'), '250');
+    fireEvent.press(getByText('Save'));
+    await waitFor(() => expect(getByText('DB error')).toBeTruthy());
+  });
+
+  it('cancels edit mode', () => {
+    const { getByText, queryByText } = render(
+      <ProteinProgressBar goal={200} current={100} average={null} onGoalChanged={jest.fn()} />,
+    );
+    fireEvent.press(getByText(/consumed/));
+    expect(getByText('Cancel')).toBeTruthy();
+    fireEvent.press(getByText('Cancel'));
+    expect(queryByText('Daily protein goal (grams)')).toBeNull();
+  });
+
+  it('handles goal of 0', () => {
+    const { getByText } = render(
+      <ProteinProgressBar goal={0} current={50} average={null} onGoalChanged={jest.fn()} />,
+    );
+    expect(getByText('0%')).toBeTruthy();
+  });
 });

@@ -26,6 +26,64 @@ interface ExerciseTargetRowProps {
   onUngroup?: () => void;
 }
 
+function getTargetsText(exercise: Exercise, dayExercise: ProgramDayExercise): string {
+  if (exercise.measurementType === 'timed') { return 'Timed'; }
+  if (dayExercise.targetWeightKg > 0) {
+    return `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightKg}lb`;
+  }
+  return `${dayExercise.targetSets}x${dayExercise.targetReps}`;
+}
+
+function LeftColumn({
+  selectionMode, isSelected, onSelect,
+  onMoveUp, onMoveDown, isFirst, isLast,
+}: Readonly<{
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+}>) {
+  if (selectionMode) {
+    return (
+      <TouchableOpacity
+        style={styles.checkboxColumn}
+        onPress={onSelect}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+          {isSelected && <Text style={styles.checkboxMark}>{'\u2713'}</Text>}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <View style={styles.reorderColumn}>
+      {onMoveUp && !isFirst ? (
+        <TouchableOpacity
+          style={styles.reorderButton}
+          onPress={onMoveUp}
+          hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}>
+          <Text style={styles.reorderIcon}>{'\u25B2'}</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.reorderPlaceholder} />
+      )}
+      {onMoveDown && !isLast ? (
+        <TouchableOpacity
+          style={styles.reorderButton}
+          onPress={onMoveDown}
+          hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}>
+          <Text style={styles.reorderIcon}>{'\u25BC'}</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.reorderPlaceholder} />
+      )}
+    </View>
+  );
+}
+
 export function ExerciseTargetRow({
   exercise,
   dayExercise,
@@ -42,14 +100,7 @@ export function ExerciseTargetRow({
   onUngroup,
 }: ExerciseTargetRowProps) {
   const [showActions, setShowActions] = useState(false);
-
-  const isTimed = exercise.measurementType === 'timed';
-  const targetsText = isTimed
-    ? 'Timed'
-    : dayExercise.targetWeightKg > 0
-      ? `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightKg}lb`
-      : `${dayExercise.targetSets}x${dayExercise.targetReps}`;
-
+  const targetsText = getTargetsText(exercise, dayExercise);
   const isInSuperset = supersetGroupId != null;
 
   return (
@@ -59,40 +110,15 @@ export function ExerciseTargetRow({
       onLongPress={selectionMode ? undefined : () => setShowActions(prev => !prev)}
       activeOpacity={0.7}>
 
-      {/* Left column: checkbox in selection mode, reorder buttons otherwise */}
-      {selectionMode ? (
-        <TouchableOpacity
-          style={styles.checkboxColumn}
-          onPress={onSelect}
-          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
-          <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-            {isSelected && <Text style={styles.checkboxMark}>{'\u2713'}</Text>}
-          </View>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.reorderColumn}>
-          {onMoveUp && !isFirst ? (
-            <TouchableOpacity
-              style={styles.reorderButton}
-              onPress={onMoveUp}
-              hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}>
-              <Text style={styles.reorderIcon}>{'\u25B2'}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.reorderPlaceholder} />
-          )}
-          {onMoveDown && !isLast ? (
-            <TouchableOpacity
-              style={styles.reorderButton}
-              onPress={onMoveDown}
-              hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}>
-              <Text style={styles.reorderIcon}>{'\u25BC'}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.reorderPlaceholder} />
-          )}
-        </View>
-      )}
+      <LeftColumn
+        selectionMode={selectionMode}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        isFirst={isFirst}
+        isLast={isLast}
+      />
 
       {/* Exercise info */}
       <View style={styles.info}>

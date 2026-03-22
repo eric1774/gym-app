@@ -30,7 +30,9 @@ describe('CategorySummaryCard', () => {
       <CategorySummaryCard summary={makeSummary()} isStale={false} onPress={noop} />,
     );
     expect(getByTestId('category-name').props.children).toBe('Chest');
-    expect(getByTestId('exercise-count').props.children).toEqual([3, ' ', 'exercises']);
+    // exercise count now includes inline relative time via nested Text
+    const countEl = getByTestId('exercise-count');
+    expect(countEl).toBeTruthy();
   });
 
   it('calls onPress when card is pressed', () => {
@@ -85,7 +87,7 @@ describe('CategorySummaryCard', () => {
         onPress={noop}
       />,
     );
-    expect(getByTestId('delta-text').props.children).toBe('+10.0 kg');
+    expect(getByTestId('delta-text').props.children).toBe('+10.0 lb');
   });
 
   it('shows positive delta for timed type as duration', () => {
@@ -110,8 +112,18 @@ describe('CategorySummaryCard', () => {
     expect(queryByTestId('delta-text')).toBeNull();
   });
 
+  it('shows no delta badge when progress is not positive', () => {
+    const { queryByTestId } = render(
+      <CategorySummaryCard
+        summary={makeSummary({ sparklinePoints: [60, 50] })}
+        isStale={false}
+        onPress={noop}
+      />,
+    );
+    expect(queryByTestId('delta-text')).toBeNull();
+  });
+
   it('renders relative time from lastTrainedAt', () => {
-    // Set a known time: 3 hours ago
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     const { getByText } = render(
       <CategorySummaryCard

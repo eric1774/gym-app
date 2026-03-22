@@ -12,11 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession } from '../types';
-type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' };
+type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
 type RouteParams = RouteProp<{ ExerciseProgress: ExerciseProgressParams }, 'ExerciseProgress'>;
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
@@ -56,8 +56,9 @@ function formatDuration(totalSeconds: number): string {
 export function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
-  const { exerciseId, exerciseName, measurementType } = route.params;
+  const { exerciseId, exerciseName, measurementType, category } = route.params;
   const isTimed = measurementType === 'timed';
+  const accentColor = category ? getCategoryColor(category) : colors.accent;
 
   const [progressData, setProgressData] = useState<ExerciseProgressPoint[]>([]);
   const [historyData, setHistoryData] = useState<ExerciseHistorySession[]>([]);
@@ -85,6 +86,19 @@ export function ExerciseProgressScreen() {
     }, [exerciseId]),
   );
 
+  const confirmDeleteHistory = useCallback(
+    async (sessionId: number) => {
+      try {
+        await deleteExerciseHistorySession(sessionId, exerciseId);
+        setHistoryData(prev => prev.filter(s => s.sessionId !== sessionId));
+        setProgressData(prev => prev.filter(p => p.sessionId !== sessionId));
+      } catch {
+        // ignore
+      }
+    },
+    [exerciseId],
+  );
+
   const handleDeleteHistory = useCallback(
     (session: ExerciseHistorySession) => {
       Alert.alert(
@@ -95,20 +109,12 @@ export function ExerciseProgressScreen() {
           {
             text: 'Delete',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteExerciseHistorySession(session.sessionId, exerciseId);
-                setHistoryData(prev => prev.filter(s => s.sessionId !== session.sessionId));
-                setProgressData(prev => prev.filter(p => p.sessionId !== session.sessionId));
-              } catch {
-                // ignore
-              }
-            },
+            onPress: () => { confirmDeleteHistory(session.sessionId); },
           },
         ],
       );
     },
-    [exerciseId],
+    [confirmDeleteHistory],
   );
 
   const filteredProgress = useMemo(() => {
@@ -135,7 +141,7 @@ export function ExerciseProgressScreen() {
           data: isTimed
             ? filteredProgress.map(p => p.bestReps)
             : filteredProgress.map(p => p.bestWeightKg),
-          color: () => colors.accent,
+          color: () => accentColor,
           strokeWidth: 2,
         },
       ],
@@ -165,7 +171,7 @@ export function ExerciseProgressScreen() {
               key={range}
               style={[
                 styles.filterButton,
-                timeRange === range && styles.filterButtonActive,
+                timeRange === range && [styles.filterButtonActive, { backgroundColor: accentColor }],
               ]}
               activeOpacity={0.7}
               onPress={() => setTimeRange(range)}>
@@ -200,12 +206,12 @@ export function ExerciseProgressScreen() {
                 backgroundGradientFrom: colors.surface,
                 backgroundGradientTo: colors.surface,
                 decimalPlaces: isTimed ? 0 : 1,
-                color: () => colors.accent,
+                color: () => accentColor,
                 labelColor: () => colors.secondary,
                 propsForDots: {
                   r: '4',
                   strokeWidth: '0',
-                  fill: colors.accent,
+                  fill: accentColor,
                 },
               }}
               bezier
@@ -221,7 +227,7 @@ export function ExerciseProgressScreen() {
           <Text style={styles.noDataText}>No sessions recorded yet.</Text>
         ) : (
           historyData.map(session => (
-            <View key={session.sessionId} style={styles.historyCard}>
+            <View key={session.sessionId} style={[styles.historyCard, { borderLeftColor: accentColor, borderLeftWidth: 3 }]}>
               <View style={styles.historyCardHeader}>
                 <Text style={styles.historyDate}>
                   {formatDateReadable(session.date)}

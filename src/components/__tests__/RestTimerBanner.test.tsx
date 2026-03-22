@@ -25,4 +25,11 @@ describe('RestTimerBanner', () => {
     fireEvent.press(getByText('Skip'));
     expect(mockFn).toHaveBeenCalledTimes(1);
   });
+
+  it('handles totalSeconds of 0 without crashing', () => {
+    const { getByText } = render(
+      <RestTimerBanner remainingSeconds={0} totalSeconds={0} onStop={jest.fn()} />,
+    );
+    expect(getByText('0:00')).toBeTruthy();
+  });
 });
