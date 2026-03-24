@@ -83,7 +83,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Add live Garmin heart rate display during workouts via BLE, with configurable HR zones, session HR persistence, and post-workout HR stats.
 
-- [ ] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService
+- [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [ ] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX
 - [ ] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details
 - [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
@@ -100,7 +100,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
   3. DB migration v8 runs cleanly on a device upgrading from schema v7: heart_rate_samples table exists and avg_hr/peak_hr columns exist on workout_sessions
   4. Jest mock for react-native-ble-plx is registered so the existing test suite passes without modification
   5. HRSettingsService can read and write age, maxHrOverride, and pairedDeviceId from AsyncStorage
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 24-01-PLAN.md — Dependencies, permissions, types, BleManager singleton, Jest mock
 - [x] 24-02-PLAN.md — DB migration v8, HRSettingsService with AsyncStorage CRUD
@@ -167,7 +167,7 @@ Plans:
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
 | 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
-| 24. BLE Foundation | v1.6 | 1/2 | In Progress|  |
+| 24. BLE Foundation | v1.6 | 1/2 | Complete    | 2026-03-24 |
 | 25. Connection Management | v1.6 | 0/? | Not started | - |
 | 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |
