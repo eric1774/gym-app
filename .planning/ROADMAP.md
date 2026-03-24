@@ -7,7 +7,8 @@
 - ✅ **v1.2 Meal Library** — Phase 8 (shipped 2026-03-09)
 - ✅ **v1.3 Workout Intelligence & Speed** — Phases 9-14 (shipped 2026-03-14)
 - ✅ **v1.4 Test Coverage** — Phases 15-21 (shipped 2026-03-17)
-- 🚧 **v1.5 Program Data Export** — Phases 22-23 (in progress)
+- ✅ **v1.5 Program Data Export** — Phases 22-23 (shipped 2026-03-22)
+- 🚧 **v1.6 Heart Rate Monitoring** — Phases 24-27 (in progress)
 
 ## Phases
 
@@ -68,47 +69,83 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 </details>
 
-### 🚧 v1.5 Program Data Export (In Progress)
+<details>
+<summary>✅ v1.5 Program Data Export (Phases 22-23) — SHIPPED 2026-03-22</summary>
 
 **Milestone Goal:** Let users export a program's completed workout data as a structured JSON file saved directly to their phone.
 
 - [x] **Phase 22: Export Data Layer** — DB query and JSON assembly for completed workout data, structured by week/day with program metadata (completed 2026-03-22)
 - [x] **Phase 23: Export UI & File Delivery** — Three-dot menu trigger, loading indicator, Android share/save dialog, descriptive filename, and result toast (completed 2026-03-22)
 
+</details>
+
+### 🚧 v1.6 Heart Rate Monitoring (In Progress)
+
+**Milestone Goal:** Add live Garmin heart rate display during workouts via BLE, with configurable HR zones, session HR persistence, and post-workout HR stats.
+
+- [ ] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService
+- [ ] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX
+- [ ] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details
+- [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
+
 ## Phase Details
 
-### Phase 22: Export Data Layer
-**Goal**: Program workout data can be queried and assembled into a complete, correctly-structured JSON export
-**Depends on**: Phase 21 (v1.4 complete)
-**Requirements**: EXPD-01, EXPD-02, EXPD-03, EXPD-04, EXPD-05
+### Phase 24: BLE Foundation
+**Goal**: The BLE infrastructure needed by all subsequent phases is in place — permissions are declared and requested, the BleManager singleton is initialized without memory leaks, the DB schema supports HR data, and shared types plus HRSettingsService are available throughout the codebase.
+**Depends on**: Phase 23
+**Requirements**: BLE-04
 **Success Criteria** (what must be TRUE):
-  1. Calling the export function for a program returns a JSON object structured as weeks containing days
-  2. Each day entry lists every exercise with the actual sets, reps, and weights the user completed
-  3. Days that were not completed are absent from the export output
-  4. The JSON object includes program-level metadata: name, total weeks, and completion percentage
-  5. A partially-completed program produces a partial export containing only its completed days
-**Plans:** 1/1 plans complete
+  1. App requests BLUETOOTH_SCAN and BLUETOOTH_CONNECT at runtime on Android 12+ (and BLUETOOTH + ACCESS_FINE_LOCATION on Android 11 and below) before any BLE call
+  2. A single BleManager instance exists as a module-level constant — no duplicate instances created on re-render or hot reload
+  3. DB migration v8 runs cleanly on a device upgrading from schema v7: heart_rate_samples table exists and avg_hr/peak_hr columns exist on workout_sessions
+  4. Jest mock for react-native-ble-plx is registered so the existing test suite passes without modification
+  5. HRSettingsService can read and write age, maxHrOverride, and pairedDeviceId from AsyncStorage
+**Plans:** 1/2 plans executed
 Plans:
-- [x] 22-01-PLAN.md — Export types, DB query function, and comprehensive tests
+- [ ] 24-01-PLAN.md — Dependencies, permissions, types, BleManager singleton, Jest mock
+- [x] 24-02-PLAN.md — DB migration v8, HRSettingsService with AsyncStorage CRUD
 
-### Phase 23: Export UI & File Delivery
-**Goal**: Users can trigger an export from the Programs page and receive a saved JSON file on their phone
-**Depends on**: Phase 22
-**Requirements**: UI-01, UI-02, UI-03, FILE-01, FILE-02
+### Phase 25: Connection Management
+**Goal**: Users can scan for nearby BLE heart rate devices, select and connect to their Garmin Forerunner 245, have that device remembered for auto-reconnect, and see the live connection state in the workout header — including graceful "--" display on mid-workout disconnect with automatic reconnect attempt.
+**Depends on**: Phase 24
+**Requirements**: BLE-01, BLE-02, BLE-03, BLE-05, HR-04
 **Success Criteria** (what must be TRUE):
-  1. Tapping the three-dot menu on a program card shows an Export option
-  2. After tapping Export, a loading indicator is visible while the data is prepared
-  3. Android's native share/save dialog appears so the user can choose where to save the file
-  4. The suggested filename follows the pattern ProgramName_YYYY-MM-DD.json
-  5. After the dialog is dismissed, a success or error toast confirms the outcome
-**Plans:** 1/1 plans complete
-Plans:
-- [x] 23-01-PLAN.md — ExportToast component, three-dot menu with Export/Delete, share flow, and tests
+  1. User can open a scan screen, see nearby BLE heart rate devices appear in a list, and tap one to connect
+  2. After connecting to the Garmin Forerunner 245, the device ID is persisted; the next time the workout screen opens, the app connects automatically without requiring a scan
+  3. A connection state indicator (connected / reconnecting / disconnected) is visible in the workout header during an active workout
+  4. When the watch disconnects mid-workout, the BPM display shows "--" and the app attempts one auto-reconnect without any user action required
+  5. HeartRateContext is wired to BLEHeartRateService and exposes currentBpm, deviceState, and session actions to the rest of the app
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 26: HR Data Persistence
+**Goal**: HR samples collected during a workout are reliably stored without impacting set-logging speed, and avg/peak HR computed from those samples is visible on the workout summary card and in the calendar day detail view.
+**Depends on**: Phase 25
+**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04
+**Success Criteria** (what must be TRUE):
+  1. HR samples accumulate in memory during a workout and are batch-inserted into hr_samples in a single SQLite transaction when the session ends — no per-sample DB writes during an active workout
+  2. avg_hr and peak_hr are computed from the in-memory buffer on session end and persisted to workout_sessions before the summary screen renders
+  3. The workout summary card displays average HR and peak HR after a session that included a connected heart rate monitor
+  4. The calendar day detail view displays average HR and peak HR for past sessions that recorded HR data
+**Plans**: TBD
+
+### Phase 27: Live Display & Settings UI
+**Goal**: Users see their live BPM color-coded by zone in the workout header throughout a session, and can configure age and max HR in Settings and initiate device pairing from Settings.
+**Depends on**: Phase 26
+**Requirements**: HR-01, HR-02, HR-03, SET-01, SET-02
+**Success Criteria** (what must be TRUE):
+  1. Live BPM updates in the workout header approximately once per second during an active session with a connected device
+  2. The BPM display is color-coded to match the user's current HR zone (5-zone model: Zone 1–5 at 50/60/70/80/90% of max HR)
+  3. A zone label ("Zone 3 — Aerobic") is shown alongside the BPM number
+  4. User can enter their age in Settings, and the app automatically calculates max HR using the Tanaka formula (208 − 0.7 × age)
+  5. User can initiate a device scan and pair their Garmin from the Settings screen (without needing to start a workout first)
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
-| Phase | Milestone | Plans | Status | Completed |
-|-------|-----------|-------|--------|-----------|
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
 | 1-3. Core Workout Tracking | v1.0 | — | Complete | 2026-03-06 |
 | 4. Data Foundation | v1.1 | 2/2 | Complete | 2026-03-07 |
 | 5. Protein Tab and Meal Logging | v1.1 | 2/2 | Complete | 2026-03-08 |
@@ -128,5 +165,9 @@ Plans:
 | 19. Screens Part 1 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 20. Screens Part 2 | v1.4 | 2/2 | Complete | 2026-03-16 |
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
-| 22. Export Data Layer | v1.5 | 1/1 | Complete    | 2026-03-22 |
-| 23. Export UI & File Delivery | v1.5 | 1/1 | Complete   | 2026-03-22 |
+| 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
+| 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
+| 24. BLE Foundation | v1.6 | 1/2 | In Progress|  |
+| 25. Connection Management | v1.6 | 0/? | Not started | - |
+| 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
+| 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |

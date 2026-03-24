@@ -1,54 +1,65 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Program Data Export
-status: unknown
-stopped_at: Completed 23-export-ui-file-delivery/23-01-PLAN.md
-last_updated: "2026-03-22T18:05:10.252Z"
+milestone: v1.6
+milestone_name: Heart Rate Monitoring
+status: Phase complete — ready for verification
+stopped_at: Completed 24-ble-foundation/24-01-PLAN.md
+last_updated: "2026-03-24T20:46:58.186Z"
 progress:
-  total_phases: 2
-  completed_phases: 2
+  total_phases: 4
+  completed_phases: 0
   total_plans: 2
-  completed_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-19)
+See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** Phase 23 — export-ui-file-delivery
+**Current focus:** Phase 24 — ble-foundation
 
 ## Current Position
 
-Phase: 23 (export-ui-file-delivery) — EXECUTING
-Plan: 1 of 1
+Phase: 24 (ble-foundation) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Phases defined | 2 |
-| Phases complete | 0 |
-| Requirements mapped | 10/10 |
-| Coverage | 100% |
-| Phase 22-export-data-layer P01 | 6 | 2 tasks | 4 files |
-| Phase 23 P01 | 6 | 3 tasks | 4 files |
+**Velocity:**
+
+- Total plans completed: 0 (v1.6)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| — | — | — | — |
+
+*Updated after each plan completion*
+| Phase 24-ble-foundation P02 | 8 | 2 tasks | 7 files |
+| Phase 24-ble-foundation P01 | 8 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-- Two-phase structure: data layer first (Phase 22), then UI + file delivery (Phase 23)
-- Export triggers from program card three-dot menu on Programs page (not program detail screen)
-- JSON-only format (CSV/XML deferred as out of scope)
-- Android share/save dialog handles file destination — no custom file picker needed
-- [Phase 22-export-data-layer]: Map.forEach() used instead of for...of Map iteration for ES5 TypeScript target compatibility
-- [Phase 22-export-data-layer]: Completion % uses DISTINCT (program_day_id, program_week) pairs to avoid inflation from duplicate sessions
-- [Phase 23]: nativeEvent access guarded with optional chaining for test environment compatibility in menu button onPress
-- [Phase 23]: PopupMenu uses Modal transparent with Pressable backdrop for native dismissal without custom file picker
+- BleManager must be a module-level singleton in BLEHeartRateService.ts — never instantiated inside a component or hook (prevents native memory leaks)
+- HR samples buffer in a useRef during workout; batch-flushed to SQLite in one transaction on session end (protects set-logging speed)
+- Zone computation uses Tanaka formula (208 − 0.7×age), not 220-age (more accurate for adults over 40)
+- Age, maxHrOverride, and pairedDeviceId stored in AsyncStorage (not SQLite — three scalar preferences, never joined relationally)
+- HeartRateContext mirrors TimerContext pattern — proven architecture for BLE-to-React bridge
+- Reconnect uses exponential backoff (1/2/4/8/16s, max 5 attempts) triggered by onDeviceDisconnected
+- [Phase 24-ble-foundation]: AsyncStorage keys are prefixed hr_settings_ for namespace clarity
+- [Phase 24-ble-foundation]: Tanaka formula (208 - 0.7 * age) used per D-11 for max HR computation
+- [Phase 24-ble-foundation]: @react-native-async-storage/async-storage added to dependencies for HR settings AsyncStorage access
+- [Phase 24-ble-foundation]: BleManager instantiated at module level in BLEHeartRateService.ts — not inside component/hook — prevents native memory leaks (D-09)
+- [Phase 24-ble-foundation]: Android 12+ (API 31+) uses BLUETOOTH_SCAN + BLUETOOTH_CONNECT; Android 11 and below uses ACCESS_FINE_LOCATION (D-02)
+- [Phase 24-ble-foundation]: AsyncStorage chosen over SQLite for HR settings (age, maxHrOverride, pairedDeviceId) — three scalar preferences, never joined relationally (D-12)
 
 ### Pending Todos
 
@@ -56,11 +67,12 @@ None.
 
 ### Blockers/Concerns
 
-None active.
+- Phase 25 requires physical Garmin Forerunner 245 testing — Garmin Connect conflict (GATT_ERROR 133) behavior on the specific device has not been verified; consider /gsd:research-phase if unexpected behavior encountered
+- react-native-ble-plx v3.5.1 on RN 0.84.1: validate with minimal BLE scan on device in Phase 24 before full implementation proceeds
 
 ## Session Continuity
 
-Last session: 2026-03-22T18:05:10.246Z
-Stopped at: Completed 23-export-ui-file-delivery/23-01-PLAN.md
+Last session: 2026-03-24T20:46:58.182Z
+Stopped at: Completed 24-ble-foundation/24-01-PLAN.md
 Resume file: None
-Next step: `/gsd:plan-phase 22`
+Next step: /gsd:plan-phase 24
