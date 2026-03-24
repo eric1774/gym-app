@@ -20,6 +20,7 @@ interface Migration {
  * - Version 5: Add program_week to workout_sessions
  * - Version 6: Deduplicate exercises, re-point history to winners
  * - Version 7: Add superset_group_id column to program_day_exercises
+ * - Version 8: Create heart_rate_samples table, add avg_hr/peak_hr to workout_sessions
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -237,6 +238,29 @@ const MIGRATIONS: Migration[] = [
     up: (tx: Transaction) => {
       tx.executeSql(
         'ALTER TABLE program_day_exercises ADD COLUMN superset_group_id INTEGER',
+      );
+    },
+  },
+  {
+    version: 8,
+    description: 'Create heart_rate_samples table and add avg_hr/peak_hr to workout_sessions',
+    up: (tx: Transaction) => {
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS heart_rate_samples (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id INTEGER NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+          bpm INTEGER NOT NULL,
+          recorded_at TEXT NOT NULL
+        )
+      `);
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_hr_samples_session ON heart_rate_samples(session_id)',
+      );
+      tx.executeSql(
+        'ALTER TABLE workout_sessions ADD COLUMN avg_hr REAL',
+      );
+      tx.executeSql(
+        'ALTER TABLE workout_sessions ADD COLUMN peak_hr INTEGER',
       );
     },
   },
