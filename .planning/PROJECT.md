@@ -49,10 +49,14 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ Component and context provider tests (rendering, interaction, lifecycle) — v1.4
 - ✓ Screen tests for all app screens including complex workout flows — v1.4
 - ✓ 82.26% global line coverage with Jest threshold enforcement — v1.4
+- ✓ Program data export as JSON via share/save dialog — v1.5
+- ✓ BLE foundation: Android permissions, BleManager singleton, DB migration v8, HR types, HRSettingsService — v1.6
 
 ### Active
 
-(No active milestone — use `/gsd:new-milestone` to start next)
+- BLE connection management: device scan, connect, auto-reconnect, connection state indicator — v1.6 Phase 25
+- HR data persistence: in-session buffering, batch flush, avg/peak HR aggregates — v1.6 Phase 26
+- Live HR display: BPM in workout header, zone coloring, age/max HR settings — v1.6 Phase 27
 
 ### Out of Scope
 
@@ -67,13 +71,13 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Platform**: Android only, local storage (no internet)
 - **Framework**: React Native with local SQLite for persistence
 - **Test Coverage**: 82.26% lines, 75.37% functions, 72.09% branches — Jest with 80/70 thresholds enforced
-- **DB Schema**: Migration v7 (latest — superset support)
+- **DB Schema**: Migration v8 (latest — heart_rate_samples table, avg_hr/peak_hr on workout_sessions)
 - **UI Directive**: Use ui-ux-pro-max for mobile UX best practices and dark-mint-card-ui for visual/aesthetic design — clean, minimal dark theme with mint accents
 - **UX Priority**: Speed of data entry during an active workout is the #1 UX constraint
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export
 
 ## Constraints
 
@@ -98,4 +102,4 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Object.defineProperty for db mock | Required because db export is read-only const | ✓ Good |
 
 ---
-*Last updated: 2026-03-17 after v1.4 milestone*
+*Last updated: 2026-03-24 after v1.6 Phase 24 (BLE Foundation)*
