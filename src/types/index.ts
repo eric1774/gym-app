@@ -271,3 +271,60 @@ export interface ProgramExport {
   exportedAt: string;
   weeks: ProgramExportWeek[];
 }
+
+// -- Heart Rate domain types (Phase 24) --
+
+/** A single heart rate sample recorded during a workout session. */
+export interface HRSample {
+  id: number;
+  sessionId: number;
+  bpm: number;
+  /** ISO 8601 timestamp (local, no Z suffix) */
+  recordedAt: string;
+}
+
+/** Possible states of the BLE device connection. */
+export type DeviceConnectionState =
+  | 'disconnected'
+  | 'scanning'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting';
+
+/** User-configurable HR settings stored in AsyncStorage. */
+export interface HRSettings {
+  /** User's age in years — required before pairing (per D-06) */
+  age: number | null;
+  /** User-overridden max HR, or null to use Tanaka formula (per D-08) */
+  maxHrOverride: number | null;
+  /** BLE device ID of previously paired device, or null if never paired */
+  pairedDeviceId: string | null;
+}
+
+/** Computed max HR (from age or override) and the 5-zone thresholds. */
+export interface HRZoneThresholds {
+  maxHr: number;
+  /** Zone boundaries: [zone1Min, zone2Min, zone3Min, zone4Min, zone5Min] at 50/60/70/80/90% of maxHr */
+  zones: [number, number, number, number, number];
+}
+
+/** The five HR training zones. */
+export type HRZoneNumber = 1 | 2 | 3 | 4 | 5;
+
+/** Zone metadata for display. */
+export interface HRZoneInfo {
+  zone: HRZoneNumber;
+  name: string;
+  minPercent: number;
+  maxPercent: number;
+  color: string;
+}
+
+/** HR zone constants — labels, colors, and percentage ranges for the 5-zone model. */
+export const HR_ZONES: HRZoneInfo[] = [
+  { zone: 1, name: 'Recovery',  minPercent: 50, maxPercent: 60, color: '#90EE90' },
+  { zone: 2, name: 'Easy',      minPercent: 60, maxPercent: 70, color: '#00BFFF' },
+  { zone: 3, name: 'Aerobic',   minPercent: 70, maxPercent: 80, color: '#FFD700' },
+  { zone: 4, name: 'Threshold', minPercent: 80, maxPercent: 90, color: '#FF8C00' },
+  { zone: 5, name: 'Max',       minPercent: 90, maxPercent: 100, color: '#FF4500' },
+];
