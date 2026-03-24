@@ -11,3 +11,12 @@ jest.mock('react-native/Libraries/LogBox/LogBox', () => ({
     ignoreAllLogs: jest.fn(),
   },
 }));
+
+// Mock @react-native-async-storage/async-storage for HR settings tests
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(() => Promise.resolve(null)),
+  setItem: jest.fn(() => Promise.resolve()),
+  removeItem: jest.fn(() => Promise.resolve()),
+  multiGet: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+}));

@@ -239,6 +239,17 @@ export interface CalendarSetDetail {
   isPR: boolean;
 }
 
+// -- Heart Rate domain types (Phase 24) --
+
+export interface HRSettings {
+  /** User's age in years; null if not yet set (required before pairing per D-06) */
+  age: number | null;
+  /** Optional manual override for max HR; null means use Tanaka formula (per D-08) */
+  maxHrOverride: number | null;
+  /** BLE device ID of the paired HR monitor; null if unpaired (per D-12) */
+  pairedDeviceId: string | null;
+}
+
 // -- Program Export types (Phase 22) --
 
 export interface ProgramExportSet {
