@@ -82,3 +82,14 @@ export const CREATE_PROGRAM_DAY_EXERCISES_TABLE = `
     sort_order INTEGER NOT NULL DEFAULT 0
   )
 `;
+
+// ── Heart Rate tables (Phase 24) ──────────────────────────────────
+
+export const CREATE_HEART_RATE_SAMPLES_TABLE = `
+  CREATE TABLE IF NOT EXISTS heart_rate_samples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    bpm INTEGER NOT NULL,
+    recorded_at TEXT NOT NULL
+  )
+`;
