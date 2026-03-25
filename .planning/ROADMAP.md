@@ -115,9 +115,9 @@ Plans:
   3. A connection state indicator (connected / reconnecting / disconnected) is visible in the workout header during an active workout
   4. When the watch disconnects mid-workout, the BPM display shows "--" and the app attempts one auto-reconnect without any user action required
   5. HeartRateContext is wired to BLEHeartRateService and exposes currentBpm, deviceState, and session actions to the rest of the app
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
-- [ ] 25-01-PLAN.md — HeartRateContext BLE state machine, presentation components, App.tsx provider wiring
+- [x] 25-01-PLAN.md — HeartRateContext BLE state machine, presentation components, App.tsx provider wiring
 - [ ] 25-02-PLAN.md — DeviceScanSheet bottom sheet, SettingsScreen HR Monitor card
 - [ ] 25-03-PLAN.md — WorkoutScreen header indicator, auto-reconnect, disconnect haptic
 **UI hint**: yes
@@ -172,6 +172,6 @@ Plans:
 | 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
-| 25. Connection Management | v1.6 | 0/3 | Planning | - |
+| 25. Connection Management | v1.6 | 1/3 | In Progress|  |
 | 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |
