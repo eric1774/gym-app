@@ -32,6 +32,9 @@ import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { checkForPR } from '../db/sets';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
+import { useHeartRate } from '../context/HeartRateContext';
+import { HRConnectionIndicator } from '../components/HRConnectionIndicator';
+import { getHRSettings } from '../services/HRSettingsService';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -548,6 +551,43 @@ export function WorkoutScreen() {
   const supersetGroupsRef = useRef<Map<number, number[]>>(new Map());
   const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
 
+  // ─── Heart Rate Integration ────────────────────────────────────────────────
+  const { deviceState, attemptAutoReconnect } = useHeartRate();
+  const [hasPairedDevice, setHasPairedDevice] = useState(false);
+  const prevDeviceStateRef = useRef(deviceState);
+
+  // Load paired device status on mount and when session changes
+  useEffect(() => {
+    let cancelled = false;
+    getHRSettings().then(settings => {
+      if (!cancelled) {
+        setHasPairedDevice(settings.pairedDeviceId !== null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [session]);
+
+  // Auto-reconnect on workout start (per D-09: fires on workout start only)
+  useEffect(() => {
+    if (session && hasPairedDevice) {
+      attemptAutoReconnect();
+    }
+  }, [session, hasPairedDevice, attemptAutoReconnect]);
+
+  // Disconnect haptic (per D-13: single impactMedium on transition to disconnected/reconnecting from connected)
+  useEffect(() => {
+    const prev = prevDeviceStateRef.current;
+    if (
+      prev === 'connected' &&
+      (deviceState === 'disconnected' || deviceState === 'reconnecting') &&
+      session // only during active workout
+    ) {
+      HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
+    }
+    prevDeviceStateRef.current = deviceState;
+  }, [deviceState, session]);
+  // ──────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (programDayId) {
       getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
@@ -895,6 +935,18 @@ export function WorkoutScreen() {
         <Text style={styles.volumeText}>
           {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
         </Text>
+
+        {/* HR Connection Indicator — only visible when device is paired (per D-07) */}
+        <HRConnectionIndicator
+          deviceState={deviceState}
+          visible={hasPairedDevice}
+        />
+
+        {/* BPM placeholder — shows "--" when paired but not connected (Phase 25 scope) */}
+        {hasPairedDevice && deviceState !== 'connected' && (
+          <Text style={styles.bpmPlaceholder}>--</Text>
+        )}
+
         <TouchableOpacity
           onPress={handleEndWorkout}
           style={styles.endButtonTouchable}
@@ -1095,6 +1147,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: weightSemiBold,
     color: colors.danger,
+  },
+  bpmPlaceholder: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
   },
   sessionBanner: {
     paddingHorizontal: spacing.base,
