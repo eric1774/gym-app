@@ -51,10 +51,10 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ 82.26% global line coverage with Jest threshold enforcement — v1.4
 - ✓ Program data export as JSON via share/save dialog — v1.5
 - ✓ BLE foundation: Android permissions, BleManager singleton, DB migration v8, HR types, HRSettingsService — v1.6
+- ✓ BLE connection management: device scan, connect, auto-reconnect, connection state indicator, disconnect UX — v1.6
 
 ### Active
 
-- BLE connection management: device scan, connect, auto-reconnect, connection state indicator — v1.6 Phase 25
 - HR data persistence: in-session buffering, batch flush, avg/peak HR aggregates — v1.6 Phase 26
 - Live HR display: BPM in workout header, zone coloring, age/max HR settings — v1.6 Phase 27
 
@@ -77,7 +77,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 BLE Foundation + Connection Management
 
 ## Constraints
 
@@ -102,4 +102,4 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Object.defineProperty for db mock | Required because db export is read-only const | ✓ Good |
 
 ---
-*Last updated: 2026-03-24 after v1.6 Phase 24 (BLE Foundation)*
+*Last updated: 2026-03-25 after v1.6 Phase 25 (Connection Management)*
