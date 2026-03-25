@@ -62,3 +62,4 @@ export {
   deleteLibraryMeal,
 } from './protein';
 export { exportProgramData } from './export';
+export { repairProgramData } from './repair';

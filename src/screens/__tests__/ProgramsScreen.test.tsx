@@ -10,15 +10,19 @@ jest.mock('../../db/dashboard', () => ({
 jest.mock('../../db/export', () => ({
   exportProgramData: jest.fn().mockResolvedValue(null),
 }));
+jest.mock('../../native/FileSaver', () => ({
+  saveFileToDevice: jest.fn().mockResolvedValue(true),
+}));
 
 import React from 'react';
-import { Alert, Share } from 'react-native';
+import { Alert } from 'react-native';
 import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../test-utils';
 import { ProgramsScreen } from '../ProgramsScreen';
 import { getPrograms, getProgramDays } from '../../db/programs';
 import { getProgramTotalCompleted } from '../../db/dashboard';
 import { exportProgramData } from '../../db/export';
+import { saveFileToDevice } from '../../native/FileSaver';
 
 describe('ProgramsScreen', () => {
   beforeEach(() => {
@@ -176,8 +180,8 @@ describe('ProgramsScreen', () => {
     expect(getByText('No workout data')).toBeTruthy();
   });
 
-  it('calls exportProgramData and Share.share on Export tap', async () => {
-    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+  it('calls exportProgramData and saveFileToDevice on Export tap', async () => {
+    (saveFileToDevice as jest.Mock).mockResolvedValue(true);
     (exportProgramData as jest.Mock).mockResolvedValue({
       programName: 'PPL',
       totalWeeks: 4,
@@ -198,11 +202,9 @@ describe('ProgramsScreen', () => {
     fireEvent.press(getByText('Export'));
 
     await waitFor(() => expect(exportProgramData).toHaveBeenCalledWith(1));
-    await waitFor(() => expect(shareSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: expect.stringMatching(/^PPL_.*\.json$/),
-      }),
+    await waitFor(() => expect(saveFileToDevice).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringMatching(/^PPL_.*\.json$/),
     ));
-    shareSpy.mockRestore();
   });
 });

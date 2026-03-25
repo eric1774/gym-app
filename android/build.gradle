@@ -20,6 +20,15 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
+allprojects {
+    repositories {
+        maven {
+            // @react-native-async-storage/async-storage ships shared_storage in a local Maven repo
+            url("${rootProject.projectDir}/../node_modules/@react-native-async-storage/async-storage/android/local_repo")
+        }
+    }
+}
+
 // Workaround: CMake creates hardlinks for .so files on Windows which Gradle 8.13 cannot snapshot.
 // After each CMake build task, replace hardlinked .so files with true copies.
 subprojects {

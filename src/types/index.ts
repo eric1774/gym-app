@@ -243,7 +243,7 @@ export interface CalendarSetDetail {
 
 export interface ProgramExportSet {
   setNumber: number;
-  weightKg: number;
+  weightLbs: number;
   reps: number;
   isWarmup: boolean;
 }

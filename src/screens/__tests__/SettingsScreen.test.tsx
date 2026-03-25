@@ -1,11 +1,13 @@
 import React from 'react';
-import { Share } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SettingsScreen } from '../SettingsScreen';
 
 jest.mock('../../db/dashboard', () => ({
   exportAllData: jest.fn().mockResolvedValue({ programs: [], exercises: [] }),
+}));
+jest.mock('../../native/FileSaver', () => ({
+  saveFileToDevice: jest.fn().mockResolvedValue(true),
 }));
 
 function renderSettings() {
@@ -37,18 +39,20 @@ describe('SettingsScreen', () => {
     expect(getByText('Local-only workout tracker')).toBeTruthy();
   });
 
-  it('calls exportAllData and Share.share when Export is pressed', async () => {
+  it('calls exportAllData and saveFileToDevice when Export is pressed', async () => {
     const { exportAllData } = require('../../db/dashboard');
-    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' } as any);
+    const { saveFileToDevice } = require('../../native/FileSaver');
 
     const { getByText } = renderSettings();
     fireEvent.press(getByText('Export'));
 
     await waitFor(() => {
       expect(exportAllData).toHaveBeenCalled();
-      expect(shareSpy).toHaveBeenCalled();
+      expect(saveFileToDevice).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.stringMatching(/^gymtrack-export-.*\.json$/),
+      );
     });
-    shareSpy.mockRestore();
   });
 
   it('handles export error gracefully', async () => {

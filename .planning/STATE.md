@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
-status: Ready to execute
-stopped_at: Completed 25-connection-management/25-03-PLAN.md
-last_updated: "2026-03-25T19:43:27.597Z"
+status: Ready to plan
+stopped_at: Completed 25-connection-management/25-02-PLAN.md
+last_updated: "2026-03-25T20:04:17.867Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 5
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 25 (connection-management) — EXECUTING
-Plan: 3 of 3
+Phase: 26
+Plan: Not started
 
 ## Performance Metrics
 
@@ -45,6 +45,7 @@ Plan: 3 of 3
 | Phase 24-ble-foundation P01 | 8 | 2 tasks | 7 files |
 | Phase 25-connection-management P01 | 7 | 2 tasks | 5 files |
 | Phase 25-connection-management P03 | 8 | 1 tasks | 1 files |
+| Phase 25-connection-management P02 | 15 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,7 @@ Plan: 3 of 3
 - [Phase 25-connection-management]: deviceStateRef mirrors deviceState to allow stopScan callback to read current BLE state from within async closures
 - [Phase 25-connection-management]: prevDeviceStateRef pattern for detecting connected->disconnected transitions in useEffect without extra state
 - [Phase 25-connection-management]: HR UI in WorkoutScreen gated by hasPairedDevice (D-07) — zero change for users without paired device
+- [Phase 25-connection-management]: DeviceScanSheet resets all local state on close to prevent stale UI on re-open; loadHRSettings refreshed after scan sheet closes to pick up newly-paired device
 
 ### Pending Todos
 
@@ -79,7 +81,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-25T19:43:27.593Z
-Stopped at: Completed 25-connection-management/25-03-PLAN.md
+Last session: 2026-03-25T19:54:53.013Z
+Stopped at: Completed 25-connection-management/25-02-PLAN.md
 Resume file: None
 Next step: /gsd:plan-phase 24

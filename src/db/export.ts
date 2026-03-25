@@ -10,6 +10,10 @@ import {
 /**
  * Export a program's completed workout data as a structured JSON object.
  *
+ * Week numbers come from the stored program_week column, which is set to the
+ * program's current_week at session creation time. Migration 9 repaired any
+ * historical sessions that were incorrectly backfilled to week 1 by migration 5.
+ *
  * Returns null if the program does not exist.
  * Returns a valid ProgramExport with empty weeks array if the program has no completed sessions.
  */
@@ -40,30 +44,35 @@ export async function exportProgramData(programId: number): Promise<ProgramExpor
   );
   const daysPerProgram = daysCountResult.rows.item(0).cnt as number;
 
-  // c) Fetch all completed sessions for this program
+  // c) Fetch ALL completed sessions for this program, ordered by week then completion time.
+  //    Uses stored program_week which reflects the program's current_week at session creation.
   const sessionsResult = await executeSql(
     database,
-    `SELECT ws.id AS session_id, ws.program_week, ws.completed_at,
-            pd.name AS day_name
+    `SELECT ws.id AS session_id, ws.completed_at, ws.program_week,
+            ws.program_day_id, pd.name AS day_name
      FROM workout_sessions ws
      INNER JOIN program_days pd ON pd.id = ws.program_day_id
      WHERE pd.program_id = ?
        AND ws.completed_at IS NOT NULL
        AND ws.program_week IS NOT NULL
-     ORDER BY ws.program_week ASC, ws.completed_at ASC`,
+     ORDER BY ws.program_week ASC, ws.completed_at ASC, ws.id ASC`,
     [programId],
   );
 
-  // d) For each session, fetch its sets with exercise names
-  // Build weeks map: weekNumber -> ProgramExportDay[]
+  // d) Group sessions by their stored program_week.
   const weeksMap = new Map<number, ProgramExportDay[]>();
+  const distinctPairs = new Set<string>();
 
   for (let i = 0; i < sessionsResult.rows.length; i++) {
     const sessionRow = sessionsResult.rows.item(i);
     const sessionId = sessionRow.session_id as number;
-    const weekNumber = sessionRow.program_week as number;
+    const dayId = sessionRow.program_day_id as number;
     const dayName = sessionRow.day_name as string;
     const completedAt = sessionRow.completed_at as string;
+    const weekNumber = sessionRow.program_week as number;
+
+    // Track distinct (day, week) pairs for completion %
+    distinctPairs.add(`${dayId}-${weekNumber}`);
 
     const setsResult = await executeSql(
       database,
@@ -89,7 +98,7 @@ export async function exportProgramData(programId: number): Promise<ProgramExpor
 
       const exportSet: ProgramExportSet = {
         setNumber: setRow.set_number as number,
-        weightKg: setRow.weight_kg as number,
+        weightLbs: setRow.weight_kg as number,
         reps: setRow.reps as number,
         isWarmup: setRow.is_warmup === 1,
       };
@@ -126,24 +135,10 @@ export async function exportProgramData(programId: number): Promise<ProgramExpor
     });
   });
 
-  // f) Calculate completion percentage using distinct (program_day_id, program_week) pairs
-  const distinctCountResult = await executeSql(
-    database,
-    `SELECT COUNT(*) as cnt FROM (
-       SELECT DISTINCT ws.program_day_id, ws.program_week
-       FROM workout_sessions ws
-       INNER JOIN program_days pd ON pd.id = ws.program_day_id
-       WHERE pd.program_id = ?
-         AND ws.completed_at IS NOT NULL
-         AND ws.program_week IS NOT NULL
-     )`,
-    [programId],
-  );
-  const distinctCompletedDays = distinctCountResult.rows.item(0).cnt as number;
-
+  // f) Calculate completion percentage from calculated weeks
   let completionPercent = 0;
   if (daysPerProgram > 0 && program.weeks > 0) {
-    completionPercent = Math.round((distinctCompletedDays / (program.weeks * daysPerProgram)) * 100);
+    completionPercent = Math.round((distinctPairs.size / (program.weeks * daysPerProgram)) * 100);
   }
 
   // g) Return the ProgramExport object

@@ -84,7 +84,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Add live Garmin heart rate display during workouts via BLE, with configurable HR zones, session HR persistence, and post-workout HR stats.
 
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
-- [ ] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX
+- [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
 - [ ] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details
 - [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
 
@@ -115,7 +115,7 @@ Plans:
   3. A connection state indicator (connected / reconnecting / disconnected) is visible in the workout header during an active workout
   4. When the watch disconnects mid-workout, the BPM display shows "--" and the app attempts one auto-reconnect without any user action required
   5. HeartRateContext is wired to BLEHeartRateService and exposes currentBpm, deviceState, and session actions to the rest of the app
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 25-01-PLAN.md — HeartRateContext BLE state machine, presentation components, App.tsx provider wiring
 - [ ] 25-02-PLAN.md — DeviceScanSheet bottom sheet, SettingsScreen HR Monitor card
@@ -172,6 +172,6 @@ Plans:
 | 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
-| 25. Connection Management | v1.6 | 1/3 | In Progress|  |
+| 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |

@@ -193,6 +193,7 @@ export async function hasSessionActivity(sessionId: number): Promise<boolean> {
  */
 export async function deleteSession(sessionId: number): Promise<void> {
   const database = await db;
+  await executeSql(database, 'DELETE FROM heart_rate_samples WHERE session_id = ?', [sessionId]);
   await executeSql(database, 'DELETE FROM workout_sets WHERE session_id = ?', [sessionId]);
   await executeSql(database, 'DELETE FROM exercise_sessions WHERE session_id = ?', [sessionId]);
   await executeSql(database, 'DELETE FROM workout_sessions WHERE id = ?', [sessionId]);

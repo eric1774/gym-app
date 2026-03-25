@@ -21,6 +21,7 @@ interface Migration {
  * - Version 6: Deduplicate exercises, re-point history to winners
  * - Version 7: Add superset_group_id column to program_day_exercises
  * - Version 8: Create heart_rate_samples table, add avg_hr/peak_hr to workout_sessions
+ * - Version 9: Repair program_week values (migration 5 backfill set all to 1)
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -262,6 +263,31 @@ const MIGRATIONS: Migration[] = [
       tx.executeSql(
         'ALTER TABLE workout_sessions ADD COLUMN peak_hr INTEGER',
       );
+    },
+  },
+  {
+    version: 9,
+    description: 'Repair program_week: re-rank by completion order per day',
+    up: (tx: Transaction) => {
+      // Migration 5 backfilled all pre-existing sessions with program_week = 1.
+      // This repairs the data by setting program_week = the rank of each session
+      // among completions of the same program day, ordered by completed_at.
+      // The nth completion of a given day becomes week n.
+      // Uses a correlated subquery (no window functions) for SQLite compatibility.
+      tx.executeSql(`
+        UPDATE workout_sessions
+        SET program_week = (
+          SELECT COUNT(*)
+          FROM workout_sessions ws2
+          WHERE ws2.program_day_id = workout_sessions.program_day_id
+            AND ws2.completed_at IS NOT NULL
+            AND (ws2.completed_at < workout_sessions.completed_at
+                 OR (ws2.completed_at = workout_sessions.completed_at
+                     AND ws2.id <= workout_sessions.id))
+        )
+        WHERE program_day_id IS NOT NULL
+          AND completed_at IS NOT NULL
+      `);
     },
   },
 ];

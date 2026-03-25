@@ -9,6 +9,14 @@ jest.mock('../../db/calendar', () => ({
   getDaySessionDetails: jest.fn().mockResolvedValue([]),
 }));
 
+jest.mock('../../db/sessions', () => ({
+  deleteSession: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('react-native-haptic-feedback', () => ({
+  trigger: jest.fn(),
+}));
+
 const mockGetDaySessionDetails = getDaySessionDetails as jest.Mock;
 
 const Stack = createNativeStackNavigator();

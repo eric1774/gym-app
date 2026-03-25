@@ -55,4 +55,12 @@ export async function initDatabase(): Promise<void> {
   // Lazy import to avoid circular dependency at module load time
   const { seedIfEmpty } = await import('./seed');
   await seedIfEmpty();
+
+  // Import program data from prod export (idempotent — skips if data exists)
+  const { importProgramData } = await import('./importProgram');
+  await importProgramData();
+
+  // One-time data repair: fix week counter and restore lost sessions
+  const { repairProgramData } = await import('./repair');
+  await repairProgramData();
 }

@@ -296,29 +296,36 @@ describe('hasSessionActivity', () => {
 // ── deleteSession ─────────────────────────────────────────────────────
 
 describe('deleteSession', () => {
-  it('deletes workout_sets, exercise_sessions, and workout_sessions in order', async () => {
+  it('deletes heart_rate_samples, workout_sets, exercise_sessions, and workout_sessions in order', async () => {
     mockExecuteSql
+      .mockResolvedValueOnce(mockResultSet([], 0))
       .mockResolvedValueOnce(mockResultSet([], 0))
       .mockResolvedValueOnce(mockResultSet([], 0))
       .mockResolvedValueOnce(mockResultSet([], 0));
 
     await deleteSession(10);
 
-    expect(mockExecuteSql).toHaveBeenCalledTimes(3);
+    expect(mockExecuteSql).toHaveBeenCalledTimes(4);
     expect(mockExecuteSql).toHaveBeenNthCalledWith(
       1,
       mockDb,
-      expect.stringContaining('DELETE FROM workout_sets'),
+      expect.stringContaining('DELETE FROM heart_rate_samples'),
       [10],
     );
     expect(mockExecuteSql).toHaveBeenNthCalledWith(
       2,
       mockDb,
-      expect.stringContaining('DELETE FROM exercise_sessions'),
+      expect.stringContaining('DELETE FROM workout_sets'),
       [10],
     );
     expect(mockExecuteSql).toHaveBeenNthCalledWith(
       3,
+      mockDb,
+      expect.stringContaining('DELETE FROM exercise_sessions'),
+      [10],
+    );
+    expect(mockExecuteSql).toHaveBeenNthCalledWith(
+      4,
       mockDb,
       expect.stringContaining('DELETE FROM workout_sessions'),
       [10],

@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,10 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { exportAllData } from '../db/dashboard';
-import { useHeartRate } from '../context/HeartRateContext';
-import { getHRSettings } from '../services/HRSettingsService';
-import { HRSettings } from '../types';
-import { DeviceScanSheet } from './DeviceScanSheet';
+import { saveFileToDevice } from '../native/FileSaver';
+import { repairProgramData } from '../db/repair';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -22,59 +19,31 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 export function SettingsScreen() {
   const navigation = useNavigation();
   const [isExporting, setIsExporting] = useState(false);
-  const [scanSheetVisible, setScanSheetVisible] = useState(false);
-  const [hrSettings, setHrSettings] = useState<HRSettings | null>(null);
-  const { deviceState, pairedDeviceName, disconnect } = useHeartRate();
+  const [isRepairing, setIsRepairing] = useState(false);
 
-  const loadHRSettings = useCallback(async () => {
-    try {
-      const settings = await getHRSettings();
-      setHrSettings(settings);
-    } catch {
-      // ignore errors
-    }
-  }, []);
-
-  useEffect(() => {
-    loadHRSettings();
-  }, [loadHRSettings]);
-
-  const handleScanClose = useCallback(() => {
-    setScanSheetVisible(false);
-    loadHRSettings();
-  }, [loadHRSettings]);
-
-  const handleUnpair = useCallback(() => {
+  const handleRepair = useCallback(async () => {
     Alert.alert(
-      'Unpair Device',
-      `Stop connecting to ${pairedDeviceName ?? 'this device'} during workouts?`,
+      'Repair Data',
+      'Reset week to 4, remove bogus week 5-8 sessions, and restore March 24/25 workouts?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Unpair',
-          style: 'destructive',
+          text: 'Repair',
           onPress: async () => {
-            await disconnect();
-            loadHRSettings();
+            setIsRepairing(true);
+            try {
+              const result = await repairProgramData();
+              Alert.alert('Repair Complete', result);
+            } catch (e: any) {
+              Alert.alert('Repair Failed', e?.message ?? 'Unknown error');
+            } finally {
+              setIsRepairing(false);
+            }
           },
         },
       ],
     );
-  }, [pairedDeviceName, disconnect, loadHRSettings]);
-
-  const stateColor =
-    deviceState === 'connected' ? '#8DC28A' :
-    deviceState === 'reconnecting' ? '#FACC15' :
-    deviceState === 'connecting' ? '#FACC15' :
-    deviceState === 'scanning' ? '#8DC28A' :
-    '#D9534F'; // disconnected
-
-  const stateLabel =
-    deviceState === 'connected' ? 'Connected' :
-    deviceState === 'reconnecting' ? 'Reconnecting' :
-    deviceState === 'connecting' ? 'Connecting' :
-    deviceState === 'scanning' ? 'Scanning' :
-    'Disconnected';
+  }, []);
 
   const handleExport = useCallback(async () => {
     setIsExporting(true);
@@ -82,12 +51,9 @@ export function SettingsScreen() {
       const data = await exportAllData();
       const jsonString = JSON.stringify(data, null, 2);
       const today = new Date().toISOString().split('T')[0];
-      await Share.share({
-        message: jsonString,
-        title: `gymtrack-export-${today}.json`,
-      });
+      await saveFileToDevice(jsonString, `gymtrack-export-${today}.json`);
     } catch {
-      // ignore - user may have cancelled share sheet
+      // ignore - user may have cancelled save dialog
     } finally {
       setIsExporting(false);
     }
@@ -125,40 +91,22 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Heart Rate Monitor Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Heart Rate Monitor</Text>
-          <Text style={styles.cardDescription}>Manage your paired device</Text>
-
-          {hrSettings?.pairedDeviceId ? (
-            <>
-              <Text style={styles.pairedDeviceName}>
-                {pairedDeviceName ?? 'Unknown Device'}
-              </Text>
-              <Text style={[styles.deviceStateLabel, { color: stateColor }]}>
-                {stateLabel}
-              </Text>
-              <TouchableOpacity
-                style={styles.scanAgainButton}
-                onPress={() => setScanSheetVisible(true)}
-                activeOpacity={0.85}>
-                <Text style={styles.scanAgainText}>Scan for Device</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.unpairButton}
-                onPress={handleUnpair}
-                activeOpacity={0.85}>
-                <Text style={styles.unpairText}>Unpair</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={styles.scanButton}
-              onPress={() => setScanSheetVisible(true)}
-              activeOpacity={0.85}>
-              <Text style={styles.scanButtonText}>Scan for Device</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.cardTitle}>Repair Data</Text>
+          <Text style={styles.cardDescription}>
+            Fix week counter (reset to 4), remove bogus week 5-8 sessions, and restore March 24/25 workouts
+          </Text>
+          <TouchableOpacity
+            style={[styles.exportButton, styles.repairButton]}
+            onPress={handleRepair}
+            disabled={isRepairing}
+            activeOpacity={0.85}>
+            {isRepairing ? (
+              <ActivityIndicator color={colors.background} size="small" />
+            ) : (
+              <Text style={styles.exportButtonText}>Repair</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={styles.aboutCard}>
@@ -166,8 +114,6 @@ export function SettingsScreen() {
           <Text style={styles.aboutSubtitle}>Local-only workout tracker</Text>
         </View>
       </View>
-
-      <DeviceScanSheet visible={scanSheetVisible} onClose={handleScanClose} />
     </SafeAreaView>
   );
 }
@@ -239,6 +185,9 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
     color: colors.background,
   },
+  repairButton: {
+    backgroundColor: '#E67E22',
+  },
   aboutCard: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -254,46 +203,5 @@ const styles = StyleSheet.create({
   aboutSubtitle: {
     fontSize: fontSize.sm,
     color: colors.secondary,
-  },
-  // Heart Rate Monitor card styles
-  scanButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  scanButtonText: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.background,
-  },
-  pairedDeviceName: {
-    fontSize: fontSize.base,
-    color: colors.primary,
-    marginBottom: spacing.xs,
-  },
-  deviceStateLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    marginBottom: spacing.md,
-  },
-  scanAgainButton: {
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  scanAgainText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.accent,
-  },
-  unpairButton: {
-    paddingVertical: spacing.sm,
-  },
-  unpairText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.danger,
   },
 });

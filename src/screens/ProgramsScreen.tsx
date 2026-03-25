@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import { deleteProgram, getProgramDays, getPrograms } from '../db/programs';
 import { getProgramTotalCompleted } from '../db/dashboard';
 import { exportProgramData } from '../db';
 import { ExportToast, ExportToastHandle } from '../components/ExportToast';
+import { saveFileToDevice } from '../native/FileSaver';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
@@ -284,15 +284,11 @@ export function ProgramsScreen() {
       setMenuVisible(false);
       setIsExporting(false);
 
-      const result = await Share.share({
-        message: jsonString,
-        title: filename,
-      });
-
-      if (result.action === Share.sharedAction) {
+      const saved = await saveFileToDevice(jsonString, filename);
+      if (saved) {
         exportToastRef.current?.show('Export saved', 'success');
       }
-      // Per D-14: cancel = no toast (silent dismiss)
+      // cancel = no toast (silent dismiss)
     } catch {
       setMenuVisible(false);
       setIsExporting(false);
