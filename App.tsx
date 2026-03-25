@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SessionProvider } from './src/context/SessionContext';
 import { TimerProvider } from './src/context/TimerContext';
+import { HeartRateProvider } from './src/context/HeartRateContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initDatabase } from './src/db';
 
@@ -22,9 +23,11 @@ export default function App() {
 
   return (
     <SessionProvider>
-      <TimerProvider>
-        <RootNavigator />
-      </TimerProvider>
+      <HeartRateProvider>
+        <TimerProvider>
+          <RootNavigator />
+        </TimerProvider>
+      </HeartRateProvider>
     </SessionProvider>
   );
 }
