@@ -79,11 +79,11 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 </details>
 
-### 🚧 v1.6 Heart Rate Monitoring (In Progress)
+### v1.6 Heart Rate Monitoring (In Progress)
 
 **Milestone Goal:** Add live Garmin heart rate display during workouts via BLE, with configurable HR zones, session HR persistence, and post-workout HR stats.
 
-- [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
+- [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [ ] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX
 - [ ] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details
 - [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
@@ -102,7 +102,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
   5. HRSettingsService can read and write age, maxHrOverride, and pairedDeviceId from AsyncStorage
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 24-01-PLAN.md — Dependencies, permissions, types, BleManager singleton, Jest mock
+- [x] 24-01-PLAN.md — Dependencies, permissions, types, BleManager singleton, Jest mock
 - [x] 24-02-PLAN.md — DB migration v8, HRSettingsService with AsyncStorage CRUD
 
 ### Phase 25: Connection Management
@@ -115,7 +115,11 @@ Plans:
   3. A connection state indicator (connected / reconnecting / disconnected) is visible in the workout header during an active workout
   4. When the watch disconnects mid-workout, the BPM display shows "--" and the app attempts one auto-reconnect without any user action required
   5. HeartRateContext is wired to BLEHeartRateService and exposes currentBpm, deviceState, and session actions to the rest of the app
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 25-01-PLAN.md — HeartRateContext BLE state machine, presentation components, App.tsx provider wiring
+- [ ] 25-02-PLAN.md — DeviceScanSheet bottom sheet, SettingsScreen HR Monitor card
+- [ ] 25-03-PLAN.md — WorkoutScreen header indicator, auto-reconnect, disconnect haptic
 **UI hint**: yes
 
 ### Phase 26: HR Data Persistence
@@ -167,7 +171,7 @@ Plans:
 | 21. Gap Closing | v1.4 | 1/1 | Complete | 2026-03-16 |
 | 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
-| 24. BLE Foundation | v1.6 | 1/2 | Complete    | 2026-03-24 |
-| 25. Connection Management | v1.6 | 0/? | Not started | - |
+| 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
+| 25. Connection Management | v1.6 | 0/3 | Planning | - |
 | 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |
