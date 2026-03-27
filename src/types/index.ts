@@ -35,6 +35,10 @@ export interface WorkoutSession {
   completedAt: string | null;
   /** null in Phase 1; Phase 2 will populate this when attaching sessions to program days */
   programDayId: number | null;
+  /** Average heart rate (BPM) for the session — null when no HR monitor was used (Phase 26) */
+  avgHr: number | null;
+  /** Peak heart rate (BPM) for the session — null when no HR monitor was used (Phase 26) */
+  peakHr: number | null;
 }
 
 export interface WorkoutSet {
