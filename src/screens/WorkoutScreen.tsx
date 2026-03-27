@@ -535,6 +535,8 @@ export function WorkoutScreen() {
     exercisesCompleted: number;
     exercisesTotal: number;
     prCount: number;
+    avgHr: number | null;
+    peakHr: number | null;
   } | null>(null);
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prToastRef = useRef<PRToastHandle>(null);
@@ -552,7 +554,7 @@ export function WorkoutScreen() {
   const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
 
   // ─── Heart Rate Integration ────────────────────────────────────────────────
-  const { deviceState, attemptAutoReconnect } = useHeartRate();
+  const { deviceState, attemptAutoReconnect, flushHRSamples } = useHeartRate();
   const [hasPairedDevice, setHasPairedDevice] = useState(false);
   const prevDeviceStateRef = useRef(deviceState);
 
@@ -860,6 +862,8 @@ export function WorkoutScreen() {
               const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
               const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
               const exercisesTotal = sessionExercises.length;
+              // Flush HR samples before completing the session (D-06)
+              const { avgHr, peakHr } = await flushHRSamples(session.id);
               setSummaryData({
                 duration: elapsed,
                 totalSets,
@@ -867,6 +871,8 @@ export function WorkoutScreen() {
                 exercisesCompleted,
                 exercisesTotal,
                 prCount,
+                avgHr,
+                peakHr,
               });
               if (isRunning) { stopTimer(); }
               await endSession();
@@ -876,7 +882,7 @@ export function WorkoutScreen() {
         ],
       );
     }
-  }, [session, endSession, isRunning, stopTimer, programDayId, navigation, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount]);
+  }, [session, endSession, isRunning, stopTimer, programDayId, navigation, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
 
   if (isLoading) {
     return (
