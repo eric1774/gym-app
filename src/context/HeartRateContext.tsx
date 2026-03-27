@@ -11,6 +11,11 @@ import { bleManager, HR_SERVICE_UUID, HR_MEASUREMENT_CHAR_UUID } from '../servic
 import { requestBLEPermissions } from '../services/BLEPermissions';
 import { getHRSettings, setPairedDeviceId, clearPairedDevice } from '../services/HRSettingsService';
 import { DeviceConnectionState } from '../types';
+import {
+  flushHRSamples as dbFlushHRSamples,
+  updateSessionHR,
+  HRSample,
+} from '../db/sessions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +46,12 @@ interface HeartRateContextValue {
   attemptAutoReconnect: () => Promise<void>;
   /** Countdown from 15 to 0 while scanning, null when not scanning */
   scanTimeRemaining: number | null;
+  /**
+   * Flush in-memory HR samples to SQLite and update avg/peak HR on the session.
+   * Returns the computed avgHr and peakHr (both null if buffer was empty).
+   * Clears the buffer after flushing. Safe to call when no samples were collected.
+   */
+  flushHRSamples: (sessionId: number) => Promise<{ avgHr: number | null; peakHr: number | null }>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,6 +120,8 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
   const hrSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const disconnectSubscriptionRef = useRef<{ remove: () => void } | null>(null);
   const deviceStateRef = useRef<DeviceConnectionState>('disconnected');
+  /** In-memory HR sample buffer — flushed to SQLite on session end (D-06) */
+  const hrSamplesRef = useRef<HRSample[]>([]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -235,6 +248,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
                     try {
                       const bpm = parseHeartRate(characteristic.value);
                       setCurrentBpm(bpm);
+                      hrSamplesRef.current.push({ bpm, recordedAt: new Date().toISOString() });
                     } catch {
                       // Ignore parse errors
                     }
@@ -291,6 +305,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
               try {
                 const bpm = parseHeartRate(characteristic.value);
                 setCurrentBpm(bpm);
+                hrSamplesRef.current.push({ bpm, recordedAt: new Date().toISOString() });
               } catch {
                 // Ignore parse errors
               }
@@ -375,6 +390,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
             try {
               const bpm = parseHeartRate(characteristic.value);
               setCurrentBpm(bpm);
+              hrSamplesRef.current.push({ bpm, recordedAt: new Date().toISOString() });
             } catch {
               // Ignore parse errors
             }
@@ -420,6 +436,36 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
     };
   }, [clearScanTimer, clearReconnectTimer]);
 
+  // ─── HR Sample flush (Phase 26) ────────────────────────────────────────────
+
+  const flushHRSamples = useCallback(
+    async (sessionId: number): Promise<{ avgHr: number | null; peakHr: number | null }> => {
+      const samples = hrSamplesRef.current;
+      if (samples.length === 0) {
+        return { avgHr: null, peakHr: null };
+      }
+
+      // Compute avg (rounded integer) and peak from buffer
+      const bpms = samples.map(s => s.bpm);
+      const avgHr = Math.round(bpms.reduce((sum, b) => sum + b, 0) / bpms.length);
+      const peakHr = Math.max(...bpms);
+
+      // Flush to DB and update session — fire and forget on errors to not block summary
+      try {
+        await dbFlushHRSamples(sessionId, samples);
+        await updateSessionHR(sessionId, avgHr, peakHr);
+      } catch {
+        // Non-critical: HR data loss is acceptable on flush error (D-07)
+      }
+
+      // Clear buffer after flush
+      hrSamplesRef.current = [];
+
+      return { avgHr, peakHr };
+    },
+    [],
+  );
+
   // ─── Context value ─────────────────────────────────────────────────────────
 
   const value = useMemo<HeartRateContextValue>(
@@ -434,6 +480,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
       connectToDevice,
       disconnect,
       attemptAutoReconnect,
+      flushHRSamples,
     }),
     [
       deviceState,
@@ -446,6 +493,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
       connectToDevice,
       disconnect,
       attemptAutoReconnect,
+      flushHRSamples,
     ],
   );
 
