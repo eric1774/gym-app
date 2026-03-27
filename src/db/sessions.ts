@@ -254,3 +254,45 @@ export async function createCompletedSession(programDayId: number): Promise<void
     [now, now, programDayId, programWeek],
   );
 }
+
+// ── Heart Rate Persistence (Phase 26) ─────────────────────────────────────────
+
+export interface HRSample {
+  bpm: number;
+  recordedAt: string;
+}
+
+/**
+ * Batch-insert heart rate samples into heart_rate_samples for a given session.
+ * Uses individual INSERT calls executed sequentially within the same database connection.
+ * If samples array is empty, does nothing.
+ */
+export async function flushHRSamples(sessionId: number, samples: HRSample[]): Promise<void> {
+  if (samples.length === 0) {
+    return;
+  }
+  const database = await db;
+  for (const sample of samples) {
+    await executeSql(
+      database,
+      'INSERT INTO heart_rate_samples (session_id, bpm, recorded_at) VALUES (?, ?, ?)',
+      [sessionId, sample.bpm, sample.recordedAt],
+    );
+  }
+}
+
+/**
+ * Update the avg_hr and peak_hr columns on workout_sessions for a completed session.
+ */
+export async function updateSessionHR(
+  sessionId: number,
+  avgHr: number,
+  peakHr: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE workout_sessions SET avg_hr = ?, peak_hr = ? WHERE id = ?',
+    [avgHr, peakHr, sessionId],
+  );
+}
