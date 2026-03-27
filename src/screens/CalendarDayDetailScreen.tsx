@@ -267,6 +267,16 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
           )}
         </View>
 
+        {/* HR stats row — only rendered when HR data was recorded (D-08, D-04) */}
+        {session.avgHr != null && (
+          <View style={styles.statsRow}>
+            <StatItem label="Avg HR" value={`${session.avgHr} bpm`} />
+            {session.peakHr != null && (
+              <StatItem label="Peak HR" value={`${session.peakHr} bpm`} />
+            )}
+          </View>
+        )}
+
         {/* PR highlights */}
         {session.prCount > 0 && (
           <View style={styles.prHighlightsSection}>
