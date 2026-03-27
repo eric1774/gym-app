@@ -15,6 +15,8 @@ import {
   updateSessionRestSeconds,
   uncompleteSession,
   createCompletedSession,
+  flushHRSamples,
+  updateSessionHR,
 } from '../sessions';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -404,6 +406,58 @@ describe('createCompletedSession', () => {
       mockDb,
       expect.stringContaining('INSERT INTO workout_sessions'),
       expect.arrayContaining([null]),
+    );
+  });
+});
+
+// ── flushHRSamples ────────────────────────────────────────────────────
+
+describe('flushHRSamples', () => {
+  it('does nothing when samples array is empty', async () => {
+    await flushHRSamples(10, []);
+
+    expect(mockExecuteSql).not.toHaveBeenCalled();
+  });
+
+  it('inserts each sample with correct session_id, bpm, and recorded_at', async () => {
+    const samples = [
+      { bpm: 120, recordedAt: '2026-01-01T10:00:01.000Z' },
+      { bpm: 135, recordedAt: '2026-01-01T10:00:02.000Z' },
+    ];
+    mockExecuteSql
+      .mockResolvedValueOnce(mockResultSet([], 1))
+      .mockResolvedValueOnce(mockResultSet([], 2));
+
+    await flushHRSamples(10, samples);
+
+    expect(mockExecuteSql).toHaveBeenCalledTimes(2);
+    expect(mockExecuteSql).toHaveBeenNthCalledWith(
+      1,
+      mockDb,
+      expect.stringContaining('INSERT INTO heart_rate_samples'),
+      [10, 120, '2026-01-01T10:00:01.000Z'],
+    );
+    expect(mockExecuteSql).toHaveBeenNthCalledWith(
+      2,
+      mockDb,
+      expect.stringContaining('INSERT INTO heart_rate_samples'),
+      [10, 135, '2026-01-01T10:00:02.000Z'],
+    );
+  });
+});
+
+// ── updateSessionHR ───────────────────────────────────────────────────
+
+describe('updateSessionHR', () => {
+  it('updates avg_hr and peak_hr for the session', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([], 0));
+
+    await updateSessionHR(10, 132, 178);
+
+    expect(mockExecuteSql).toHaveBeenCalledWith(
+      mockDb,
+      expect.stringContaining('SET avg_hr = ?'),
+      [132, 178, 10],
     );
   });
 });

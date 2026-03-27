@@ -703,6 +703,8 @@ export async function exportAllData(): Promise<FullDataExport> {
       startedAt: r.started_at,
       completedAt: r.completed_at ?? null,
       programDayId: r.program_day_id ?? null,
+      avgHr: r.avg_hr ?? null,
+      peakHr: r.peak_hr ?? null,
       sets,
     });
   }

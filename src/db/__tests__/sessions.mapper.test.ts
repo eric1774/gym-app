@@ -14,6 +14,8 @@ describe('rowToSession', () => {
       startedAt: '2026-01-01T10:00:00',
       completedAt: '2026-01-01T11:00:00',
       programDayId: 5,
+      avgHr: null,
+      peakHr: null,
     });
   });
 
@@ -35,6 +37,32 @@ describe('rowToSession', () => {
       program_day_id: null,
     };
     expect(rowToSession(row).programDayId).toBe(null);
+  });
+
+  it('maps avg_hr and peak_hr columns to avgHr and peakHr', () => {
+    const row = {
+      id: 4,
+      started_at: '2026-01-01T10:00:00',
+      completed_at: '2026-01-01T11:00:00',
+      program_day_id: null,
+      avg_hr: 132,
+      peak_hr: 178,
+    };
+    const result = rowToSession(row);
+    expect(result.avgHr).toBe(132);
+    expect(result.peakHr).toBe(178);
+  });
+
+  it('returns null for avgHr/peakHr when avg_hr/peak_hr are absent', () => {
+    const row = {
+      id: 5,
+      started_at: '2026-01-01T10:00:00',
+      completed_at: null,
+      program_day_id: null,
+    };
+    const result = rowToSession(row);
+    expect(result.avgHr).toBe(null);
+    expect(result.peakHr).toBe(null);
   });
 });
 
