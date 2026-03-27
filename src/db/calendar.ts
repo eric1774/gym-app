@@ -91,6 +91,7 @@ export async function getDaySessionDetails(
   const allSessionsResult = await executeSql(
     database,
     `SELECT ws.id, ws.started_at, ws.completed_at, ws.program_day_id,
+            ws.avg_hr, ws.peak_hr,
             pd.name AS program_day_name
      FROM workout_sessions ws
      LEFT JOIN program_days pd ON pd.id = ws.program_day_id
@@ -103,6 +104,8 @@ export async function getDaySessionDetails(
     started_at: string;
     completed_at: string;
     program_day_name: string | null;
+    avg_hr: number | null;
+    peak_hr: number | null;
   }[] = [];
 
   for (let i = 0; i < allSessionsResult.rows.length; i++) {
@@ -114,6 +117,8 @@ export async function getDaySessionDetails(
         started_at: row.started_at,
         completed_at: row.completed_at,
         program_day_name: row.program_day_name ?? null,
+        avg_hr: row.avg_hr ?? null,
+        peak_hr: row.peak_hr ?? null,
       });
     }
   }
@@ -223,6 +228,8 @@ export async function getDaySessionDetails(
       exerciseCount: exerciseOrder.length,
       prCount,
       exercises,
+      avgHr: session.avg_hr,
+      peakHr: session.peak_hr,
     });
   }
 

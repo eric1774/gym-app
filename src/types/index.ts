@@ -225,6 +225,10 @@ export interface CalendarSessionDetail {
   exerciseCount: number;
   prCount: number;
   exercises: CalendarExerciseDetail[];
+  /** Average heart rate (BPM) — null when no HR monitor was used (Phase 26) */
+  avgHr: number | null;
+  /** Peak heart rate (BPM) — null when no HR monitor was used (Phase 26) */
+  peakHr: number | null;
 }
 
 /** Per-exercise breakdown within a session. */
