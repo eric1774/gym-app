@@ -440,6 +440,8 @@ interface WorkoutSummaryProps {
   exercisesCompleted: number;
   exercisesTotal: number;
   prCount: number;
+  avgHr?: number | null;
+  peakHr?: number | null;
   onDismiss: () => void;
 }
 
@@ -450,6 +452,8 @@ function WorkoutSummary({
   exercisesCompleted,
   exercisesTotal,
   prCount,
+  avgHr,
+  peakHr,
   onDismiss,
 }: WorkoutSummaryProps) {
   return (
@@ -486,6 +490,20 @@ function WorkoutSummary({
             <View style={summaryStyles.statRow}>
               <Text style={summaryStyles.prLabel}>{'\uD83C\uDFC6'} PRs</Text>
               <Text style={summaryStyles.prValue}>{prCount}</Text>
+            </View>
+          )}
+
+          {avgHr != null && (
+            <View style={summaryStyles.statRow}>
+              <Text style={summaryStyles.statLabel}>Avg HR</Text>
+              <Text style={summaryStyles.statValue}>{avgHr} bpm</Text>
+            </View>
+          )}
+
+          {peakHr != null && (
+            <View style={summaryStyles.statRow}>
+              <Text style={summaryStyles.statLabel}>Peak HR</Text>
+              <Text style={summaryStyles.statValue}>{peakHr} bpm</Text>
             </View>
           )}
         </View>
@@ -901,6 +919,8 @@ export function WorkoutScreen() {
         exercisesCompleted={summaryData.exercisesCompleted}
         exercisesTotal={summaryData.exercisesTotal}
         prCount={summaryData.prCount}
+        avgHr={summaryData.avgHr}
+        peakHr={summaryData.peakHr}
         onDismiss={handleDismissSummary}
       />
     );
