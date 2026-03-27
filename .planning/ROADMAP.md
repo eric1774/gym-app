@@ -85,7 +85,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
-- [ ] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details
+- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
 - [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
 
 ## Phase Details
@@ -173,5 +173,5 @@ Plans:
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
-| 26. HR Data Persistence | v1.6 | 0/? | Not started | - |
+| 26. HR Data Persistence | v1.6 | 1/1 | Complete   | 2026-03-27 |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |

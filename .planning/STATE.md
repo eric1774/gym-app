@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
 status: Ready to plan
-stopped_at: Phase 26 context gathered
-last_updated: "2026-03-27T15:20:10.365Z"
+stopped_at: Completed 26-hr-data-persistence/26-01-PLAN.md
+last_updated: "2026-03-27T22:31:23.139Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 5
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -46,6 +46,7 @@ Plan: Not started
 | Phase 25-connection-management P01 | 7 | 2 tasks | 5 files |
 | Phase 25-connection-management P03 | 8 | 1 tasks | 1 files |
 | Phase 25-connection-management P02 | 15 | 2 tasks | 2 files |
+| Phase 26-hr-data-persistence P01 | 9 | 8 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Plan: Not started
 - [Phase 25-connection-management]: prevDeviceStateRef pattern for detecting connected->disconnected transitions in useEffect without extra state
 - [Phase 25-connection-management]: HR UI in WorkoutScreen gated by hasPairedDevice (D-07) — zero change for users without paired device
 - [Phase 25-connection-management]: DeviceScanSheet resets all local state on close to prevent stale UI on re-open; loadHRSettings refreshed after scan sheet closes to pick up newly-paired device
+- [Phase 26-hr-data-persistence]: D-05/D-06 honored: all BPM notifications buffered in hrSamplesRef, single batch flush on session end only
+- [Phase 26-hr-data-persistence]: flushHRSamples returns {avgHr, peakHr} so caller can use values without extra DB query
 
 ### Pending Todos
 
@@ -81,7 +84,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T15:20:10.359Z
-Stopped at: Phase 26 context gathered
-Resume file: .planning/phases/26-hr-data-persistence/26-CONTEXT.md
+Last session: 2026-03-27T22:31:23.136Z
+Stopped at: Completed 26-hr-data-persistence/26-01-PLAN.md
+Resume file: None
 Next step: /gsd:plan-phase 24
