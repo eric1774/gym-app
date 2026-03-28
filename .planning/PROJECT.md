@@ -52,10 +52,10 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ Program data export as JSON via share/save dialog — v1.5
 - ✓ BLE foundation: Android permissions, BleManager singleton, DB migration v8, HR types, HRSettingsService — v1.6
 - ✓ BLE connection management: device scan, connect, auto-reconnect, connection state indicator, disconnect UX — v1.6
+- ✓ HR data persistence: in-session buffering, batch flush to SQLite, avg/peak HR on summary card and calendar — v1.6
 
 ### Active
 
-- HR data persistence: in-session buffering, batch flush, avg/peak HR aggregates — v1.6 Phase 26
 - Live HR display: BPM in workout header, zone coloring, age/max HR settings — v1.6 Phase 27
 
 ### Out of Scope
@@ -77,7 +77,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 BLE Foundation + Connection Management
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 BLE Foundation + Connection Management + HR Data Persistence
 
 ## Constraints
 
@@ -102,4 +102,4 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Object.defineProperty for db mock | Required because db export is read-only const | ✓ Good |
 
 ---
-*Last updated: 2026-03-25 after v1.6 Phase 25 (Connection Management)*
+*Last updated: 2026-03-28 after v1.6 Phase 26 (HR Data Persistence)*
