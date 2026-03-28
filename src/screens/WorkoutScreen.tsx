@@ -34,6 +34,7 @@ import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
 import { useHeartRate } from '../context/HeartRateContext';
 import { HRConnectionIndicator } from '../components/HRConnectionIndicator';
+import { DeviceScanSheet } from './DeviceScanSheet';
 import { getHRSettings } from '../services/HRSettingsService';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
@@ -574,18 +575,25 @@ export function WorkoutScreen() {
   // ─── Heart Rate Integration ────────────────────────────────────────────────
   const { deviceState, attemptAutoReconnect, flushHRSamples } = useHeartRate();
   const [hasPairedDevice, setHasPairedDevice] = useState(false);
+  const [scanSheetVisible, setScanSheetVisible] = useState(false);
   const prevDeviceStateRef = useRef(deviceState);
 
   // Load paired device status on mount and when session changes
-  useEffect(() => {
-    let cancelled = false;
+  const loadPairedStatus = useCallback(() => {
     getHRSettings().then(settings => {
-      if (!cancelled) {
-        setHasPairedDevice(settings.pairedDeviceId !== null);
-      }
+      setHasPairedDevice(settings.pairedDeviceId !== null);
     });
-    return () => { cancelled = true; };
-  }, [session]);
+  }, []);
+
+  useEffect(() => {
+    loadPairedStatus();
+  }, [session, loadPairedStatus]);
+
+  const handleScanSheetClose = useCallback(() => {
+    setScanSheetVisible(false);
+    // Reload paired status — user may have just paired a device
+    loadPairedStatus();
+  }, [loadPairedStatus]);
 
   // Auto-reconnect on workout start (per D-09: fires on workout start only)
   useEffect(() => {
@@ -962,15 +970,27 @@ export function WorkoutScreen() {
           {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
         </Text>
 
-        {/* HR Connection Indicator — only visible when device is paired (per D-07) */}
+        {/* HR Connection Indicator — only visible when device is paired */}
         <HRConnectionIndicator
           deviceState={deviceState}
           visible={hasPairedDevice}
         />
 
-        {/* BPM placeholder — shows "--" when paired but not connected (Phase 25 scope) */}
+        {/* BPM placeholder — shows "--" when paired but not connected */}
         {hasPairedDevice && deviceState !== 'connected' && (
           <Text style={styles.bpmPlaceholder}>--</Text>
+        )}
+
+        {/* Pair HR monitor button — visible when no device is paired */}
+        {!hasPairedDevice && (
+          <TouchableOpacity
+            onPress={() => setScanSheetVisible(true)}
+            style={styles.hrPairButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill={colors.accent}>
+              <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </Svg>
+          </TouchableOpacity>
         )}
 
         <TouchableOpacity
@@ -1094,6 +1114,11 @@ export function WorkoutScreen() {
       />
 
       <PRToast ref={prToastRef} />
+
+      <DeviceScanSheet
+        visible={scanSheetVisible}
+        onClose={handleScanSheetClose}
+      />
     </SafeAreaView>
   );
 }
@@ -1177,6 +1202,9 @@ const styles = StyleSheet.create({
   bpmPlaceholder: {
     fontSize: fontSize.base,
     color: colors.secondary,
+  },
+  hrPairButton: {
+    padding: spacing.xs,
   },
   sessionBanner: {
     paddingHorizontal: spacing.base,

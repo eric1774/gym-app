@@ -176,7 +176,7 @@ export function DeviceScanSheet({ visible, onClose }: DeviceScanSheetProps) {
             </View>
           ) : isScanning ? (
             /* Scanning state */
-            <View>
+            <View style={{flex: 1}}>
               <View style={styles.scanningHeader}>
                 <Text style={styles.scanningTitle}>Scanning...</Text>
                 <ActivityIndicator size="small" color={colors.accent} />
@@ -222,7 +222,7 @@ export function DeviceScanSheet({ visible, onClose }: DeviceScanSheetProps) {
             </View>
           ) : devicesFound ? (
             /* Devices found after scan timeout — show list with Scan Again */
-            <View>
+            <View style={{flex: 1}}>
               <FlatList
                 data={discoveredDevices}
                 keyExtractor={item => item.id}

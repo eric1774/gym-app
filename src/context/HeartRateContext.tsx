@@ -173,7 +173,6 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
       { allowDuplicates: false },
       (error, device) => {
         if (error) {
-          // Scan error — stop gracefully
           stopScan();
           return;
         }
