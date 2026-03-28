@@ -173,5 +173,5 @@ Plans:
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
-| 26. HR Data Persistence | v1.6 | 2/2 | Complete   | 2026-03-27 |
+| 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
 | 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |
