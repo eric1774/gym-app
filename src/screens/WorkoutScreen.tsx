@@ -36,6 +36,8 @@ import { useHeartRate } from '../context/HeartRateContext';
 import { HRConnectionIndicator } from '../components/HRConnectionIndicator';
 import { DeviceScanSheet } from './DeviceScanSheet';
 import { getHRSettings } from '../services/HRSettingsService';
+import { HRSettings } from '../types';
+import { getHRZone, computeMaxHR } from '../utils/hrZones';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -573,15 +575,17 @@ export function WorkoutScreen() {
   const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
 
   // ─── Heart Rate Integration ────────────────────────────────────────────────
-  const { deviceState, attemptAutoReconnect, flushHRSamples } = useHeartRate();
+  const { deviceState, currentBpm, attemptAutoReconnect, flushHRSamples } = useHeartRate();
   const [hasPairedDevice, setHasPairedDevice] = useState(false);
+  const [hrSettings, setHrSettings] = useState<HRSettings | null>(null);
   const [scanSheetVisible, setScanSheetVisible] = useState(false);
   const prevDeviceStateRef = useRef(deviceState);
 
-  // Load paired device status on mount and when session changes
+  // Load paired device status and HR settings on mount and when session changes
   const loadPairedStatus = useCallback(() => {
     getHRSettings().then(settings => {
       setHasPairedDevice(settings.pairedDeviceId !== null);
+      setHrSettings(settings);
     });
   }, []);
 
@@ -961,6 +965,21 @@ export function WorkoutScreen() {
   // Build superset-aware grouped sections for rendering
   const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
 
+  // Compute zone info for live BPM display (null when no age configured or no BPM reading)
+  const bpmZone = React.useMemo(() => {
+    if (deviceState !== 'connected' || currentBpm === null || hrSettings === null) {
+      return null;
+    }
+    const age = hrSettings.age;
+    const override = hrSettings.maxHrOverride;
+    if (age === null && override === null) {
+      return null;
+    }
+    const effectiveAge = age ?? 35; // fallback; override takes priority anyway
+    const maxHr = computeMaxHR(effectiveAge, override);
+    return getHRZone(currentBpm, maxHr);
+  }, [deviceState, currentBpm, hrSettings]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Session header */}
@@ -976,8 +995,20 @@ export function WorkoutScreen() {
           visible={hasPairedDevice}
         />
 
-        {/* BPM placeholder — shows "--" when paired but not connected */}
-        {hasPairedDevice && deviceState !== 'connected' && (
+        {/* Live BPM display — zone-colored number + zone label when connected, "--" otherwise */}
+        {hasPairedDevice && deviceState === 'connected' && currentBpm !== null && (
+          <View style={styles.bpmBlock}>
+            <Text style={[styles.bpmValue, { color: bpmZone ? bpmZone.color : colors.primary }]}>
+              {currentBpm}
+            </Text>
+            {bpmZone && (
+              <Text style={styles.bpmZoneLabel}>{`Zone ${bpmZone.zone} — ${bpmZone.name}`}</Text>
+            )}
+          </View>
+        )}
+
+        {/* BPM placeholder — shows "--" when paired but not connected (or connected, no reading yet) */}
+        {hasPairedDevice && (deviceState !== 'connected' || currentBpm === null) && (
           <Text style={styles.bpmPlaceholder}>--</Text>
         )}
 
@@ -1202,6 +1233,18 @@ const styles = StyleSheet.create({
   bpmPlaceholder: {
     fontSize: fontSize.base,
     color: colors.secondary,
+  },
+  bpmBlock: {
+    alignItems: 'center',
+  },
+  bpmValue: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+  },
+  bpmZoneLabel: {
+    fontSize: fontSize.xs,
+    color: colors.secondary,
+    marginTop: 1,
   },
   hrPairButton: {
     padding: spacing.xs,
