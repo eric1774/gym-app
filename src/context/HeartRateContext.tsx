@@ -215,7 +215,7 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
       const subscription = bleManager.onDeviceDisconnected(deviceId, _error => {
         // Device disconnected unexpectedly
         setDeviceState('reconnecting');
-        setCurrentBpm(null);
+        // Keep last known BPM visible during reconnection (removed setCurrentBpm(null) — caused flicker)
 
         // Begin exponential backoff reconnect sequence
         reconnectAttemptRef.current = 0;
@@ -363,6 +363,11 @@ export function HeartRateProvider({ children }: { children: React.ReactNode }) {
   // ─── Auto-reconnect ────────────────────────────────────────────────────────
 
   const attemptAutoReconnect = useCallback(async () => {
+    // Skip if already connected — prevents flash from connected->connecting->connected
+    if (deviceStateRef.current === 'connected') {
+      return;
+    }
+
     const settings = await getHRSettings();
     const pairedId = settings.pairedDeviceId;
     if (!pairedId) {
