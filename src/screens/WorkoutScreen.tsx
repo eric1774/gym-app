@@ -618,6 +618,22 @@ export function WorkoutScreen() {
     }
     prevDeviceStateRef.current = deviceState;
   }, [deviceState, session]);
+
+  // Compute zone info for live BPM display (null when no age configured or no BPM reading)
+  // Must be before early returns to maintain consistent hook count across renders
+  const bpmZone = React.useMemo(() => {
+    if (deviceState !== 'connected' || currentBpm === null || hrSettings === null) {
+      return null;
+    }
+    const age = hrSettings.age;
+    const override = hrSettings.maxHrOverride;
+    if (age === null && override === null) {
+      return null;
+    }
+    const effectiveAge = age ?? 35; // fallback; override takes priority anyway
+    const maxHr = computeMaxHR(effectiveAge, override);
+    return getHRZone(currentBpm, maxHr);
+  }, [deviceState, currentBpm, hrSettings]);
   // ──────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -964,21 +980,6 @@ export function WorkoutScreen() {
 
   // Build superset-aware grouped sections for rendering
   const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
-
-  // Compute zone info for live BPM display (null when no age configured or no BPM reading)
-  const bpmZone = React.useMemo(() => {
-    if (deviceState !== 'connected' || currentBpm === null || hrSettings === null) {
-      return null;
-    }
-    const age = hrSettings.age;
-    const override = hrSettings.maxHrOverride;
-    if (age === null && override === null) {
-      return null;
-    }
-    const effectiveAge = age ?? 35; // fallback; override takes priority anyway
-    const maxHr = computeMaxHR(effectiveAge, override);
-    return getHRZone(currentBpm, maxHr);
-  }, [deviceState, currentBpm, hrSettings]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
