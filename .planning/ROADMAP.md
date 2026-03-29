@@ -84,8 +84,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Add live Garmin heart rate display during workouts via BLE, with configurable HR zones, session HR persistence, and post-workout HR stats.
 
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
-- [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
-- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
+- [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
+- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
 - [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
 
 ## Phase Details
@@ -139,11 +139,14 @@ Plans:
 **Requirements**: HR-01, HR-02, HR-03, SET-01, SET-02
 **Success Criteria** (what must be TRUE):
   1. Live BPM updates in the workout header approximately once per second during an active session with a connected device
-  2. The BPM display is color-coded to match the user's current HR zone (5-zone model: Zone 1–5 at 50/60/70/80/90% of max HR)
+  2. The BPM display is color-coded to match the user's current HR zone (5-zone model: Zone 1-5 at 50/60/70/80/90% of max HR)
   3. A zone label ("Zone 3 — Aerobic") is shown alongside the BPM number
-  4. User can enter their age in Settings, and the app automatically calculates max HR using the Tanaka formula (208 − 0.7 × age)
+  4. User can enter their age in Settings, and the app automatically calculates max HR using the Tanaka formula (208 - 0.7 x age)
   5. User can initiate a device scan and pair their Garmin from the Settings screen (without needing to start a workout first)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 27-01-PLAN.md — Zone utility, HRLiveBpmDisplay component, WorkoutScreen integration
+- [ ] 27-02-PLAN.md — Settings Heart Rate Monitor card with age/max HR controls and device pairing
 **UI hint**: yes
 
 ## Progress
@@ -174,4 +177,4 @@ Plans:
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
-| 27. Live Display & Settings UI | v1.6 | 0/? | Not started | - |
+| 27. Live Display & Settings UI | v1.6 | 0/2 | Not started | - |

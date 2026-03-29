@@ -9,6 +9,28 @@ jest.mock('../../db/dashboard', () => ({
 jest.mock('../../native/FileSaver', () => ({
   saveFileToDevice: jest.fn().mockResolvedValue(true),
 }));
+jest.mock('../../context/HeartRateContext', () => ({
+  useHeartRate: jest.fn().mockReturnValue({
+    pairedDeviceName: null,
+  }),
+}));
+jest.mock('../../services/HRSettingsService', () => ({
+  getHRSettings: jest.fn().mockResolvedValue({
+    age: null,
+    maxHrOverride: null,
+    pairedDeviceId: null,
+  }),
+  setAge: jest.fn().mockResolvedValue(undefined),
+  setMaxHrOverride: jest.fn().mockResolvedValue(undefined),
+  getComputedMaxHR: jest.fn().mockResolvedValue(null),
+  clearPairedDevice: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../DeviceScanSheet', () => ({
+  DeviceScanSheet: jest.fn().mockReturnValue(null),
+}));
+jest.mock('../../db/repair', () => ({
+  repairProgramData: jest.fn().mockResolvedValue('Repair complete'),
+}));
 
 function renderSettings() {
   return render(
@@ -25,6 +47,14 @@ describe('SettingsScreen', () => {
     expect(getByText('Settings')).toBeTruthy();
   });
 
+  it('renders Heart Rate Monitor card first', async () => {
+    const { getByText } = renderSettings();
+
+    await waitFor(() => {
+      expect(getByText('Heart Rate Monitor')).toBeTruthy();
+    });
+  });
+
   it('renders Export Data card', () => {
     const { getByText } = renderSettings();
 
@@ -37,6 +67,15 @@ describe('SettingsScreen', () => {
 
     expect(getByText('GymTrack v1.0')).toBeTruthy();
     expect(getByText('Local-only workout tracker')).toBeTruthy();
+  });
+
+  it('renders No device paired when no device', async () => {
+    const { getByText } = renderSettings();
+
+    await waitFor(() => {
+      expect(getByText('No device paired')).toBeTruthy();
+      expect(getByText('Scan for Devices')).toBeTruthy();
+    });
   });
 
   it('calls exportAllData and saveFileToDevice when Export is pressed', async () => {
@@ -72,5 +111,13 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByText('<'));
     // No crash - back navigation invoked
     expect(getByText('Settings')).toBeTruthy();
+  });
+
+  it('shows age input with Enter age placeholder', async () => {
+    const { getByPlaceholderText } = renderSettings();
+
+    await waitFor(() => {
+      expect(getByPlaceholderText('Enter age')).toBeTruthy();
+    });
   });
 });
