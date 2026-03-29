@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getCategorySummaries, getNextWorkoutDay } from '../db/dashboard';
@@ -22,6 +23,29 @@ import { formatRelativeTime } from '../utils/formatRelativeTime';
 import { CategorySummaryCard } from '../components/CategorySummaryCard';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
+
+const ICON_SIZE = 22;
+
+function GearIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 function formatElapsed(s: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -96,7 +120,18 @@ export function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.title}>Dashboard</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Dashboard</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Settings')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          testID="settings-button"
+          accessibilityLabel="Settings"
+          accessibilityRole="button"
+        >
+          <GearIcon color={colors.secondary} />
+        </TouchableOpacity>
+      </View>
 
       {/* Next Workout Card — only shown when an activated program exists */}
       {nextWorkout !== null && (
@@ -165,13 +200,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
   title: {
     color: colors.primary,
     fontSize: fontSize.xl,
     fontWeight: weightBold,
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
   },
   list: {
     paddingHorizontal: spacing.base,
