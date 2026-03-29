@@ -143,10 +143,10 @@ Plans:
   3. A zone label ("Zone 3 — Aerobic") is shown alongside the BPM number
   4. User can enter their age in Settings, and the app automatically calculates max HR using the Tanaka formula (208 - 0.7 x age)
   5. User can initiate a device scan and pair their Garmin from the Settings screen (without needing to start a workout first)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 27-01-PLAN.md — Zone utility, HRLiveBpmDisplay component, WorkoutScreen integration
-- [ ] 27-02-PLAN.md — Settings Heart Rate Monitor card with age/max HR controls and device pairing
+- [x] 27-02-PLAN.md — Settings Heart Rate Monitor card with age/max HR controls and device pairing
 **UI hint**: yes
 
 ## Progress
@@ -177,4 +177,4 @@ Plans:
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
-| 27. Live Display & Settings UI | v1.6 | 0/2 | Not started | - |
+| 27. Live Display & Settings UI | v1.6 | 1/2 | In Progress|  |

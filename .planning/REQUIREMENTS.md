@@ -24,8 +24,8 @@ Requirements for Heart Rate Monitoring milestone. Each maps to roadmap phases.
 
 ### HR Settings
 
-- [ ] **SET-01**: User can enter their age in Settings, which calculates max HR via 220-age formula
-- [ ] **SET-02**: User can initiate device pairing from Settings screen
+- [x] **SET-01**: User can enter their age in Settings, which calculates max HR via 220-age formula
+- [x] **SET-02**: User can initiate device pairing from Settings screen
 
 ### HR Data & Stats
 
@@ -77,8 +77,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HR-02 | Phase 27 | Pending |
 | HR-03 | Phase 27 | Pending |
 | HR-04 | Phase 25 | Complete |
-| SET-01 | Phase 27 | Pending |
-| SET-02 | Phase 27 | Pending |
+| SET-01 | Phase 27 | Complete |
+| SET-02 | Phase 27 | Complete |
 | DATA-01 | Phase 26 | Pending |
 | DATA-02 | Phase 26 | Pending |
 | DATA-03 | Phase 26 | Pending |

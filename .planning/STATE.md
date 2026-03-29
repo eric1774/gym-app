@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
-status: Ready to plan
-stopped_at: Completed 26-hr-data-persistence/26-01-PLAN.md
-last_updated: "2026-03-28T12:34:34.671Z"
+status: Ready to execute
+stopped_at: Completed 27-live-display-settings-ui/27-02-PLAN.md
+last_updated: "2026-03-29T13:57:49.144Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** Phase 25 — connection-management
+**Current focus:** Phase 27 — live-display-settings-ui
 
 ## Current Position
 
-Phase: 27
-Plan: Not started
+Phase: 27 (live-display-settings-ui) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Plan: Not started
 | Phase 25-connection-management P03 | 8 | 1 tasks | 1 files |
 | Phase 25-connection-management P02 | 15 | 2 tasks | 2 files |
 | Phase 26-hr-data-persistence P01 | 9 | 8 tasks | 9 files |
+| Phase 27-live-display-settings-ui P02 | 494 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Plan: Not started
 - [Phase 25-connection-management]: DeviceScanSheet resets all local state on close to prevent stale UI on re-open; loadHRSettings refreshed after scan sheet closes to pick up newly-paired device
 - [Phase 26-hr-data-persistence]: D-05/D-06 honored: all BPM notifications buffered in hrSamplesRef, single batch flush on session end only
 - [Phase 26-hr-data-persistence]: flushHRSamples returns {avgHr, peakHr} so caller can use values without extra DB query
+- [Phase 27-live-display-settings-ui]: Age blur-to-save pattern: setAge called on onBlur with 1-120 validation; invalid input silently restores previous value per D-09
+- [Phase 27-live-display-settings-ui]: weightSemiBold removed from SettingsScreen; exportButtonText.fontWeight migrated to weightBold per font weight reduction decision in UI-SPEC
 
 ### Pending Todos
 
@@ -84,7 +87,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T22:31:23.136Z
-Stopped at: Completed 26-hr-data-persistence/26-01-PLAN.md
+Last session: 2026-03-29T13:57:49.136Z
+Stopped at: Completed 27-live-display-settings-ui/27-02-PLAN.md
 Resume file: None
 Next step: /gsd:plan-phase 24
