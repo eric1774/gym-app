@@ -9,9 +9,9 @@ Requirements for Heart Rate Monitoring milestone. Each maps to roadmap phases.
 
 ### BLE Connection
 
-- [x] **BLE-01**: User can scan for nearby BLE heart rate devices from within the app
-- [x] **BLE-02**: User can select and connect to a Garmin Forerunner 245 from the scan results
-- [x] **BLE-03**: App remembers the paired device and auto-reconnects on workout start
+- [ ] **BLE-01**: User can scan for nearby BLE heart rate devices from within the app
+- [ ] **BLE-02**: User can select and connect to a Garmin Forerunner 245 from the scan results
+- [ ] **BLE-03**: App remembers the paired device and auto-reconnects on workout start
 - [x] **BLE-04**: App requests correct Android BLE permissions (BLUETOOTH_SCAN + BLUETOOTH_CONNECT on 12+, ACCESS_FINE_LOCATION on older)
 - [x] **BLE-05**: User can see connection state indicator (connected/reconnecting/disconnected) in workout header
 
@@ -25,7 +25,7 @@ Requirements for Heart Rate Monitoring milestone. Each maps to roadmap phases.
 ### HR Settings
 
 - [x] **SET-01**: User can enter their age in Settings, which calculates max HR via 220-age formula
-- [x] **SET-02**: User can initiate device pairing from Settings screen
+- [ ] **SET-02**: User can initiate device pairing from Settings screen
 
 ### HR Data & Stats
 
@@ -68,27 +68,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BLE-01 | Phase 25 | Complete |
-| BLE-02 | Phase 25 | Complete |
-| BLE-03 | Phase 25 | Complete |
+| BLE-01 | Phase 25 → 29 | Pending |
+| BLE-02 | Phase 25 → 29 | Pending |
+| BLE-03 | Phase 25 → 28, 29 | Pending |
 | BLE-04 | Phase 24 | Complete |
 | BLE-05 | Phase 25 | Complete |
-| HR-01 | Phase 27 | Pending |
-| HR-02 | Phase 27 | Pending |
-| HR-03 | Phase 27 | Pending |
+| HR-01 | Phase 27 → 29 | Pending |
+| HR-02 | Phase 27 → 28, 29 | Pending |
+| HR-03 | Phase 27 → 28, 29 | Pending |
 | HR-04 | Phase 25 | Complete |
 | SET-01 | Phase 27 | Complete |
-| SET-02 | Phase 27 | Complete |
-| DATA-01 | Phase 26 | Pending |
-| DATA-02 | Phase 26 | Pending |
-| DATA-03 | Phase 26 | Pending |
-| DATA-04 | Phase 26 | Pending |
+| SET-02 | Phase 27 → 28 | Pending |
+| DATA-01 | Phase 26 → 28, 29 | Pending |
+| DATA-02 | Phase 26 → 29 | Pending |
+| DATA-03 | Phase 26 → 29 | Pending |
+| DATA-04 | Phase 26 → 29 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 15 total
-- Mapped to phases: 15
-- Unmapped: 0 ✓
+- Satisfied: 4 (BLE-04, BLE-05, HR-04, SET-01)
+- Pending gap closure: 11 (via Phases 28-29)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after roadmap creation — all 15 requirements mapped*
+*Last updated: 2026-03-29 after milestone audit — 10 requirements reset to Pending for gap closure phases 28-29*

@@ -8,7 +8,7 @@
 - ✅ **v1.3 Workout Intelligence & Speed** — Phases 9-14 (shipped 2026-03-14)
 - ✅ **v1.4 Test Coverage** — Phases 15-21 (shipped 2026-03-17)
 - ✅ **v1.5 Program Data Export** — Phases 22-23 (shipped 2026-03-22)
-- 🚧 **v1.6 Heart Rate Monitoring** — Phases 24-27 (in progress)
+- 🚧 **v1.6 Heart Rate Monitoring** — Phases 24-29 (in progress)
 
 ## Phases
 
@@ -87,6 +87,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
 - [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
 - [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
+- [ ] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code
+- [ ] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts
 
 ## Phase Details
 
@@ -151,6 +153,31 @@ Plans:
 - [x] 27-04-PLAN.md — Gap closure: fix BPM flicker and header overflow (End Workout pushed off screen)
 **UI hint**: yes
 
+### Phase 28: Bug Fixes & Dead Code Cleanup
+**Goal**: All functional bugs and dead code identified by the milestone audit are resolved — unpair properly disconnects BLE, below-zone BPM renders correctly, and dead types/exports are removed.
+**Depends on**: Phase 27
+**Requirements**: SET-02, BLE-03, HR-02, HR-03, DATA-01
+**Gap Closure:** Closes gaps from v1.6 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. handleUnpair calls disconnect() before clearing paired device — BLE connection is torn down on unpair
+  2. getHRZone returns null for BPM below Zone 1 threshold instead of clamping to Zone 1
+  3. WorkoutScreen shows neutral color (no zone color) and no zone label when BPM is below Zone 1 or age is not configured
+  4. HRSample type in src/types/index.ts is removed (dead code)
+  5. getComputedMaxHR export in HRSettingsService.ts is removed (dead code)
+  6. effectiveAge fallback dead code is removed from WorkoutScreen.tsx
+**Plans**: TBD
+
+### Phase 29: Milestone Bookkeeping
+**Goal**: All SUMMARY.md frontmatter and REQUIREMENTS.md checkboxes accurately reflect verified requirement completion, bringing the milestone from "gaps_found" to audit-ready.
+**Depends on**: Phase 28
+**Requirements**: BLE-01, BLE-02, BLE-03, HR-01, HR-02, HR-03, DATA-01, DATA-02, DATA-03, DATA-04
+**Gap Closure:** Closes bookkeeping gaps from v1.6 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. SUMMARY.md files for phases 25, 26, 27 include all verified requirements in requirements_completed frontmatter
+  2. DATA-01 through DATA-04 are checked [x] in REQUIREMENTS.md
+  3. Coverage count in REQUIREMENTS.md reflects 15/15 satisfied
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -180,3 +207,5 @@ Plans:
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete   | 2026-03-29 |
+| 28. Bug Fixes & Dead Code Cleanup | v1.6 | 0/0 | Planned | — |
+| 29. Milestone Bookkeeping | v1.6 | 0/0 | Planned | — |
