@@ -984,52 +984,59 @@ export function WorkoutScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Session header */}
       <View style={styles.header}>
-        <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
-        <Text style={styles.volumeText}>
-          {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
-        </Text>
+        {/* Row 1: Timer, Volume, End Workout — always fits */}
+        <View style={styles.headerTopRow}>
+          <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
+          <Text style={styles.volumeText}>
+            {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
+          </Text>
 
-        {/* HR Connection Indicator — only visible when device is paired */}
-        <HRConnectionIndicator
-          deviceState={deviceState}
-          visible={hasPairedDevice}
-        />
+          {/* Pair HR monitor button — visible when no device is paired */}
+          {!hasPairedDevice && (
+            <TouchableOpacity
+              onPress={() => setScanSheetVisible(true)}
+              style={styles.hrPairButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Svg width={16} height={16} viewBox="0 0 24 24" fill={colors.accent}>
+                <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </Svg>
+            </TouchableOpacity>
+          )}
 
-        {/* Live BPM display — zone-colored number + zone label when connected, "--" otherwise */}
-        {hasPairedDevice && deviceState === 'connected' && currentBpm !== null && (
-          <View style={styles.bpmBlock}>
-            <Text style={[styles.bpmValue, { color: bpmZone ? bpmZone.color : colors.primary }]}>
-              {currentBpm}
-            </Text>
-            {bpmZone && (
-              <Text style={styles.bpmZoneLabel}>{`Zone ${bpmZone.zone} — ${bpmZone.name}`}</Text>
-            )}
+          <TouchableOpacity
+            onPress={handleEndWorkout}
+            style={styles.endButtonTouchable}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.endButton}>End Workout</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Row 2: HR info — only rendered when device is paired */}
+        {hasPairedDevice && (
+          <View style={styles.headerHRRow}>
+            <HRConnectionIndicator
+              deviceState={deviceState}
+              visible={hasPairedDevice}
+            />
+            {/* Always-rendered BPM display — swaps content without mount/unmount */}
+            <View style={styles.bpmBlock}>
+              <Text
+                style={[
+                  styles.bpmValue,
+                  { color: bpmZone ? bpmZone.color : colors.primary },
+                ]}>
+                {deviceState === 'connected' && currentBpm !== null
+                  ? String(currentBpm)
+                  : '--'}
+              </Text>
+              {bpmZone && (
+                <Text style={styles.bpmZoneLabel}>
+                  {`Zone ${bpmZone.zone} — ${bpmZone.name}`}
+                </Text>
+              )}
+            </View>
           </View>
         )}
-
-        {/* BPM placeholder — shows "--" when paired but not connected (or connected, no reading yet) */}
-        {hasPairedDevice && (deviceState !== 'connected' || currentBpm === null) && (
-          <Text style={styles.bpmPlaceholder}>--</Text>
-        )}
-
-        {/* Pair HR monitor button — visible when no device is paired */}
-        {!hasPairedDevice && (
-          <TouchableOpacity
-            onPress={() => setScanSheetVisible(true)}
-            style={styles.hrPairButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Svg width={16} height={16} viewBox="0 0 24 24" fill={colors.accent}>
-              <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </Svg>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          onPress={handleEndWorkout}
-          style={styles.endButtonTouchable}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.endButton}>End Workout</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Session title banner for program workouts */}
@@ -1198,11 +1205,20 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  headerTopRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+  },
+  headerHRRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   timerText: {
     fontSize: fontSize.xl,
@@ -1230,21 +1246,18 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
     color: colors.danger,
   },
-  bpmPlaceholder: {
-    fontSize: fontSize.base,
-    color: colors.secondary,
-  },
   bpmBlock: {
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing.xs,
   },
   bpmValue: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.base,    // Reduced from fontSize.lg (20) to fontSize.base (15) — compact in HR row
     fontWeight: weightBold,
   },
   bpmZoneLabel: {
     fontSize: fontSize.xs,
     color: colors.secondary,
-    marginTop: 1,
   },
   hrPairButton: {
     padding: spacing.xs,

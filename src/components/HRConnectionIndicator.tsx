@@ -47,6 +47,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: 100,  // Prevent unbounded width in compact layouts
   },
   dot: {
     width: 8,

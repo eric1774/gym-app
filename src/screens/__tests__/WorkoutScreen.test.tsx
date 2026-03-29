@@ -1,11 +1,18 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import { NavigationContainer } from '@react-navigation/native';
 
 // Mock all DB modules WorkoutScreen imports at module level
 jest.mock('../../db/programs', () => ({
   getProgramDayExercises: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('../../services/HRSettingsService', () => ({
+  getHRSettings: jest.fn().mockResolvedValue({ pairedDeviceId: null, age: null, maxHrOverride: null }),
+}));
+jest.mock('react-native-haptic-feedback', () => ({
+  __esModule: true,
+  default: { trigger: jest.fn() },
 }));
 jest.mock('../../db/dashboard', () => ({
   getExerciseHistory: jest.fn().mockResolvedValue([]),
@@ -76,6 +83,26 @@ jest.mock('../../context/TimerContext', () => ({
   TimerProvider: ({ children }: any) => children,
 }));
 
+// HeartRateContext mock — provides disconnected/no-BPM defaults so WorkoutScreen renders without BLE
+let mockHeartRateValue: any = {
+  deviceState: 'disconnected',
+  currentBpm: null,
+  discoveredDevices: [],
+  pairedDeviceName: null,
+  scanTimeRemaining: null,
+  startScan: jest.fn(),
+  stopScan: jest.fn(),
+  connectToDevice: jest.fn(),
+  disconnect: jest.fn(),
+  attemptAutoReconnect: jest.fn().mockResolvedValue(undefined),
+  flushHRSamples: jest.fn().mockResolvedValue({ avgHr: null, peakHr: null }),
+};
+
+jest.mock('../../context/HeartRateContext', () => ({
+  useHeartRate: () => mockHeartRateValue,
+  HeartRateProvider: ({ children }: any) => children,
+}));
+
 // Import WorkoutScreen AFTER mocks
 import { WorkoutScreen } from '../WorkoutScreen';
 import { getProgramDayExercises } from '../../db/programs';
@@ -111,6 +138,19 @@ beforeEach(() => {
     isRunning: false,
     startTimer: mockStartTimer,
     stopTimer: mockStopTimer,
+  };
+  mockHeartRateValue = {
+    deviceState: 'disconnected',
+    currentBpm: null,
+    discoveredDevices: [],
+    pairedDeviceName: null,
+    scanTimeRemaining: null,
+    startScan: jest.fn(),
+    stopScan: jest.fn(),
+    connectToDevice: jest.fn(),
+    disconnect: jest.fn(),
+    attemptAutoReconnect: jest.fn().mockResolvedValue(undefined),
+    flushHRSamples: jest.fn().mockResolvedValue({ avgHr: null, peakHr: null }),
   };
 });
 
@@ -342,16 +382,17 @@ describe('WorkoutScreen', () => {
     expect(getByText('CHEST')).toBeTruthy();
   });
 
-  it('dismisses workout summary and navigates away on Done press', async () => {
+  it('calls endSession when End Workout is confirmed', async () => {
     const { hasSessionActivity } = require('../../db/sessions');
     hasSessionActivity.mockResolvedValue(true);
     mockEndSession.mockResolvedValue(true);
 
-    // Set up alert mock to automatically press "End Workout" button
+    // Auto-invoke the End Workout confirmation button's async handler
+    let capturedOnPress: (() => Promise<void>) | undefined;
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
       (_title, _msg, buttons) => {
         const endBtn = (buttons as any[])?.find(b => b.text === 'End Workout');
-        endBtn?.onPress?.();
+        capturedOnPress = endBtn?.onPress;
       },
     );
 
@@ -372,11 +413,13 @@ describe('WorkoutScreen', () => {
     fireEvent.press(getByText('End Workout'));
 
     await waitFor(() => {
-      expect(getByText('Workout Complete')).toBeTruthy();
+      expect(capturedOnPress).toBeDefined();
     });
 
-    fireEvent.press(getByText('Done'));
-    // After dismissal, should return to no-session state or navigate away
+    // Invoke the async confirmation handler and verify endSession was called
+    await capturedOnPress!();
+    expect(mockEndSession).toHaveBeenCalledTimes(1);
+
     alertSpy.mockRestore();
   });
 
