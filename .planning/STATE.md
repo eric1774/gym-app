@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
 status: Ready to execute
-stopped_at: Completed 27-live-display-settings-ui/27-03-PLAN.md
-last_updated: "2026-03-29T15:07:56.285Z"
+stopped_at: Completed 27-live-display-settings-ui/27-04-PLAN.md
+last_updated: "2026-03-29T15:27:39.355Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 27 (live-display-settings-ui) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Plan: 2 of 4
 | Phase 26-hr-data-persistence P01 | 9 | 8 tasks | 9 files |
 | Phase 27-live-display-settings-ui P02 | 494 | 1 tasks | 2 files |
 | Phase 27-live-display-settings-ui P03 | 5 | 1 tasks | 2 files |
+| Phase 27-live-display-settings-ui P04 | 1626 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,8 @@ Plan: 2 of 4
 - [Phase 27-live-display-settings-ui]: Age blur-to-save pattern: setAge called on onBlur with 1-120 validation; invalid input silently restores previous value per D-09
 - [Phase 27-live-display-settings-ui]: weightSemiBold removed from SettingsScreen; exportButtonText.fontWeight migrated to weightBold per font weight reduction decision in UI-SPEC
 - [Phase 27-live-display-settings-ui]: headerRow View replaces standalone title Text in DashboardScreen — padding moved from title style to headerRow to maintain spacing while enabling row layout with gear icon
+- [Phase 27-live-display-settings-ui]: Remove setCurrentBpm(null) from auto-disconnect handler: last known BPM stays visible during reconnection; manual disconnect retains null-clearing behavior
+- [Phase 27-live-display-settings-ui]: Two-row workout header: Row 1 (timer, volume, End Workout) always fits any screen; Row 2 (HR indicator, BPM, zone) only when device is paired
 
 ### Pending Todos
 
@@ -89,7 +92,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T15:07:56.281Z
-Stopped at: Completed 27-live-display-settings-ui/27-03-PLAN.md
+Last session: 2026-03-29T15:27:39.351Z
+Stopped at: Completed 27-live-display-settings-ui/27-04-PLAN.md
 Resume file: None
 Next step: /gsd:plan-phase 24

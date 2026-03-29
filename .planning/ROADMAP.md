@@ -86,7 +86,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
 - [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
-- [ ] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings
+- [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
 
 ## Phase Details
 
@@ -143,12 +143,12 @@ Plans:
   3. A zone label ("Zone 3 — Aerobic") is shown alongside the BPM number
   4. User can enter their age in Settings, and the app automatically calculates max HR using the Tanaka formula (208 - 0.7 x age)
   5. User can initiate a device scan and pair their Garmin from the Settings screen (without needing to start a workout first)
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 - [x] 27-01-PLAN.md — Zone utility, HRLiveBpmDisplay component, WorkoutScreen integration
 - [x] 27-02-PLAN.md — Settings Heart Rate Monitor card with age/max HR controls and device pairing
 - [x] 27-03-PLAN.md — Gap closure: add gear icon to Dashboard header for Settings navigation
-- [ ] 27-04-PLAN.md — Gap closure: fix BPM flicker and header overflow (End Workout pushed off screen)
+- [x] 27-04-PLAN.md — Gap closure: fix BPM flicker and header overflow (End Workout pushed off screen)
 **UI hint**: yes
 
 ## Progress
@@ -179,4 +179,4 @@ Plans:
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
-| 27. Live Display & Settings UI | v1.6 | 3/4 | In Progress|  |
+| 27. Live Display & Settings UI | v1.6 | 4/4 | Complete   | 2026-03-29 |
