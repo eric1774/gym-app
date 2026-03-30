@@ -86,9 +86,9 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
 - [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
-- [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
+- [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
 - [x] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code (completed 2026-03-30)
-- [ ] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts
+- [x] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts
 
 ## Phase Details
 
@@ -120,8 +120,8 @@ Plans:
 **Plans:** 3/3 plans complete
 Plans:
 - [x] 25-01-PLAN.md — HeartRateContext BLE state machine, presentation components, App.tsx provider wiring
-- [ ] 25-02-PLAN.md — DeviceScanSheet bottom sheet, SettingsScreen HR Monitor card
-- [ ] 25-03-PLAN.md — WorkoutScreen header indicator, auto-reconnect, disconnect haptic
+- [x] 25-02-PLAN.md — DeviceScanSheet bottom sheet, SettingsScreen HR Monitor card
+- [x] 25-03-PLAN.md — WorkoutScreen header indicator, auto-reconnect, disconnect haptic
 **UI hint**: yes
 
 ### Phase 26: HR Data Persistence
@@ -133,7 +133,10 @@ Plans:
   2. avg_hr and peak_hr are computed from the in-memory buffer on session end and persisted to workout_sessions before the summary screen renders
   3. The workout summary card displays average HR and peak HR after a session that included a connected heart rate monitor
   4. The calendar day detail view displays average HR and peak HR for past sessions that recorded HR data
-**Plans**: TBD
+**Plans:** 2/2 plans complete
+Plans:
+- [x] 26-01-PLAN.md — HR sample buffer, batch flush, avg/peak HR computation and DB persistence
+- [x] 26-02-PLAN.md — Avg/Peak HR stat rows in WorkoutSummary and CalendarDayDetail
 
 ### Phase 27: Live Display & Settings UI
 **Goal**: Users see their live BPM color-coded by zone in the workout header throughout a session, and can configure age and max HR in Settings and initiate device pairing from Settings.
@@ -165,7 +168,10 @@ Plans:
   4. HRSample type in src/types/index.ts is removed (dead code)
   5. getComputedMaxHR export in HRSettingsService.ts is removed (dead code)
   6. effectiveAge fallback dead code is removed from WorkoutScreen.tsx
-**Plans**: TBD
+**Plans:** 2/2 plans complete
+Plans:
+- [x] 28-01-PLAN.md — Bug fixes: unpair disconnect, zone clamping, dead code removal
+- [x] 28-02-PLAN.md — Dead code removal: HRSample type, getComputedMaxHR, effectiveAge fallback
 
 ### Phase 29: Milestone Bookkeeping
 **Goal**: All SUMMARY.md frontmatter and REQUIREMENTS.md checkboxes accurately reflect verified requirement completion, bringing the milestone from "gaps_found" to audit-ready.
@@ -176,7 +182,9 @@ Plans:
   1. SUMMARY.md files for phases 25, 26, 27 include all verified requirements in requirements_completed frontmatter
   2. DATA-01 through DATA-04 are checked [x] in REQUIREMENTS.md
   3. Coverage count in REQUIREMENTS.md reflects 15/15 satisfied
-**Plans**: TBD
+**Plans:** 1/1 plans complete
+Plans:
+- [x] 29-01-PLAN.md — Update SUMMARY.md frontmatter, REQUIREMENTS.md checkboxes/coverage/traceability
 
 ## Progress
 
@@ -204,8 +212,8 @@ Plans:
 | 22. Export Data Layer | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 23. Export UI & File Delivery | v1.5 | 1/1 | Complete | 2026-03-22 |
 | 24. BLE Foundation | v1.6 | 2/2 | Complete | 2026-03-24 |
-| 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
-| 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
-| 27. Live Display & Settings UI | v1.6 | 4/4 | Complete   | 2026-03-29 |
-| 28. Bug Fixes & Dead Code Cleanup | v1.6 | 1/1 | Complete   | 2026-03-30 |
-| 29. Milestone Bookkeeping | v1.6 | 0/0 | Planned | — |
+| 25. Connection Management | v1.6 | 3/3 | Complete | 2026-03-25 |
+| 26. HR Data Persistence | v1.6 | 2/2 | Complete | 2026-03-28 |
+| 27. Live Display & Settings UI | v1.6 | 4/4 | Complete | 2026-03-29 |
+| 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
+| 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-29 |
