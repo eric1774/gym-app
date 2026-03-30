@@ -60,7 +60,6 @@ export async function initDatabase(): Promise<void> {
   const { importProgramData } = await import('./importProgram');
   await importProgramData();
 
-  // One-time data repair: fix week counter and restore lost sessions
-  const { repairProgramData } = await import('./repair');
-  await repairProgramData();
+  // Data repair is user-initiated only (Settings > Repair Data).
+  // Never run repair automatically on boot — it must require explicit confirmation.
 }

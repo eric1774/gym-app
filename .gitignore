@@ -70,3 +70,11 @@ vendor/
 *.log
 .cache/
 tmp/
+
+# Tool/build artifacts
+.agent/
+.agents/
+.claude/worktrees/
+.scannerwork/
+android/.scannerwork/
+android/app/.cxx/

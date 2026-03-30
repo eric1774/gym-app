@@ -96,7 +96,7 @@ export async function getLastSessionSets(
   // excluding the current session.
   const sessionResult = await executeSql(
     database,
-    `SELECT ws.id
+    `SELECT ws.session_id
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      WHERE ws.exercise_id = ?
@@ -111,7 +111,7 @@ export async function getLastSessionSets(
     return [];
   }
 
-  const lastSessionId: number = sessionResult.rows.item(0).id;
+  const lastSessionId: number = sessionResult.rows.item(0).session_id;
   return getSetsForExerciseInSession(lastSessionId, exerciseId);
 }
 

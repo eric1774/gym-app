@@ -1,11 +1,10 @@
 import { db, executeSql } from './database';
 
 /**
- * One-time data repair: fix program week counter and restore lost sessions.
+ * Data repair: advance program to week 5 and restore the March 30 Chest session.
  *
- * 1. Reset "8 week program" current_week to 4
- * 2. Delete bogus sessions stamped with program_week > 4
- * 3. Recreate the March 24 (Chest) and March 25 (Legs) workout sessions
+ * This is user-initiated only — called from Settings > Repair Data.
+ * Never runs automatically on boot to prevent accidental data loss.
  *
  * Safe to run multiple times — checks for existing data before inserting.
  */
@@ -24,16 +23,16 @@ export async function repairProgramData(): Promise<string> {
   const programId = progResult.rows.item(0).id as number;
   const currentWeek = progResult.rows.item(0).current_week as number;
 
-  // ── Step 2: Reset current_week to 4 ──────────────────────────────
-  if (currentWeek !== 4) {
+  // ── Step 2: Ensure current_week is at least 5 ────────────────────
+  if (currentWeek < 5) {
     await executeSql(
       database,
-      'UPDATE programs SET current_week = 4 WHERE id = ?',
+      'UPDATE programs SET current_week = 5 WHERE id = ?',
       [programId],
     );
-    log.push(`Reset current_week from ${currentWeek} to 4`);
+    log.push(`Advanced current_week from ${currentWeek} to 5`);
   } else {
-    log.push('current_week already at 4');
+    log.push(`current_week already at ${currentWeek}`);
   }
 
   // ── Step 3: Get program day IDs ───────────────────────────────────
@@ -49,53 +48,35 @@ export async function repairProgramData(): Promise<string> {
   }
 
   const chestDayId = dayMap.get('Chest triceps and conditioning');
-  const legsDayId = dayMap.get('Legs Quad Focus');
 
-  if (!chestDayId || !legsDayId) {
-    log.push(`WARNING: Could not find program days. Chest=${chestDayId}, Legs=${legsDayId}`);
+  if (!chestDayId) {
+    log.push('WARNING: Could not find "Chest triceps and conditioning" day');
     return log.join('\n');
   }
 
-  // ── Step 4: Delete bogus sessions for weeks > 4 ──────────────────
-  const bogusSessionsResult = await executeSql(
-    database,
-    `SELECT ws.id FROM workout_sessions ws
-     INNER JOIN program_days pd ON pd.id = ws.program_day_id
-     WHERE pd.program_id = ? AND ws.program_week > 4`,
-    [programId],
-  );
-
-  let deletedCount = 0;
-  for (let i = 0; i < bogusSessionsResult.rows.length; i++) {
-    const sid = bogusSessionsResult.rows.item(i).id as number;
-    await executeSql(database, 'DELETE FROM workout_sets WHERE session_id = ?', [sid]);
-    await executeSql(database, 'DELETE FROM exercise_sessions WHERE session_id = ?', [sid]);
-    await executeSql(database, 'DELETE FROM workout_sessions WHERE id = ?', [sid]);
-    deletedCount++;
-  }
-  log.push(`Deleted ${deletedCount} bogus sessions (weeks 5-8)`);
-
-  // ── Step 5: Recreate March 24 Chest session ──────────────────────
-  const march24Exists = await executeSql(
+  // ── Step 4: Restore March 30 Chest session (week 5) ──────────────
+  const march30Exists = await executeSql(
     database,
     `SELECT id FROM workout_sessions
      WHERE program_day_id = ?
-       AND completed_at LIKE '2026-03-24%'
+       AND program_week = 5
+       AND completed_at LIKE '2026-03-30%'
      LIMIT 1`,
     [chestDayId],
   );
 
-  if (march24Exists.rows.length === 0) {
-    const startedAt = '2026-03-24T10:00:00.000Z';
-    const completedAt = '2026-03-24T11:15:43.847Z';
+  if (march30Exists.rows.length === 0) {
+    const startedAt = '2026-03-30T10:00:00.000Z';
+    const completedAt = '2026-03-30T11:15:00.000Z';
 
     const sessionResult = await executeSql(
       database,
-      'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, 4)',
+      'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, 5)',
       [startedAt, completedAt, chestDayId],
     );
     const sessionId = sessionResult.insertId;
 
+    // Using week 4 weights as baseline — user can verify in calendar detail
     const chestExercises = [
       { name: 'Bench Press', sets: [
         { setNumber: 1, weight: 135, reps: 8 },
@@ -125,75 +106,9 @@ export async function repairProgramData(): Promise<string> {
     ];
 
     await insertExerciseSets(database, sessionId, chestExercises, completedAt);
-    log.push('Restored March 24 Chest session (5 exercises, 15 sets)');
+    log.push('Restored March 30 Chest session for week 5 (5 exercises, 15 sets)');
   } else {
-    log.push('March 24 Chest session already exists — skipped');
-  }
-
-  // ── Step 6: Recreate March 25 Legs session ───────────────────────
-  const march25Exists = await executeSql(
-    database,
-    `SELECT id FROM workout_sessions
-     WHERE program_day_id = ?
-       AND completed_at LIKE '2026-03-25%'
-     LIMIT 1`,
-    [legsDayId],
-  );
-
-  if (march25Exists.rows.length === 0) {
-    const startedAt = '2026-03-25T10:00:00.000Z';
-    const completedAt = '2026-03-25T11:29:00.533Z';
-
-    const sessionResult = await executeSql(
-      database,
-      'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, 4)',
-      [startedAt, completedAt, legsDayId],
-    );
-    const sessionId = sessionResult.insertId;
-
-    const legsExercises = [
-      { name: 'Bulgarian Split Squats', sets: [
-        { setNumber: 1, weight: 25, reps: 10 },
-        { setNumber: 2, weight: 25, reps: 10 },
-        { setNumber: 3, weight: 25, reps: 10 },
-      ]},
-      { name: 'Box Jump', sets: [
-        { setNumber: 1, weight: 0, reps: 10 },
-        { setNumber: 2, weight: 0, reps: 10 },
-        { setNumber: 3, weight: 0, reps: 10 },
-      ]},
-      { name: 'Belt Squats', sets: [
-        { setNumber: 1, weight: 100, reps: 12 },
-        { setNumber: 2, weight: 110, reps: 12 },
-        { setNumber: 3, weight: 110, reps: 12 },
-        { setNumber: 4, weight: 120, reps: 12 },
-      ]},
-      { name: 'Walking Lunges', sets: [
-        { setNumber: 1, weight: 20, reps: 10 },
-        { setNumber: 2, weight: 20, reps: 10 },
-        { setNumber: 3, weight: 20, reps: 7 },
-      ]},
-      { name: 'Leg Extension', sets: [
-        { setNumber: 1, weight: 90, reps: 12 },
-        { setNumber: 2, weight: 105, reps: 12 },
-        { setNumber: 3, weight: 105, reps: 12 },
-      ]},
-      { name: 'DB V up', sets: [
-        { setNumber: 1, weight: 20, reps: 10 },
-        { setNumber: 2, weight: 20, reps: 10 },
-        { setNumber: 3, weight: 20, reps: 6 },
-      ]},
-      { name: 'Superman lift', sets: [
-        { setNumber: 1, weight: 0, reps: 10 },
-        { setNumber: 2, weight: 0, reps: 10 },
-        { setNumber: 3, weight: 0, reps: 10 },
-      ]},
-    ];
-
-    await insertExerciseSets(database, sessionId, legsExercises, completedAt);
-    log.push('Restored March 25 Legs session (7 exercises, 22 sets)');
-  } else {
-    log.push('March 25 Legs session already exists — skipped');
+    log.push('March 30 Chest session already exists — skipped');
   }
 
   return log.join('\n');

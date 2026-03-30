@@ -152,8 +152,8 @@ describe('getLastSessionSets', () => {
   });
 
   it('finds previous session then calls getSetsForExerciseInSession', async () => {
-    // Previous session query returns session id=9
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 9 }]));
+    // Previous session query returns session_id=9
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ session_id: 9 }]));
     // Sets for session 9
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ ...setRow, session_id: 9 }]));
 
