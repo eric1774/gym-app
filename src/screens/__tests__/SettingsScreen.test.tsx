@@ -22,7 +22,6 @@ jest.mock('../../services/HRSettingsService', () => ({
   }),
   setAge: jest.fn().mockResolvedValue(undefined),
   setMaxHrOverride: jest.fn().mockResolvedValue(undefined),
-  getComputedMaxHR: jest.fn().mockResolvedValue(null),
   clearPairedDevice: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../DeviceScanSheet', () => ({

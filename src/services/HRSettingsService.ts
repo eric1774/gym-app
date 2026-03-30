@@ -57,22 +57,3 @@ export async function clearPairedDevice(): Promise<void> {
   await AsyncStorage.removeItem(KEYS.PAIRED_DEVICE_ID);
 }
 
-/**
- * Compute effective max HR using Tanaka formula or user override (per D-08, D-11).
- * Tanaka: 208 - 0.7 * age (more accurate for adults over 40).
- * Returns null if age is not set (per D-06: age required before HR features work).
- */
-export async function getComputedMaxHR(): Promise<number | null> {
-  const settings = await getHRSettings();
-
-  if (settings.age === null) {
-    return null;
-  }
-
-  if (settings.maxHrOverride !== null) {
-    return settings.maxHrOverride;
-  }
-
-  // Tanaka formula (per D-11)
-  return 208 - 0.7 * settings.age;
-}

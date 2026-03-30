@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { exportAllData } from '../db/dashboard';
 import { saveFileToDevice } from '../native/FileSaver';
 import { repairProgramData } from '../db/repair';
-import { getHRSettings, setAge, setMaxHrOverride, getComputedMaxHR, clearPairedDevice } from '../services/HRSettingsService';
+import { getHRSettings, setAge, setMaxHrOverride, clearPairedDevice } from '../services/HRSettingsService';
 import { DeviceScanSheet } from './DeviceScanSheet';
 import { useHeartRate } from '../context/HeartRateContext';
 import { colors } from '../theme/colors';
