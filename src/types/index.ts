@@ -282,15 +282,6 @@ export interface ProgramExport {
 
 // -- Heart Rate domain types (Phase 24) --
 
-/** A single heart rate sample recorded during a workout session. */
-export interface HRSample {
-  id: number;
-  sessionId: number;
-  bpm: number;
-  /** ISO 8601 timestamp (local, no Z suffix) */
-  recordedAt: string;
-}
-
 /** Possible states of the BLE device connection. */
 export type DeviceConnectionState =
   | 'disconnected'
