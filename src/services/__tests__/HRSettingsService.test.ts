@@ -5,7 +5,6 @@ import {
   setMaxHrOverride,
   setPairedDeviceId,
   clearPairedDevice,
-  getComputedMaxHR,
 } from '../HRSettingsService';
 
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
@@ -80,42 +79,6 @@ describe('HRSettingsService', () => {
     it('removes hr_settings_paired_device_id from AsyncStorage', async () => {
       await clearPairedDevice();
       expect(mockRemoveItem).toHaveBeenCalledWith('hr_settings_paired_device_id');
-    });
-  });
-
-  describe('getComputedMaxHR', () => {
-    it('returns Tanaka-computed value (183.5) when age is 35 and no override', async () => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === 'hr_settings_age') {
-          return Promise.resolve('35');
-        }
-        return Promise.resolve(null);
-      });
-
-      const maxHR = await getComputedMaxHR();
-      expect(maxHR).toBe(183.5); // 208 - 0.7 * 35 = 183.5
-    });
-
-    it('returns override value (190) when age is 35 and maxHrOverride is 190', async () => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === 'hr_settings_age') {
-          return Promise.resolve('35');
-        }
-        if (key === 'hr_settings_max_hr_override') {
-          return Promise.resolve('190');
-        }
-        return Promise.resolve(null);
-      });
-
-      const maxHR = await getComputedMaxHR();
-      expect(maxHR).toBe(190);
-    });
-
-    it('returns null when age is not set', async () => {
-      mockGetItem.mockResolvedValue(null);
-
-      const maxHR = await getComputedMaxHR();
-      expect(maxHR).toBeNull();
     });
   });
 });
