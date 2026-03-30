@@ -12,6 +12,7 @@ jest.mock('../../native/FileSaver', () => ({
 jest.mock('../../context/HeartRateContext', () => ({
   useHeartRate: jest.fn().mockReturnValue({
     pairedDeviceName: null,
+    disconnect: jest.fn().mockResolvedValue(undefined),
   }),
 }));
 jest.mock('../../services/HRSettingsService', () => ({
@@ -22,8 +23,6 @@ jest.mock('../../services/HRSettingsService', () => ({
   }),
   setAge: jest.fn().mockResolvedValue(undefined),
   setMaxHrOverride: jest.fn().mockResolvedValue(undefined),
-  getComputedMaxHR: jest.fn().mockResolvedValue(null),
-  clearPairedDevice: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../DeviceScanSheet', () => ({
   DeviceScanSheet: jest.fn().mockReturnValue(null),

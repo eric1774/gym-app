@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { exportAllData } from '../db/dashboard';
 import { saveFileToDevice } from '../native/FileSaver';
 import { repairProgramData } from '../db/repair';
-import { getHRSettings, setAge, setMaxHrOverride, getComputedMaxHR, clearPairedDevice } from '../services/HRSettingsService';
+import { getHRSettings, setAge, setMaxHrOverride } from '../services/HRSettingsService';
 import { DeviceScanSheet } from './DeviceScanSheet';
 import { useHeartRate } from '../context/HeartRateContext';
 import { colors } from '../theme/colors';
@@ -24,7 +24,7 @@ import { fontSize, weightBold, weightRegular } from '../theme/typography';
 
 export function SettingsScreen() {
   const navigation = useNavigation();
-  const { pairedDeviceName } = useHeartRate();
+  const { pairedDeviceName, disconnect } = useHeartRate();
   const [isExporting, setIsExporting] = useState(false);
   const [isRepairing, setIsRepairing] = useState(false);
 
@@ -121,7 +121,7 @@ export function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await clearPairedDevice();
+              await disconnect();
               setPairedDeviceId(null);
             } catch (e: any) {
               Alert.alert('Error', 'Could not remove paired device. Please try again.');
@@ -130,7 +130,7 @@ export function SettingsScreen() {
         },
       ],
     );
-  }, []);
+  }, [disconnect]);
 
   const handleScanSheetClose = useCallback(() => {
     setScanSheetVisible(false);
