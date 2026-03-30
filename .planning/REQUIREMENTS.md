@@ -11,25 +11,25 @@ Requirements for Heart Rate Monitoring milestone. Each maps to roadmap phases.
 
 - [ ] **BLE-01**: User can scan for nearby BLE heart rate devices from within the app
 - [ ] **BLE-02**: User can select and connect to a Garmin Forerunner 245 from the scan results
-- [ ] **BLE-03**: App remembers the paired device and auto-reconnects on workout start
+- [x] **BLE-03**: App remembers the paired device and auto-reconnects on workout start
 - [x] **BLE-04**: App requests correct Android BLE permissions (BLUETOOTH_SCAN + BLUETOOTH_CONNECT on 12+, ACCESS_FINE_LOCATION on older)
 - [x] **BLE-05**: User can see connection state indicator (connected/reconnecting/disconnected) in workout header
 
 ### Live HR Display
 
 - [ ] **HR-01**: User can see live BPM updating in the workout header during an active workout
-- [ ] **HR-02**: Live BPM display is color-coded by HR zone (5-zone model: 50/60/70/80/90% of max HR)
-- [ ] **HR-03**: Zone label is shown alongside BPM (e.g., "Zone 3 — Aerobic")
+- [x] **HR-02**: Live BPM display is color-coded by HR zone (5-zone model: 50/60/70/80/90% of max HR)
+- [x] **HR-03**: Zone label is shown alongside BPM (e.g., "Zone 3 — Aerobic")
 - [x] **HR-04**: When watch disconnects mid-workout, BPM shows "- -" and app attempts one auto-reconnect
 
 ### HR Settings
 
 - [x] **SET-01**: User can enter their age in Settings, which calculates max HR via 220-age formula
-- [ ] **SET-02**: User can initiate device pairing from Settings screen
+- [x] **SET-02**: User can initiate device pairing from Settings screen
 
 ### HR Data & Stats
 
-- [ ] **DATA-01**: HR samples are stored per workout session as time-series data (hr_samples table)
+- [x] **DATA-01**: HR samples are stored per workout session as time-series data (hr_samples table)
 - [ ] **DATA-02**: Average HR and Peak HR are computed and persisted per workout session (DB migration v8)
 - [ ] **DATA-03**: Average HR and Peak HR are displayed on the workout summary card
 - [ ] **DATA-04**: Average HR and Peak HR are displayed in calendar history day details
@@ -70,16 +70,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | BLE-01 | Phase 25 → 29 | Pending |
 | BLE-02 | Phase 25 → 29 | Pending |
-| BLE-03 | Phase 25 → 28, 29 | Pending |
+| BLE-03 | Phase 25 → 28, 29 | Complete |
 | BLE-04 | Phase 24 | Complete |
 | BLE-05 | Phase 25 | Complete |
 | HR-01 | Phase 27 → 29 | Pending |
-| HR-02 | Phase 27 → 28, 29 | Pending |
-| HR-03 | Phase 27 → 28, 29 | Pending |
+| HR-02 | Phase 27 → 28, 29 | Complete |
+| HR-03 | Phase 27 → 28, 29 | Complete |
 | HR-04 | Phase 25 | Complete |
 | SET-01 | Phase 27 | Complete |
-| SET-02 | Phase 27 → 28 | Pending |
-| DATA-01 | Phase 26 → 28, 29 | Pending |
+| SET-02 | Phase 27 → 28 | Complete |
+| DATA-01 | Phase 26 → 28, 29 | Complete |
 | DATA-02 | Phase 26 → 29 | Pending |
 | DATA-03 | Phase 26 → 29 | Pending |
 | DATA-04 | Phase 26 → 29 | Pending |

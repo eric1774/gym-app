@@ -87,7 +87,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
 - [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
 - [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
-- [ ] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code
+- [x] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code (completed 2026-03-30)
 - [ ] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts
 
 ## Phase Details
@@ -207,5 +207,5 @@ Plans:
 | 25. Connection Management | v1.6 | 1/3 | Complete    | 2026-03-25 |
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete    | 2026-03-28 |
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete   | 2026-03-29 |
-| 28. Bug Fixes & Dead Code Cleanup | v1.6 | 0/0 | Planned | — |
+| 28. Bug Fixes & Dead Code Cleanup | v1.6 | 1/1 | Complete   | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 0/0 | Planned | — |
