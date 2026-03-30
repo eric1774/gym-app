@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
-status: Ready to execute
-stopped_at: Completed 28-bug-fixes-dead-code-cleanup/28-01-PLAN.md
-last_updated: "2026-03-30T00:11:11.496Z"
+status: Complete
+stopped_at: Completed 29-milestone-bookkeeping/29-01-PLAN.md
+last_updated: "2026-03-29T00:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 10
+  completed_phases: 6
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** Phase 27 — live-display-settings-ui
+**Current focus:** Phase 29 — milestone-bookkeeping (COMPLETE)
 
 ## Current Position
 
-Phase: 27 (live-display-settings-ui) — EXECUTING
-Plan: 4 of 4
+Phase: 29 (milestone-bookkeeping) — COMPLETE
+Plan: 1 of 1
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Plan: 4 of 4
 | Phase 27-live-display-settings-ui P03 | 5 | 1 tasks | 2 files |
 | Phase 27-live-display-settings-ui P04 | 1626 | 2 tasks | 4 files |
 | Phase 28-bug-fixes-dead-code-cleanup P1 | 20 | 5 tasks | 8 files |
+| Phase 29-milestone-bookkeeping P01 | 10 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ Plan: 4 of 4
 - [Phase 28-bug-fixes-dead-code-cleanup]: handleUnpair uses disconnect() from HeartRateContext — ensures atomic BLE GATT teardown + storage clear on unpair
 - [Phase 28-bug-fixes-dead-code-cleanup]: getHRZone returns null for below-50%-maxHr BPM — below-zone is not a training zone, neutral UI render is correct
 - [Phase 28-bug-fixes-dead-code-cleanup]: getComputedMaxHR removed from HRSettingsService — SettingsScreen computes inline, synchronous computeMaxHR in hrZones.ts covers remaining use cases
+- [Phase 29-milestone-bookkeeping]: All 15 v1.6 requirements verified and checked [x] in REQUIREMENTS.md — BLE-01, BLE-02, HR-01, DATA-02, DATA-03, DATA-04 were previously unchecked bookkeeping gaps
 
 ### Pending Todos
 
@@ -96,7 +98,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-30T00:11:11.491Z
-Stopped at: Completed 28-bug-fixes-dead-code-cleanup/28-01-PLAN.md
+Last session: 2026-03-29T00:00:00.000Z
+Stopped at: Completed 29-milestone-bookkeeping/29-01-PLAN.md
 Resume file: None
-Next step: /gsd:plan-phase 24
+Next step: v1.6 milestone complete — use /gsd:new-milestone to start next milestone
