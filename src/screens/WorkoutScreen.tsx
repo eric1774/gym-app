@@ -630,8 +630,7 @@ export function WorkoutScreen() {
     if (age === null && override === null) {
       return null;
     }
-    const effectiveAge = age ?? 35; // fallback; override takes priority anyway
-    const maxHr = computeMaxHR(effectiveAge, override);
+    const maxHr = computeMaxHR(age ?? 0, override);
     return getHRZone(currentBpm, maxHr);
   }, [deviceState, currentBpm, hrSettings]);
   // ──────────────────────────────────────────────────────────────────────────
