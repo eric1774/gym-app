@@ -37,6 +37,7 @@ metrics:
   completed: "2026-03-29"
   tasks_completed: 1
   files_modified: 2
+requirements-completed: [SET-01, SET-02]
 ---
 
 # Phase 27 Plan 02: Settings Screen Heart Rate Monitor Card Summary

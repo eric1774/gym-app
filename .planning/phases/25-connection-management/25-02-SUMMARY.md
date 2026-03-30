@@ -36,6 +36,7 @@ metrics:
   completed: "2026-03-25"
   tasks_completed: 2
   files_changed: 2
+requirements-completed: [BLE-01, BLE-02]
 ---
 
 # Phase 25 Plan 02: DeviceScanSheet + SettingsScreen HR Card Summary
