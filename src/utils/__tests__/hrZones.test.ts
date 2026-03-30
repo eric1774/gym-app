@@ -28,10 +28,9 @@ describe('computeMaxHR', () => {
 describe('getHRZone', () => {
   const maxHr = 180;
 
-  it('returns Zone 1 (Recovery) for bpm below 50% of maxHr', () => {
+  it('returns null for bpm below 50% of maxHr (below any training zone)', () => {
     const zone = getHRZone(80, maxHr); // 80/180 = 44.4% — below Zone 1 min
-    expect(zone.zone).toBe(1);
-    expect(zone.name).toBe('Recovery');
+    expect(zone).toBeNull();
   });
 
   it('returns Zone 1 (Recovery) at exactly 50% of maxHr', () => {

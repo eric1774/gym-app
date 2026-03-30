@@ -23,19 +23,20 @@ export function computeMaxHR(age: number, override: number | null): number {
  *
  * Uses the standard 5-zone model with zone boundaries at 50/60/70/80/90%
  * of max HR:
- *   Zone 1 — Recovery:  < 60%
+ *   Zone 1 — Recovery:  50%–60%
  *   Zone 2 — Easy:     60%–70%
  *   Zone 3 — Aerobic:  70%–80%
  *   Zone 4 — Threshold:80%–90%
  *   Zone 5 — Max:      ≥ 90%
  *
- * Values below 50% of max HR are clamped to Zone 1.
+ * Values below 50% of max HR return null — BPM is below any training zone
+ * and should be displayed without a zone color or label.
  *
  * @param bpm - Current heart rate reading in BPM
  * @param maxHr - Effective max HR (use computeMaxHR to derive)
- * @returns HRZoneInfo for the matching zone
+ * @returns HRZoneInfo for the matching zone, or null if below Zone 1 threshold
  */
-export function getHRZone(bpm: number, maxHr: number): HRZoneInfo {
+export function getHRZone(bpm: number, maxHr: number): HRZoneInfo | null {
   // Compute percentage of max HR
   const pct = (bpm / maxHr) * 100;
 
@@ -46,6 +47,6 @@ export function getHRZone(bpm: number, maxHr: number): HRZoneInfo {
     }
   }
 
-  // Below Zone 1 minimum (< 50%) — clamp to Zone 1
-  return HR_ZONES[0];
+  // Below Zone 1 minimum (< 50%) — not in any training zone
+  return null;
 }
