@@ -53,10 +53,12 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ BLE foundation: Android permissions, BleManager singleton, DB migration v8, HR types, HRSettingsService — v1.6
 - ✓ BLE connection management: device scan, connect, auto-reconnect, connection state indicator, disconnect UX — v1.6
 - ✓ HR data persistence: in-session buffering, batch flush to SQLite, avg/peak HR on summary card and calendar — v1.6
+- ✓ Live HR display: BPM in workout header, zone coloring, zone labels, age/max HR settings — v1.6
+- ✓ Bug fixes: unpair disconnect, zone clamping for below-zone BPM, dead code removal — v1.6
 
 ### Active
 
-- Live HR display: BPM in workout header, zone coloring, age/max HR settings — v1.6 Phase 27
+None — v1.6 milestone complete.
 
 ### Out of Scope
 
@@ -77,7 +79,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 BLE Foundation + Connection Management + HR Data Persistence
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring (BLE, connection management, HR persistence, live display, settings, bug fixes)
 
 ## Constraints
 
@@ -100,6 +102,12 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | jest.mock auto-mock pattern | Prevents native module crashes in test environment | ✓ Good |
 | renderWithProviders utility | Reusable test wrapper for screens needing context/navigation | ✓ Good |
 | Object.defineProperty for db mock | Required because db export is read-only const | ✓ Good |
+| Module-level BleManager singleton | Prevents native memory leaks on re-render/hot reload | ✓ Good |
+| AsyncStorage for HR settings | Three scalar preferences (age, maxHR, deviceId) — never joined relationally | ✓ Good |
+| Tanaka formula (208 - 0.7*age) | More accurate for adults over 40 than 220-age | ✓ Good |
+| HR samples buffered in useRef | Batch flush on session end protects set-logging speed from per-sample DB writes | ✓ Good |
+| Exponential backoff reconnect | 1/2/4/8/16s intervals, max 5 attempts — prevents BLE stack flooding | ✓ Good |
+| Two-row workout header | Row 1 (timer, volume, End Workout) always fits; Row 2 (HR) only when device paired | ✓ Good |
 
 ---
-*Last updated: 2026-03-28 after v1.6 Phase 26 (HR Data Persistence)*
+*Last updated: 2026-03-30 after v1.6 milestone*
