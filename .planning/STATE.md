@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Heart Rate Monitoring
 status: Ready to execute
-stopped_at: Completed 27-live-display-settings-ui/27-04-PLAN.md
-last_updated: "2026-03-29T15:27:39.355Z"
+stopped_at: Completed 28-bug-fixes-dead-code-cleanup/28-02-PLAN.md
+last_updated: "2026-03-30T00:06:44.230Z"
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 6
+  completed_plans: 10
 ---
 
 # Project State
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 27 (live-display-settings-ui) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Plan: 3 of 4
 | Phase 27-live-display-settings-ui P02 | 494 | 1 tasks | 2 files |
 | Phase 27-live-display-settings-ui P03 | 5 | 1 tasks | 2 files |
 | Phase 27-live-display-settings-ui P04 | 1626 | 2 tasks | 4 files |
+| Phase 28 P02 | 284 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,7 @@ Plan: 3 of 4
 - [Phase 27-live-display-settings-ui]: headerRow View replaces standalone title Text in DashboardScreen — padding moved from title style to headerRow to maintain spacing while enabling row layout with gear icon
 - [Phase 27-live-display-settings-ui]: Remove setCurrentBpm(null) from auto-disconnect handler: last known BPM stays visible during reconnection; manual disconnect retains null-clearing behavior
 - [Phase 27-live-display-settings-ui]: Two-row workout header: Row 1 (timer, volume, End Workout) always fits any screen; Row 2 (HR indicator, BPM, zone) only when device is paired
+- [Phase 28]: Replaced effectiveAge ?? 35 fallback with age! non-null assertion — dead code when override present makes age unused in computeMaxHR
 
 ### Pending Todos
 
@@ -92,7 +94,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-29T15:27:39.351Z
-Stopped at: Completed 27-live-display-settings-ui/27-04-PLAN.md
+Last session: 2026-03-30T00:06:44.205Z
+Stopped at: Completed 28-bug-fixes-dead-code-cleanup/28-02-PLAN.md
 Resume file: None
 Next step: /gsd:plan-phase 24
