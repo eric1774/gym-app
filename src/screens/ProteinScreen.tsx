@@ -13,14 +13,16 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProteinGoal, getTodayProteinTotal, getMealsByDate, deleteMeal, addMeal, get7DayAverage, getRecentDistinctMeals } from '../db';
+import { getMealsByDate, deleteMeal, addMeal, getRecentDistinctMeals } from '../db';
+import { macrosDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { Meal, MealType } from '../types';
-import { GoalSetupForm } from '../components/GoalSetupForm';
+import { Meal, MealType, MacroSettings, MacroValues } from '../types';
+import { MacroProgressCard } from '../components/MacroProgressCard';
+import { MacroGoalSetupForm } from '../components/MacroGoalSetupForm';
+import { MacroChart } from '../components/MacroChart';
 import { MealListItem } from '../components/MealListItem';
-import { ProteinChart } from '../components/ProteinChart';
-import { ProteinProgressBar } from '../components/ProteinProgressBar';
 import { QuickAddButtons } from '../components/QuickAddButtons';
+import { StreakAverageRow } from '../components/StreakAverageRow';
 import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -29,13 +31,14 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 export function ProteinScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<ProteinStackParamList>>();
-  const [goal, setGoal] = useState<number | null>(null);
-  const [todayTotal, setTodayTotal] = useState(0);
+  const [goals, setGoals] = useState<MacroSettings | null>(null);
+  const [todayTotals, setTodayTotals] = useState<MacroValues>({ protein: 0, carbs: 0, fat: 0 });
   const [meals, setMeals] = useState<Meal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   const [average, setAverage] = useState<number | null>(null);
+  const [streak, setStreak] = useState(0);
   const [recentMeals, setRecentMeals] = useState<Array<{ description: string; proteinGrams: number; mealType: MealType }>>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,18 +56,19 @@ export function ProteinScreen() {
   }, [selectedDate, isToday]);
 
   const refreshData = useCallback(async () => {
-    const today = getLocalDateString();
-    const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedAverage, fetchedRecent] = await Promise.all([
-      getProteinGoal(),
-      getTodayProteinTotal(),
+    const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak, fetchedRecent] = await Promise.all([
+      macrosDb.getMacroGoals(),
+      macrosDb.getTodayMacroTotals(),
       getMealsByDate(selectedDate),
-      get7DayAverage(),
+      macrosDb.get7DayAverage(),
+      macrosDb.getStreakDays(),
       getRecentDistinctMeals(),
     ]);
-    setGoal(fetchedGoal);
-    setTodayTotal(fetchedTotal);
+    setGoals(fetchedGoals);
+    setTodayTotals(fetchedTotals);
     setMeals(fetchedMeals);
-    setAverage(fetchedAverage);
+    setAverage(fetchedAverage?.protein ?? null);
+    setStreak(fetchedStreak);
     setRecentMeals(fetchedRecent);
     setChartRefreshKey(k => k + 1);
   }, [selectedDate]);
@@ -81,18 +85,20 @@ export function ProteinScreen() {
       setSelectedDate(getLocalDateString());
       async function load() {
         const today = getLocalDateString();
-        const [fetchedGoal, fetchedTotal, fetchedMeals, fetchedAverage, fetchedRecent] = await Promise.all([
-          getProteinGoal(),
-          getTodayProteinTotal(),
+        const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak, fetchedRecent] = await Promise.all([
+          macrosDb.getMacroGoals(),
+          macrosDb.getTodayMacroTotals(),
           getMealsByDate(today),
-          get7DayAverage(),
+          macrosDb.get7DayAverage(),
+          macrosDb.getStreakDays(),
           getRecentDistinctMeals(),
         ]);
         if (!cancelled) {
-          setGoal(fetchedGoal);
-          setTodayTotal(fetchedTotal);
+          setGoals(fetchedGoals);
+          setTodayTotals(fetchedTotals);
           setMeals(fetchedMeals);
-          setAverage(fetchedAverage);
+          setAverage(fetchedAverage?.protein ?? null);
+          setStreak(fetchedStreak);
           setRecentMeals(fetchedRecent);
           setIsLoading(false);
         }
@@ -162,10 +168,6 @@ export function ProteinScreen() {
     setModalVisible(false);
   }, []);
 
-  const handleGoalChanged = useCallback((g: number) => {
-    setGoal(g);
-  }, []);
-
   const handleQuickAdd = useCallback(async (meal: { description: string; proteinGrams: number; mealType: MealType }) => {
     try {
       await addMeal(meal.proteinGrams, meal.description, meal.mealType);
@@ -185,17 +187,14 @@ export function ProteinScreen() {
     );
   }
 
-  if (goal === null) {
+  if (goals === null) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <Text style={styles.title}>Protein</Text>
         </View>
-        <GoalSetupForm
-          onGoalSet={(g) => {
-            setGoal(g);
-            refreshData();
-          }}
+        <MacroGoalSetupForm
+          onGoalSet={() => refreshData()}
         />
       </View>
     );
@@ -214,20 +213,19 @@ export function ProteinScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.accent} colors={[colors.accent]} />
         }
       >
-        <ProteinProgressBar
-          goal={goal}
-          current={todayTotal}
-          average={average}
-          onGoalChanged={handleGoalChanged}
+        <MacroProgressCard
+          goals={goals}
+          todayTotals={todayTotals}
+          onGoalChanged={() => refreshData()}
         />
+
+        <StreakAverageRow streak={streak} average={average} />
 
         <TouchableOpacity style={styles.addMealButton} onPress={() => navigation.navigate('MealLibrary')}>
           <Text style={styles.addMealButtonText}>Meal Library</Text>
         </TouchableOpacity>
 
         <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
-
-        <ProteinChart goal={goal} refreshKey={chartRefreshKey} />
 
         {/* LOGS */}
         <View style={styles.logsSection}>
@@ -259,6 +257,8 @@ export function ProteinScreen() {
             )}
           </View>
         </View>
+
+        <MacroChart goals={goals} refreshKey={chartRefreshKey} />
       </ScrollView>
 
       {/* FAB */}
