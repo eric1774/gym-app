@@ -259,6 +259,18 @@ export interface MacroChartPoint {
   calories: number;
 }
 
+/** A reusable macro-aware meal template in the library. */
+export interface MacroLibraryMeal {
+  id: number;
+  name: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+  mealType: MealType;
+  createdAt: string;
+}
+
 // -- Calendar domain types (Phase 13) --
 
 /** A day in a month that had at least one completed workout. */
