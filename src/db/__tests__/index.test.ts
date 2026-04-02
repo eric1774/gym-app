@@ -6,6 +6,7 @@ jest.mock('../seed');
 jest.mock('../programs');
 jest.mock('../dashboard');
 jest.mock('../protein');
+jest.mock('../macros');
 
 // Trivial import test to register the barrel export file for coverage.
 // The db/index.ts file re-exports from all submodules — it has no logic.
