@@ -191,6 +191,6 @@ Plans:
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
-| 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete   | 2026-04-02 |
+| 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete    | 2026-04-02 |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
