@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
 status: Ready to discuss/plan
-stopped_at: Phase 31 UI-SPEC approved
-last_updated: "2026-04-02T20:12:34.848Z"
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-04-02T20:43:04.000Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 
 ## Current Position
 
-Phase: 31 (Goal Setting, Progress & Charts) — NOT STARTED
-Plan: 0 of ?
-Status: Ready to discuss/plan
+Phase: 31 (Goal Setting, Progress & Charts) — IN PROGRESS
+Plan: 1 of 2 complete
+Status: Plan 01 complete — Plan 02 next
 Last activity: 2026-04-02
 
 ```
-Progress: [=====               ] 1/4 phases complete
+Progress: [=======             ] 1/4 phases complete (3/4 plans)
 ```
 
 ## Performance Metrics
@@ -47,6 +47,9 @@ Progress: [=====               ] 1/4 phases complete
 | 30-02 duration | ~8 min |
 | 30-02 tasks | 2 |
 | 30-02 files | 5 |
+| 31-01 duration | ~4 min |
+| 31-01 tasks | 2 |
+| 31-01 files | 2 |
 
 ## Accumulated Context
 
@@ -64,6 +67,8 @@ Progress: [=====               ] 1/4 phases complete
 
 - [Phase 30-db-foundation]: macrosDb namespace export instead of named re-exports — protein.ts is frozen (D-07) so same names can't coexist in barrel
 - [Phase 30-db-foundation]: getStreakDays reads protein_goal from macro_settings (not protein_settings) per D-10 — streak is protein-only, carb/fat goals ignored
+- [Phase 31-01]: MacroGoalSetupForm only sends carbs/fat to setMacroGoals when > 0 to preserve NULL in DB for truly unset macros
+- [Phase 31-01]: MacroProgressCard uses React.Fragment for each macro row with divider, single editingMacro state for one-at-a-time inline edit
 
 ### Pending Todos
 
@@ -77,7 +82,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T20:12:34.844Z
-Stopped at: Phase 31 UI-SPEC approved
-Resume file: .planning/phases/31-goal-setting-progress-charts/31-UI-SPEC.md
-Next step: Discuss/plan Phase 31 (Goal Setting, Progress & Charts)
+Last session: 2026-04-02T20:43:04.000Z
+Stopped at: Completed 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm created
+Resume file: .planning/phases/31-goal-setting-progress-charts/31-02-PLAN.md
+Next step: Execute Phase 31 Plan 02 — wire MacroProgressCard/MacroGoalSetupForm into ProteinScreen

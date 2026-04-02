@@ -132,7 +132,7 @@ Plans:
   5. User can tap Protein, Carbs, or Fat tabs above the chart and see a line chart for the selected macro using its color (mint #8DC28A / blue #5B9BF0 / coral #E8845C) — tab switch is instant with no re-fetch
 **Plans**: 2 plans
 Plans:
-- [ ] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components
+- [x] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components (completed 2026-04-02)
 - [ ] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
 **UI hint**: yes
 
@@ -191,6 +191,6 @@ Plans:
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
-| 31. Goal Setting, Progress & Charts | v1.7 | 0/2 | Not started | - |
+| 31. Goal Setting, Progress & Charts | v1.7 | 1/2 | In Progress | 2026-04-02 |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
