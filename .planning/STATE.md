@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
 status: Ready to discuss/plan
-stopped_at: Phase 31 context gathered
-last_updated: "2026-04-02T19:54:35.370Z"
+stopped_at: Phase 31 UI-SPEC approved
+last_updated: "2026-04-02T20:12:34.848Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
@@ -77,7 +77,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T19:54:35.365Z
-Stopped at: Phase 31 context gathered
-Resume file: .planning/phases/31-goal-setting-progress-charts/31-CONTEXT.md
+Last session: 2026-04-02T20:12:34.844Z
+Stopped at: Phase 31 UI-SPEC approved
+Resume file: .planning/phases/31-goal-setting-progress-charts/31-UI-SPEC.md
 Next step: Discuss/plan Phase 31 (Goal Setting, Progress & Charts)
