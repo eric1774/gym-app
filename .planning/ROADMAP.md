@@ -98,7 +98,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
 
-- [ ] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility
+- [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
 - [ ] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors
 - [ ] **Phase 32: Screens & Meal Entry** — MacrosScreen, AddMealModal with 3-macro inputs, meal library macro support, macro badges
 - [ ] **Phase 33: Navigation Rename** — Protein tab renamed to Macros, all route/stack type names updated
@@ -118,7 +118,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Plans**: 2 plans
 Plans:
 - [x] 30-01-PLAN.md — Types, constants, computeCalories utility, migration v10, migration test updates (completed 2026-04-02)
-- [ ] 30-02-PLAN.md — macros.ts DB module with all functions, test suite, barrel exports
+- [x] 30-02-PLAN.md — macros.ts DB module with all functions, test suite, barrel exports
 
 ### Phase 31: Goal Setting, Progress & Charts
 **Goal**: Users can see all three macro progress bars, set goals for each macro, and view per-macro history charts
@@ -187,7 +187,7 @@ Plans:
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete | 2026-03-29 |
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
-| 30. DB Foundation | v1.7 | 1/2 | In Progress | - |
+| 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
 | 31. Goal Setting, Progress & Charts | v1.7 | 0/? | Not started | - |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
 status: executing
-stopped_at: Completed 30-01-PLAN.md
-last_updated: "2026-04-02T16:34:48Z"
-last_activity: 2026-04-02 — Phase 30 Plan 01 complete
+stopped_at: Completed 30-02-PLAN.md
+last_updated: "2026-04-02T17:04:05.168Z"
+last_activity: 2026-04-02
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** v1.7 Macros Tracking — Phase 30: DB Foundation (Plan 01 complete)
+**Current focus:** Phase 30 — db-foundation
 
 ## Current Position
 
-Phase: 30 — DB Foundation (executing)
+Phase: 30 (db-foundation) — EXECUTING
 Plan: 2 of 2
-Status: Plan 01 complete, Plan 02 next
-Last activity: 2026-04-02 — Phase 30 Plan 01 complete
+Status: Ready to execute
+Last activity: 2026-04-02
 
 ```
 Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 30)
@@ -44,6 +44,7 @@ Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 3
 | 30-01 duration | 16 min |
 | 30-01 tasks | 2 |
 | 30-01 files | 6 |
+| Phase 30-db-foundation P02 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -59,6 +60,9 @@ Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 3
 
 **Macro colors:** Protein #8DC28A (mint), Carbs #5B9BF0 (blue), Fat #E8845C (coral) — sourced from existing src/theme/colors.ts palette.
 
+- [Phase 30-db-foundation]: macrosDb namespace export instead of named re-exports — protein.ts is frozen (D-07) so same names can't coexist in barrel
+- [Phase 30-db-foundation]: getStreakDays reads protein_goal from macro_settings (not protein_settings) per D-10 — streak is protein-only, carb/fat goals ignored
+
 ### Pending Todos
 
 - [ ] Confirm streak semantics with user before closing Phase 30 (protein-only recommended)
@@ -70,7 +74,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T16:34:48Z
-Stopped at: Completed 30-01-PLAN.md
-Resume file: .planning/phases/30-db-foundation/30-01-SUMMARY.md
+Last session: 2026-04-02T17:04:05.163Z
+Stopped at: Completed 30-02-PLAN.md
+Resume file: None
 Next step: Execute 30-02-PLAN.md
