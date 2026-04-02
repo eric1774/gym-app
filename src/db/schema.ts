@@ -93,3 +93,16 @@ export const CREATE_HEART_RATE_SAMPLES_TABLE = `
     recorded_at TEXT NOT NULL
   )
 `;
+
+// -- Macro Settings table (Phase 30) --
+
+export const CREATE_MACRO_SETTINGS_TABLE = `
+  CREATE TABLE IF NOT EXISTS macro_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    protein_goal REAL,
+    carb_goal REAL,
+    fat_goal REAL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )
+`;
