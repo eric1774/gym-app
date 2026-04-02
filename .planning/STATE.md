@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
-status: Ready to discuss/plan
-stopped_at: Completed 31-01-PLAN.md
-last_updated: "2026-04-02T20:43:04.000Z"
+status: executing
+stopped_at: Completed 31-02-PLAN.md
+last_updated: "2026-04-02T20:56:24.914Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 3
+  total_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 31 (Goal Setting, Progress & Charts) — IN PROGRESS
-Plan: 1 of 2 complete
-Status: Plan 01 complete — Plan 02 next
+Plan: 2 of 2 complete
+Status: Ready to execute
 Last activity: 2026-04-02
 
 ```
@@ -50,6 +50,7 @@ Progress: [=======             ] 1/4 phases complete (3/4 plans)
 | 31-01 duration | ~4 min |
 | 31-01 tasks | 2 |
 | 31-01 files | 2 |
+| Phase 31-goal-setting-progress-charts P02 | 420 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Progress: [=======             ] 1/4 phases complete (3/4 plans)
 - [Phase 30-db-foundation]: getStreakDays reads protein_goal from macro_settings (not protein_settings) per D-10 — streak is protein-only, carb/fat goals ignored
 - [Phase 31-01]: MacroGoalSetupForm only sends carbs/fat to setMacroGoals when > 0 to preserve NULL in DB for truly unset macros
 - [Phase 31-01]: MacroProgressCard uses React.Fragment for each macro row with divider, single editingMacro state for one-at-a-time inline edit
+- [Phase 31-goal-setting-progress-charts]: MacroChart position after meal list per UI-SPEC (MacroProgressCard is primary visual anchor above fold)
 
 ### Pending Todos
 
@@ -82,7 +84,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T20:43:04.000Z
-Stopped at: Completed 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm created
-Resume file: .planning/phases/31-goal-setting-progress-charts/31-02-PLAN.md
+Last session: 2026-04-02T20:56:24.909Z
+Stopped at: Completed 31-02-PLAN.md
+Resume file: None
 Next step: Execute Phase 31 Plan 02 — wire MacroProgressCard/MacroGoalSetupForm into ProteinScreen

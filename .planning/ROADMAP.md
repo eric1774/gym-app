@@ -99,7 +99,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
 
 - [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
-- [ ] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors
+- [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
 - [ ] **Phase 32: Screens & Meal Entry** — MacrosScreen, AddMealModal with 3-macro inputs, meal library macro support, macro badges
 - [ ] **Phase 33: Navigation Rename** — Protein tab renamed to Macros, all route/stack type names updated
 
@@ -133,7 +133,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components (completed 2026-04-02)
-- [ ] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
+- [x] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
 **UI hint**: yes
 
 ### Phase 32: Screens & Meal Entry
@@ -191,6 +191,6 @@ Plans:
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
-| 31. Goal Setting, Progress & Charts | v1.7 | 1/2 | In Progress | 2026-04-02 |
+| 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete   | 2026-04-02 |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
