@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
-status: executing
-stopped_at: Completed 30-02-PLAN.md
-last_updated: "2026-04-02T17:04:05.168Z"
+status: Ready to discuss/plan
+stopped_at: Phase 31 context gathered
+last_updated: "2026-04-02T19:54:35.370Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Fast, frictionless set logging mid-workout
-**Current focus:** Phase 30 — db-foundation
+**Current focus:** Phase 31 — Goal Setting, Progress & Charts
 
 ## Current Position
 
-Phase: 30 (db-foundation) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
+Phase: 31 (Goal Setting, Progress & Charts) — NOT STARTED
+Plan: 0 of ?
+Status: Ready to discuss/plan
 Last activity: 2026-04-02
 
 ```
-Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 30)
+Progress: [=====               ] 1/4 phases complete
 ```
 
 ## Performance Metrics
@@ -38,13 +38,15 @@ Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 3
 | Metric | Value |
 |--------|-------|
 | Phases this milestone | 4 |
-| Phases complete | 0 |
-| Plans complete | 1 |
+| Phases complete | 1 |
+| Plans complete (Phase 30) | 2/2 |
 | Requirements mapped | 24/24 |
 | 30-01 duration | 16 min |
 | 30-01 tasks | 2 |
 | 30-01 files | 6 |
-| Phase 30-db-foundation P02 | 8 | 2 tasks | 5 files |
+| 30-02 duration | ~8 min |
+| 30-02 tasks | 2 |
+| 30-02 files | 5 |
 
 ## Accumulated Context
 
@@ -65,8 +67,9 @@ Progress: [==                  ] 0/4 phases complete (Plan 01/02 done in Phase 3
 
 ### Pending Todos
 
-- [ ] Confirm streak semantics with user before closing Phase 30 (protein-only recommended)
+- [x] Confirm streak semantics with user before closing Phase 30 (protein-only — confirmed by implementation)
 - [ ] Real-device test on Android for fat grams input visibility above keyboard (Phase 32 acceptance criterion)
+- [ ] On-device v10 migration test (Phase 30 HUMAN-UAT: 2 items pending)
 
 ### Blockers/Concerns
 
@@ -74,7 +77,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-02T17:04:05.163Z
-Stopped at: Completed 30-02-PLAN.md
-Resume file: None
-Next step: Execute 30-02-PLAN.md
+Last session: 2026-04-02T19:54:35.365Z
+Stopped at: Phase 31 context gathered
+Resume file: .planning/phases/31-goal-setting-progress-charts/31-CONTEXT.md
+Next step: Discuss/plan Phase 31 (Goal Setting, Progress & Charts)
