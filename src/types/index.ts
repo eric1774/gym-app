@@ -203,6 +203,62 @@ export interface LibraryMeal {
   createdAt: string;
 }
 
+// -- Macro domain types (Phase 30) --
+
+export type MacroType = 'protein' | 'carbs' | 'fat';
+
+export const MACRO_COLORS: Record<MacroType, string> = {
+  protein: '#8DC28A',
+  carbs: '#5B9BF0',
+  fat: '#E8845C',
+};
+
+export const CALORIES_PER_GRAM: Record<MacroType, number> = {
+  protein: 4,
+  carbs: 4,
+  fat: 9,
+};
+
+/** Object shape used by macros.ts for multi-macro values. */
+export interface MacroValues {
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+/** A meal with full macro data. Separate from frozen Meal type (per D-06). */
+export interface MacroMeal {
+  id: number;
+  description: string;
+  mealType: MealType;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+  loggedAt: string;
+  localDate: string;
+  createdAt: string;
+}
+
+/** Macro goal settings — NULL columns mean "not set yet" (per D-02). */
+export interface MacroSettings {
+  id: number;
+  proteinGoal: number | null;
+  carbGoal: number | null;
+  fatGoal: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Chart data point for a single macro over time. */
+export interface MacroChartPoint {
+  date: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+}
+
 // -- Calendar domain types (Phase 13) --
 
 /** A day in a month that had at least one completed workout. */
