@@ -117,7 +117,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
   5. Jest test suite passes with migration count updated to 10 and mealRow/proteinSettingsRow fixtures updated to include the new columns
 **Plans**: 2 plans
 Plans:
-- [ ] 30-01-PLAN.md — Types, constants, computeCalories utility, migration v10, migration test updates
+- [x] 30-01-PLAN.md — Types, constants, computeCalories utility, migration v10, migration test updates (completed 2026-04-02)
 - [ ] 30-02-PLAN.md — macros.ts DB module with all functions, test suite, barrel exports
 
 ### Phase 31: Goal Setting, Progress & Charts
@@ -187,7 +187,7 @@ Plans:
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete | 2026-03-29 |
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
-| 30. DB Foundation | v1.7 | 0/2 | Not started | - |
+| 30. DB Foundation | v1.7 | 1/2 | In Progress | - |
 | 31. Goal Setting, Progress & Charts | v1.7 | 0/? | Not started | - |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
