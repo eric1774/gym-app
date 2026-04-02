@@ -98,7 +98,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 **Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
 
-- [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
+- [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
 - [ ] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors
 - [ ] **Phase 32: Screens & Meal Entry** — MacrosScreen, AddMealModal with 3-macro inputs, meal library macro support, macro badges
 - [ ] **Phase 33: Navigation Rename** — Protein tab renamed to Macros, all route/stack type names updated
@@ -130,7 +130,10 @@ Plans:
   3. An existing user who has only a protein goal sees protein bar filled correctly and carbs/fat bars showing "Tap to set" instead of broken 0/0 state
   4. User can tap the progress card to inline-edit any of the three macro goals and save or cancel without leaving the screen
   5. User can tap Protein, Carbs, or Fat tabs above the chart and see a line chart for the selected macro using its color (mint #8DC28A / blue #5B9BF0 / coral #E8845C) — tab switch is instant with no re-fetch
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components
+- [ ] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
 **UI hint**: yes
 
 ### Phase 32: Screens & Meal Entry
@@ -188,6 +191,6 @@ Plans:
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
-| 31. Goal Setting, Progress & Charts | v1.7 | 0/? | Not started | - |
+| 31. Goal Setting, Progress & Charts | v1.7 | 0/2 | Not started | - |
 | 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
