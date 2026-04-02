@@ -9,6 +9,7 @@
 - ✅ **v1.4 Test Coverage** — Phases 15-21 (shipped 2026-03-17)
 - ✅ **v1.5 Program Data Export** — Phases 22-23 (shipped 2026-03-22)
 - ✅ **v1.6 Heart Rate Monitoring** — Phases 24-29 (shipped 2026-03-30)
+- ◆ **v1.7 Macros Tracking** — Phases 30-33
 
 ## Phases
 
@@ -86,12 +87,77 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
-- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
+- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-28)
 - [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
 - [x] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code (completed 2026-03-30)
 - [x] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts (completed 2026-03-30)
 
 </details>
+
+### v1.7 Macros Tracking (Phases 30-33)
+
+**Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
+
+- [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
+- [ ] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors
+- [ ] **Phase 32: Screens & Meal Entry** — MacrosScreen, AddMealModal with 3-macro inputs, meal library macro support, macro badges
+- [ ] **Phase 33: Navigation Rename** — Protein tab renamed to Macros, all route/stack type names updated
+
+## Phase Details
+
+### Phase 30: DB Foundation
+**Goal**: The app stores carbs and fat for every meal, has a macro_settings table, and all macro-aware DB functions compile and pass tests
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: DB-01, DB-02, DB-03, DB-04
+**Success Criteria** (what must be TRUE):
+  1. App opens on a v9 database and successfully migrates to v10 — meals and meal_library have carb_grams and fat_grams columns defaulting to 0, with no NaN or null values visible anywhere in the UI
+  2. A new macro_settings row exists after migration and contains the protein goal value carried over from the existing protein_settings row
+  3. computeCalories(p, c, f) returns the correct calorie value (p*4 + c*4 + f*9) and is importable by any component without a theme dependency
+  4. macros.ts exports all required DB functions (addMeal, getMacroGoals, setMacroGoals, getTodayMacroTotals, getDailyMacroTotals, get7DayAverage, getStreakDays) and its test suite passes — streak counts protein-goal-only days
+  5. Jest test suite passes with migration count updated to 10 and mealRow/proteinSettingsRow fixtures updated to include the new columns
+**Plans**: 2 plans
+Plans:
+- [x] 30-01-PLAN.md — Types, constants, computeCalories utility, migration v10, migration test updates (completed 2026-04-02)
+- [x] 30-02-PLAN.md — macros.ts DB module with all functions, test suite, barrel exports
+
+### Phase 31: Goal Setting, Progress & Charts
+**Goal**: Users can see all three macro progress bars, set goals for each macro, and view per-macro history charts
+**Depends on**: Phase 30
+**Requirements**: GOAL-01, GOAL-02, GOAL-03, GOAL-04, GOAL-05, GOAL-06, CHART-01, CHART-02, CHART-03
+**Success Criteria** (what must be TRUE):
+  1. User can open the goal form and set separate gram targets for protein, carbs, and fat — a calorie estimate updates live as numbers are typed
+  2. The progress card shows three separate P/C/F bars, each with current grams, goal grams, and percentage filled — all on one screen without scrolling
+  3. An existing user who has only a protein goal sees protein bar filled correctly and carbs/fat bars showing "Tap to set" instead of broken 0/0 state
+  4. User can tap the progress card to inline-edit any of the three macro goals and save or cancel without leaving the screen
+  5. User can tap Protein, Carbs, or Fat tabs above the chart and see a line chart for the selected macro using its color (mint #8DC28A / blue #5B9BF0 / coral #E8845C) — tab switch is instant with no re-fetch
+**Plans**: 2 plans
+Plans:
+- [ ] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components
+- [ ] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
+**UI hint**: yes
+
+### Phase 32: Screens & Meal Entry
+**Goal**: Users can log meals with all three macros, see macro badges on every meal, and the meal library stores and logs full macro data
+**Depends on**: Phase 31
+**Requirements**: MEAL-01, MEAL-02, MEAL-03, MEAL-04, MEAL-05, MEAL-06, LIB-01, LIB-02, LIB-03
+**Success Criteria** (what must be TRUE):
+  1. User can open the add meal form, enter protein, carbs, and fat grams (at least one > 0 required), and see a calorie total update live with each keystroke before saving
+  2. User can edit an existing meal and change any of its three macro values — all changes persist correctly
+  3. Every meal row in today's history shows colored badges for non-zero macros only (zero-value macros are hidden, not shown as "0g")
+  4. Quick-add buttons display non-zero macro values as compact colored pills
+  5. User can save a library meal with protein, carbs, and fat grams, then tap it to log all three macros to today's totals in one tap
+  6. Protein streak counts only consecutive days meeting the protein goal — adding carbs/fat goals does not reset or alter the existing streak count
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 33: Navigation Rename
+**Goal**: The bottom tab and all internal route names consistently say "Macros" — no visible or type-level reference to "Protein" remains in the navigation layer
+**Depends on**: Phase 32
+**Requirements**: NAV-01, NAV-02
+**Success Criteria** (what must be TRUE):
+  1. The bottom navigation tab shows "Macros" label with the correct icon — "Protein" label is gone
+  2. tsc --noEmit exits with zero errors after all route and stack type renames (ProteinStack → MacrosStack, ProteinHome → MacrosHome, ProteinStackParamList → MacrosStackParamList)
+**Plans**: TBD
 
 ## Progress
 
@@ -123,4 +189,8 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete | 2026-03-28 |
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete | 2026-03-29 |
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
-| 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete    | 2026-03-30 |
+| 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
+| 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
+| 31. Goal Setting, Progress & Charts | v1.7 | 0/2 | Not started | - |
+| 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
+| 33. Navigation Rename | v1.7 | 0/? | Not started | - |

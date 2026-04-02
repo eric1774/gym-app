@@ -63,3 +63,6 @@ export {
 } from './protein';
 export { exportProgramData } from './export';
 export { repairProgramData } from './repair';
+// Macro-aware DB functions (Phase 30) — namespaced to avoid collision with frozen protein.ts
+import * as macrosDb from './macros';
+export { macrosDb };

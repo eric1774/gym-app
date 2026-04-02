@@ -22,6 +22,7 @@ interface Migration {
  * - Version 7: Add superset_group_id column to program_day_exercises
  * - Version 8: Create heart_rate_samples table, add avg_hr/peak_hr to workout_sessions
  * - Version 9: Repair program_week values (migration 5 backfill set all to 1)
+ * - Version 10: Add macro columns to meals/meal_library and create macro_settings table
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -287,6 +288,49 @@ const MIGRATIONS: Migration[] = [
         )
         WHERE program_day_id IS NOT NULL
           AND completed_at IS NOT NULL
+      `);
+    },
+  },
+  {
+    version: 10,
+    description: 'Add macro columns to meals/meal_library and create macro_settings table',
+    up: (tx: Transaction) => {
+      // Add carb_grams and fat_grams to meals table (per DB-01)
+      tx.executeSql(
+        'ALTER TABLE meals ADD COLUMN carb_grams REAL NOT NULL DEFAULT 0',
+      );
+      tx.executeSql(
+        'ALTER TABLE meals ADD COLUMN fat_grams REAL NOT NULL DEFAULT 0',
+      );
+
+      // Add carb_grams and fat_grams to meal_library table (per DB-01)
+      tx.executeSql(
+        'ALTER TABLE meal_library ADD COLUMN carb_grams REAL NOT NULL DEFAULT 0',
+      );
+      tx.executeSql(
+        'ALTER TABLE meal_library ADD COLUMN fat_grams REAL NOT NULL DEFAULT 0',
+      );
+
+      // Create macro_settings table (per DB-02, D-01)
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS macro_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          protein_goal REAL,
+          carb_goal REAL,
+          fat_goal REAL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
+
+      // Backfill macro_settings from protein_settings if a row exists (per D-03)
+      // Only creates a macro_settings row if protein_settings has data.
+      // NULL carb_goal and fat_goal mean "not set yet" (per D-02).
+      tx.executeSql(`
+        INSERT INTO macro_settings (protein_goal, carb_goal, fat_goal, created_at, updated_at)
+        SELECT daily_goal_grams, NULL, NULL, created_at, updated_at
+        FROM protein_settings
+        LIMIT 1
       `);
     },
   },
