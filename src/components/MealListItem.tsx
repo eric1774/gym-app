@@ -10,12 +10,13 @@ import {
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Meal } from '../types';
+import { MacroMeal } from '../types';
+import { MacroPills } from './MacroPills';
 
 interface MealListItemProps {
-  meal: Meal;
-  onEdit: (meal: Meal) => void;
-  onDelete: (meal: Meal) => void;
+  meal: MacroMeal;
+  onEdit: (meal: MacroMeal) => void;
+  onDelete: (meal: MacroMeal) => void;
   isLast?: boolean;
 }
 
@@ -86,8 +87,8 @@ export const MealListItem = React.memo(function MealListItem({
                 {meal.description}
               </Text>
             ) : null}
+            <MacroPills protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
           </View>
-          <Text style={styles.proteinGrams}>{meal.proteinGrams}g</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -154,11 +155,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
     color: colors.primary,
-  },
-  proteinGrams: {
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
-    color: colors.accent,
-    marginLeft: spacing.sm,
   },
 });
