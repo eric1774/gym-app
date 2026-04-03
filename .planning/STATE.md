@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.7
 milestone_name: Macros Tracking
 status: executing
-stopped_at: Phase 32 context gathered
-last_updated: "2026-04-03T02:33:29.588Z"
+stopped_at: Phase 32 Plan 02 complete — 32-screens-meal-entry done
+last_updated: "2026-04-02T00:20:00.000Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 4
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 ## Current Position
 
 Phase: 32
-Plan: Not started
-Status: Ready to execute
+Plan: 02 complete
+Status: Phase 32 complete — all 2 plans done
 Last activity: 2026-04-02
 
 ```
-Progress: [=======             ] 1/4 phases complete (3/4 plans)
+Progress: [====================] 4/4 phases complete (4/4 plans)
 ```
 
 ## Performance Metrics
@@ -71,6 +71,9 @@ Progress: [=======             ] 1/4 phases complete (3/4 plans)
 - [Phase 31-01]: MacroGoalSetupForm only sends carbs/fat to setMacroGoals when > 0 to preserve NULL in DB for truly unset macros
 - [Phase 31-01]: MacroProgressCard uses React.Fragment for each macro row with divider, single editingMacro state for one-at-a-time inline edit
 - [Phase 31-goal-setting-progress-charts]: MacroChart position after meal list per UI-SPEC (MacroProgressCard is primary visual anchor above fold)
+- [Phase 32-02]: MacroPills in LibraryMealRow uses vertical layout (name above, pills below) — cleaner than horizontal row for 3-pill display
+- [Phase 32-02]: mealName in MealLibraryScreen uses weightSemiBold (was weightMedium) — tappable items get stronger visual weight
+- [Phase 32-02]: Cancel → Discard in AddLibraryMealModal per UI-SPEC copywriting contract
 
 ### Pending Todos
 
@@ -84,7 +87,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-03T02:33:29.582Z
-Stopped at: Phase 32 context gathered
-Resume file: .planning/phases/32-screens-meal-entry/32-CONTEXT.md
-Next step: Execute Phase 31 Plan 02 — wire MacroProgressCard/MacroGoalSetupForm into ProteinScreen
+Last session: 2026-04-02T00:20:00.000Z
+Stopped at: Completed 32-screens-meal-entry/32-02-PLAN.md
+Resume file: None
+Next step: Phase 32 complete — ready for next milestone or new phase

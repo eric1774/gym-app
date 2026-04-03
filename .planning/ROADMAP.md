@@ -150,7 +150,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 32-01-PLAN.md — MacroPills component, MealListItem migration, AddMealModal 3-macro rewrite, ProteinScreen cleanup
-- [ ] 32-02-PLAN.md — AddLibraryMealModal 3-macro rewrite, MealLibraryScreen migration to macrosDb
+- [x] 32-02-PLAN.md — AddLibraryMealModal 3-macro rewrite, MealLibraryScreen migration to macrosDb
 **UI hint**: yes
 
 ### Phase 33: Navigation Rename
@@ -195,5 +195,5 @@ Plans:
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
 | 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete    | 2026-04-02 |
-| 32. Screens & Meal Entry | v1.7 | 0/2 | Not started | - |
+| 32. Screens & Meal Entry | v1.7 | 1/2 | In Progress|  |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
