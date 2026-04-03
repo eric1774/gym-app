@@ -1,13 +1,18 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AddLibraryMealModal } from '../AddLibraryMealModal';
-import { addLibraryMeal } from '../../db';
+
+const mockAddLibraryMeal = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../../db', () => ({
-  addLibraryMeal: jest.fn().mockResolvedValue(undefined),
+  macrosDb: {
+    addLibraryMeal: (...args: unknown[]) => mockAddLibraryMeal(...args),
+  },
 }));
 
-const mockAddLibraryMeal = addLibraryMeal as jest.Mock;
+jest.mock('../../utils/macros', () => ({
+  computeCalories: jest.fn().mockReturnValue(0),
+}));
 
 describe('AddLibraryMealModal', () => {
   beforeEach(() => {
@@ -39,12 +44,13 @@ describe('AddLibraryMealModal', () => {
   it('submit is disabled when meal type not selected', () => {
     const onSaved = jest.fn();
 
-    const { getByPlaceholderText, getByText } = render(
+    const { getAllByPlaceholderText, getByPlaceholderText, getByText } = render(
       <AddLibraryMealModal visible={true} onClose={jest.fn()} onSaved={onSaved} />,
     );
 
-    // Fill protein and name but leave meal type unselected
-    fireEvent.changeText(getByPlaceholderText('0'), '25');
+    // Fill protein (first '0' placeholder) and name but leave meal type unselected
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '25');
     fireEvent.changeText(getByPlaceholderText('e.g. Chicken breast'), 'Chicken');
 
     fireEvent.press(getByText('Save to Library'));
@@ -52,24 +58,29 @@ describe('AddLibraryMealModal', () => {
     expect(mockAddLibraryMeal).not.toHaveBeenCalled();
   });
 
-  it('calls addLibraryMeal and onSaved when form is valid', async () => {
+  it('calls macrosDb.addLibraryMeal and onSaved when form is valid', async () => {
     const onSaved = jest.fn();
 
-    const { getByText, getByPlaceholderText } = render(
+    const { getByText, getAllByPlaceholderText, getByPlaceholderText } = render(
       <AddLibraryMealModal visible={true} onClose={jest.fn()} onSaved={onSaved} />,
     );
 
     // Select meal type
     fireEvent.press(getByText('Lunch'));
-    // Fill protein
-    fireEvent.changeText(getByPlaceholderText('0'), '25');
+    // Fill protein (first '0' input)
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '25');
     // Fill name
     fireEvent.changeText(getByPlaceholderText('e.g. Chicken breast'), 'Chicken');
     // Submit
     fireEvent.press(getByText('Save to Library'));
 
     await waitFor(() => {
-      expect(mockAddLibraryMeal).toHaveBeenCalledWith('Chicken', 25, 'lunch');
+      expect(mockAddLibraryMeal).toHaveBeenCalledWith(
+        'Chicken',
+        'lunch',
+        { protein: 25, carbs: 0, fat: 0 },
+      );
     });
 
     expect(onSaved).toHaveBeenCalled();

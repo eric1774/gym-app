@@ -3,18 +3,24 @@ import { Alert } from 'react-native';
 import { waitFor, fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../test-utils';
 import { MealLibraryScreen } from '../MealLibraryScreen';
-import { getLibraryMealsByType } from '../../db';
+
+const mockGetLibraryMealsByType = jest.fn().mockResolvedValue({
+  breakfast: [],
+  lunch: [],
+  dinner: [],
+  snack: [],
+});
+const mockDeleteLibraryMeal = jest.fn().mockResolvedValue(undefined);
+const mockAddMeal = jest.fn().mockResolvedValue(undefined);
+const mockAddLibraryMeal = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../../db', () => ({
-  getLibraryMealsByType: jest.fn().mockResolvedValue({
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    snack: [],
-  }),
-  deleteLibraryMeal: jest.fn().mockResolvedValue(undefined),
-  addMeal: jest.fn().mockResolvedValue(undefined),
-  addLibraryMeal: jest.fn().mockResolvedValue(undefined),
+  macrosDb: {
+    getLibraryMealsByType: (...args: unknown[]) => mockGetLibraryMealsByType(...args),
+    deleteLibraryMeal: (...args: unknown[]) => mockDeleteLibraryMeal(...args),
+    addMeal: (...args: unknown[]) => mockAddMeal(...args),
+    addLibraryMeal: (...args: unknown[]) => mockAddLibraryMeal(...args),
+  },
   setProteinGoal: jest.fn(),
   getProteinGoal: jest.fn(),
   getTodayProteinTotal: jest.fn(),
@@ -26,7 +32,9 @@ jest.mock('../../db', () => ({
   deleteMeal: jest.fn(),
 }));
 
-const mockGetLibraryMealsByType = getLibraryMealsByType as jest.Mock;
+jest.mock('../../utils/macros', () => ({
+  computeCalories: jest.fn().mockReturnValue(0),
+}));
 
 describe('MealLibraryScreen', () => {
   beforeEach(() => {
@@ -74,7 +82,10 @@ describe('MealLibraryScreen', () => {
         {
           id: 1,
           name: 'Eggs',
-          proteinGrams: 18,
+          protein: 18,
+          carbs: 0,
+          fat: 12,
+          calories: 180,
           mealType: 'breakfast',
           createdAt: '',
         },
@@ -94,7 +105,9 @@ describe('MealLibraryScreen', () => {
     });
 
     expect(getByText('Breakfast')).toBeTruthy();
-    expect(getByText('18g')).toBeTruthy();
+    // Macro pills show instead of single protein number
+    expect(getByText('18g P')).toBeTruthy();
+    expect(getByText('12g F')).toBeTruthy();
   });
 
   it('opens add library meal modal when + pressed', async () => {
@@ -115,9 +128,8 @@ describe('MealLibraryScreen', () => {
   });
 
   it('logs a meal when tapped', async () => {
-    const { addMeal } = require('../../db');
     mockGetLibraryMealsByType.mockResolvedValue({
-      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      breakfast: [{ id: 1, name: 'Eggs', protein: 18, carbs: 0, fat: 12, calories: 180, mealType: 'breakfast', createdAt: '' }],
       lunch: [],
       dinner: [],
       snack: [],
@@ -131,13 +143,17 @@ describe('MealLibraryScreen', () => {
     await waitFor(() => getByText('Eggs'));
     fireEvent.press(getByText('Eggs'));
 
-    await waitFor(() => expect(addMeal).toHaveBeenCalledWith(18, 'Eggs', 'breakfast'));
+    await waitFor(() => expect(mockAddMeal).toHaveBeenCalledWith(
+      'Eggs',
+      'breakfast',
+      { protein: 18, carbs: 0, fat: 12 },
+    ));
   });
 
   it('shows delete confirmation when Delete is pressed', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     mockGetLibraryMealsByType.mockResolvedValue({
-      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      breakfast: [{ id: 1, name: 'Eggs', protein: 18, carbs: 0, fat: 12, calories: 180, mealType: 'breakfast', createdAt: '' }],
       lunch: [],
       dinner: [],
       snack: [],
@@ -160,7 +176,6 @@ describe('MealLibraryScreen', () => {
   });
 
   it('deletes a meal when Delete confirmed in alert', async () => {
-    const { deleteLibraryMeal } = require('../../db');
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(
       (_title, _msg, buttons) => {
         const deleteBtn = (buttons as any[])?.find(b => b.text === 'Delete');
@@ -168,7 +183,7 @@ describe('MealLibraryScreen', () => {
       },
     );
     mockGetLibraryMealsByType.mockResolvedValue({
-      breakfast: [{ id: 1, name: 'Eggs', proteinGrams: 18, mealType: 'breakfast', createdAt: '' }],
+      breakfast: [{ id: 1, name: 'Eggs', protein: 18, carbs: 0, fat: 12, calories: 180, mealType: 'breakfast', createdAt: '' }],
       lunch: [],
       dinner: [],
       snack: [],
@@ -182,13 +197,13 @@ describe('MealLibraryScreen', () => {
     await waitFor(() => getByText('Eggs'));
     fireEvent.press(getByText('Delete'));
 
-    await waitFor(() => expect(deleteLibraryMeal).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(mockDeleteLibraryMeal).toHaveBeenCalledWith(1));
     alertSpy.mockRestore();
   });
 
   it('shows toast message after logging a meal', async () => {
     mockGetLibraryMealsByType.mockResolvedValue({
-      lunch: [{ id: 2, name: 'Chicken', proteinGrams: 35, mealType: 'lunch', createdAt: '' }],
+      lunch: [{ id: 2, name: 'Chicken', protein: 35, carbs: 0, fat: 0, calories: 140, mealType: 'lunch', createdAt: '' }],
       breakfast: [],
       dinner: [],
       snack: [],
@@ -202,6 +217,6 @@ describe('MealLibraryScreen', () => {
     await waitFor(() => getByText('Chicken'));
     fireEvent.press(getByText('Chicken'));
 
-    await waitFor(() => expect(getByText('Chicken 35g logged')).toBeTruthy());
+    await waitFor(() => expect(getByText('Logged: Chicken')).toBeTruthy());
   });
 });
