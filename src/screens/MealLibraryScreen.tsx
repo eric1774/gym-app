@@ -11,16 +11,17 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getLibraryMealsByType, deleteLibraryMeal, addMeal } from '../db';
-import { LibraryMeal, MealType, MEAL_TYPES } from '../types';
+import { macrosDb } from '../db';
+import { MacroLibraryMeal, MealType, MEAL_TYPES } from '../types';
 import { AddLibraryMealModal } from './AddLibraryMealModal';
+import { MacroPills } from '../components/MacroPills';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
+import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 
 interface MealSection {
   title: string;
-  data: LibraryMeal[];
+  data: MacroLibraryMeal[];
   mealType: MealType;
 }
 
@@ -31,9 +32,9 @@ function capitalize(s: string): string {
 const DELETE_THRESHOLD = -80;
 
 interface LibraryMealRowProps {
-  meal: LibraryMeal;
-  onTap: (meal: LibraryMeal) => void;
-  onDelete: (meal: LibraryMeal) => void;
+  meal: MacroLibraryMeal;
+  onTap: (meal: MacroLibraryMeal) => void;
+  onDelete: (meal: MacroLibraryMeal) => void;
 }
 
 const LibraryMealRow = React.memo(function LibraryMealRow({
@@ -84,10 +85,12 @@ const LibraryMealRow = React.memo(function LibraryMealRow({
           style={styles.rowContent}
           onPress={() => onTap(meal)}
           activeOpacity={0.7}>
-          <Text style={styles.mealName} numberOfLines={1}>
-            {meal.name}
-          </Text>
-          <Text style={styles.proteinGrams}>{meal.proteinGrams}g</Text>
+          <View style={styles.rowInner}>
+            <Text style={styles.mealName} numberOfLines={1}>
+              {meal.name}
+            </Text>
+            <MacroPills protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
+          </View>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -103,7 +106,7 @@ export function MealLibraryScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(async () => {
-    const byType = await getLibraryMealsByType();
+    const byType = await macrosDb.getLibraryMealsByType();
     const built: MealSection[] = [];
     for (const mt of MEAL_TYPES) {
       const meals = byType[mt];
@@ -123,8 +126,8 @@ export function MealLibraryScreen() {
       let cancelled = false;
 
       async function load() {
-        const byType = await getLibraryMealsByType();
-        if (cancelled) return;
+        const byType = await macrosDb.getLibraryMealsByType();
+        if (cancelled) { return; }
         const built: MealSection[] = [];
         for (const mt of MEAL_TYPES) {
           const meals = byType[mt];
@@ -143,10 +146,14 @@ export function MealLibraryScreen() {
     }, []),
   );
 
-  const handleTapMeal = useCallback(async (meal: LibraryMeal) => {
+  const handleTapMeal = useCallback(async (meal: MacroLibraryMeal) => {
     try {
-      await addMeal(meal.proteinGrams, meal.name, meal.mealType);
-      setToastMessage(`${meal.name} ${meal.proteinGrams}g logged`);
+      await macrosDb.addMeal(
+        meal.name,
+        meal.mealType,
+        { protein: meal.protein, carbs: meal.carbs, fat: meal.fat },
+      );
+      setToastMessage(`Logged: ${meal.name}`);
       setTimeout(() => setToastMessage(null), 2000);
     } catch (_err) {
       Alert.alert('Error', 'Failed to log meal');
@@ -154,7 +161,7 @@ export function MealLibraryScreen() {
   }, []);
 
   const handleDeleteMeal = useCallback(
-    (meal: LibraryMeal) => {
+    (meal: MacroLibraryMeal) => {
       Alert.alert(
         'Delete Library Meal',
         `Remove "${meal.name}" from your library?`,
@@ -165,7 +172,7 @@ export function MealLibraryScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                await deleteLibraryMeal(meal.id);
+                await macrosDb.deleteLibraryMeal(meal.id);
                 await refreshData();
               } catch (_err) {
                 Alert.alert('Error', 'Failed to delete meal');
@@ -179,7 +186,7 @@ export function MealLibraryScreen() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: LibraryMeal }) => (
+    ({ item }: { item: MacroLibraryMeal }) => (
       <LibraryMealRow meal={item} onTap={handleTapMeal} onDelete={handleDeleteMeal} />
     ),
     [handleTapMeal, handleDeleteMeal],
@@ -194,7 +201,7 @@ export function MealLibraryScreen() {
     [],
   );
 
-  const keyExtractor = useCallback((item: LibraryMeal) => String(item.id), []);
+  const keyExtractor = useCallback((item: MacroLibraryMeal) => String(item.id), []);
 
   const handleOpenModal = useCallback(() => {
     setModalVisible(true);
@@ -336,25 +343,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   rowContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: spacing.base,
     paddingVertical: 14,
     minHeight: 48,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  mealName: {
+  rowInner: {
     flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: weightMedium,
-    color: colors.primary,
   },
-  proteinGrams: {
+  mealName: {
     fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.accent,
-    marginLeft: spacing.sm,
+    fontWeight: weightSemiBold,
+    color: colors.primary,
   },
   emptyContainer: {
     alignItems: 'center',
