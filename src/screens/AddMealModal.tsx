@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,17 +12,18 @@ import {
   View,
 } from 'react-native';
 import { MealTypePills } from '../components/MealTypePills';
-import { addMeal, updateMeal } from '../db';
+import { macrosDb } from '../db';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Meal, MealType } from '../types';
+import { MacroMeal, MealType, MacroValues, MACRO_COLORS } from '../types';
+import { computeCalories } from '../utils/macros';
 
 interface AddMealModalProps {
   visible: boolean;
   onClose: () => void;
   onSaved: () => void;
-  editMeal?: Meal | null;
+  editMeal?: MacroMeal | null;
 }
 
 function formatDateForInput(date: Date): string {
@@ -78,6 +79,8 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
   const isEditMode = !!editMeal;
 
   const [proteinGrams, setProteinGrams] = useState('');
+  const [carbsGrams, setCarbsGrams] = useState('');
+  const [fatGrams, setFatGrams] = useState('');
   const [description, setDescription] = useState('');
   const [mealType, setMealType] = useState<MealType | null>(null);
   const [loggedAt, setLoggedAt] = useState(new Date());
@@ -88,10 +91,15 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const carbsRef = useRef<TextInput>(null);
+  const fatRef = useRef<TextInput>(null);
+
   // Pre-fill on edit
   React.useEffect(() => {
     if (editMeal && visible) {
-      setProteinGrams(String(editMeal.proteinGrams));
+      setProteinGrams(editMeal.protein > 0 ? String(editMeal.protein) : '');
+      setCarbsGrams(editMeal.carbs > 0 ? String(editMeal.carbs) : '');
+      setFatGrams(editMeal.fat > 0 ? String(editMeal.fat) : '');
       setDescription(editMeal.description);
       setMealType(editMeal.mealType as MealType);
       const parsed = new Date(editMeal.loggedAt);
@@ -104,6 +112,8 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
 
   const handleClose = () => {
     setProteinGrams('');
+    setCarbsGrams('');
+    setFatGrams('');
     setDescription('');
     setMealType(null);
     setLoggedAt(new Date());
@@ -143,6 +153,17 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
     }
   };
 
+  const parsedProtein = parseFloat(proteinGrams) || 0;
+  const parsedCarbs = parseFloat(carbsGrams) || 0;
+  const parsedFat = parseFloat(fatGrams) || 0;
+
+  const isDisabled =
+    (parsedProtein <= 0 && parsedCarbs <= 0 && parsedFat <= 0) ||
+    mealType === null ||
+    isSubmitting;
+
+  const caloriePreview = Math.round(computeCalories(parsedProtein, parsedCarbs, parsedFat));
+
   const handleSubmit = async () => {
     if (isDisabled) { return; }
 
@@ -150,11 +171,15 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
     setError(null);
 
     try {
-      const grams = parseFloat(proteinGrams);
+      const macros: MacroValues = {
+        protein: parsedProtein,
+        carbs: parsedCarbs,
+        fat: parsedFat,
+      };
       if (isEditMode && editMeal) {
-        await updateMeal(editMeal.id, grams, description, mealType!, loggedAt);
+        await macrosDb.updateMeal(editMeal.id, description, mealType!, macros, loggedAt);
       } else {
-        await addMeal(grams, description, mealType!, loggedAt);
+        await macrosDb.addMeal(description, mealType!, macros, loggedAt);
       }
       onSaved();
       handleClose();
@@ -164,14 +189,6 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
       setIsSubmitting(false);
     }
   };
-
-  const parsedGrams = parseFloat(proteinGrams);
-  const isDisabled =
-    proteinGrams.trim() === '' ||
-    isNaN(parsedGrams) ||
-    parsedGrams <= 0 ||
-    mealType === null ||
-    isSubmitting;
 
   const isDefaultTime = !showDateEdit && !isEditMode;
 
@@ -206,18 +223,48 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
             <Text style={styles.label}>Meal Type</Text>
             <MealTypePills selected={mealType} onSelect={setMealType} />
 
-            <Text style={[styles.label, styles.fieldSpacing]}>
-              Protein (grams)
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.secondary}
-              value={proteinGrams}
-              onChangeText={setProteinGrams}
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-            />
+            <View style={[styles.inputRow, { borderLeftColor: MACRO_COLORS.protein }]}>
+              <Text style={styles.label}>Protein (grams)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={colors.secondary}
+                value={proteinGrams}
+                onChangeText={setProteinGrams}
+                keyboardType="decimal-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => carbsRef.current?.focus()}
+              />
+            </View>
+            <View style={[styles.inputRow, { borderLeftColor: MACRO_COLORS.carbs }]}>
+              <Text style={styles.label}>Carbs (grams)</Text>
+              <TextInput
+                ref={carbsRef}
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={colors.secondary}
+                value={carbsGrams}
+                onChangeText={setCarbsGrams}
+                keyboardType="decimal-pad"
+                returnKeyType="next"
+                onSubmitEditing={() => fatRef.current?.focus()}
+              />
+            </View>
+            <View style={[styles.inputRow, { borderLeftColor: MACRO_COLORS.fat }]}>
+              <Text style={styles.label}>Fat (grams)</Text>
+              <TextInput
+                ref={fatRef}
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={colors.secondary}
+                value={fatGrams}
+                onChangeText={setFatGrams}
+                keyboardType="decimal-pad"
+                returnKeyType="done"
+              />
+            </View>
+
+            <Text style={styles.caloriePreview}>~ {caloriePreview} calories</Text>
 
             <Text style={[styles.label, styles.fieldSpacing]}>
               Description (optional)
@@ -294,7 +341,7 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>Discard</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -337,12 +384,25 @@ const styles = StyleSheet.create({
   fieldSpacing: {
     marginTop: spacing.md,
   },
+  inputRow: {
+    borderLeftWidth: 3,
+    paddingLeft: spacing.md,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
   input: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: 8,
     padding: spacing.md,
     fontSize: fontSize.base,
     color: colors.primary,
+  },
+  caloriePreview: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.primary,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
   dateButton: {
     backgroundColor: colors.surfaceElevated,

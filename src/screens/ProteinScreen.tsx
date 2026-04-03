@@ -13,15 +13,13 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getMealsByDate, deleteMeal, addMeal, getRecentDistinctMeals } from '../db';
 import { macrosDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { Meal, MealType, MacroSettings, MacroValues } from '../types';
+import { MacroMeal, MacroSettings, MacroValues } from '../types';
 import { MacroProgressCard } from '../components/MacroProgressCard';
 import { MacroGoalSetupForm } from '../components/MacroGoalSetupForm';
 import { MacroChart } from '../components/MacroChart';
 import { MealListItem } from '../components/MealListItem';
-import { QuickAddButtons } from '../components/QuickAddButtons';
 import { StreakAverageRow } from '../components/StreakAverageRow';
 import { AddMealModal } from './AddMealModal';
 import { colors } from '../theme/colors';
@@ -33,13 +31,12 @@ export function ProteinScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ProteinStackParamList>>();
   const [goals, setGoals] = useState<MacroSettings | null>(null);
   const [todayTotals, setTodayTotals] = useState<MacroValues>({ protein: 0, carbs: 0, fat: 0 });
-  const [meals, setMeals] = useState<Meal[]>([]);
+  const [meals, setMeals] = useState<MacroMeal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [editingMeal, setEditingMeal] = useState<MacroMeal | null>(null);
   const [average, setAverage] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
-  const [recentMeals, setRecentMeals] = useState<Array<{ description: string; proteinGrams: number; mealType: MealType }>>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
@@ -56,20 +53,18 @@ export function ProteinScreen() {
   }, [selectedDate, isToday]);
 
   const refreshData = useCallback(async () => {
-    const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak, fetchedRecent] = await Promise.all([
+    const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak] = await Promise.all([
       macrosDb.getMacroGoals(),
       macrosDb.getTodayMacroTotals(),
-      getMealsByDate(selectedDate),
+      macrosDb.getMealsByDate(selectedDate),
       macrosDb.get7DayAverage(),
       macrosDb.getStreakDays(),
-      getRecentDistinctMeals(),
     ]);
     setGoals(fetchedGoals);
     setTodayTotals(fetchedTotals);
     setMeals(fetchedMeals);
     setAverage(fetchedAverage?.protein ?? null);
     setStreak(fetchedStreak);
-    setRecentMeals(fetchedRecent);
     setChartRefreshKey(k => k + 1);
   }, [selectedDate]);
 
@@ -85,13 +80,12 @@ export function ProteinScreen() {
       setSelectedDate(getLocalDateString());
       async function load() {
         const today = getLocalDateString();
-        const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak, fetchedRecent] = await Promise.all([
+        const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak] = await Promise.all([
           macrosDb.getMacroGoals(),
           macrosDb.getTodayMacroTotals(),
-          getMealsByDate(today),
+          macrosDb.getMealsByDate(today),
           macrosDb.get7DayAverage(),
           macrosDb.getStreakDays(),
-          getRecentDistinctMeals(),
         ]);
         if (!cancelled) {
           setGoals(fetchedGoals);
@@ -99,7 +93,6 @@ export function ProteinScreen() {
           setMeals(fetchedMeals);
           setAverage(fetchedAverage?.protein ?? null);
           setStreak(fetchedStreak);
-          setRecentMeals(fetchedRecent);
           setIsLoading(false);
         }
       }
@@ -113,7 +106,7 @@ export function ProteinScreen() {
     d.setDate(d.getDate() - 1);
     const newDate = getLocalDateString(d);
     setSelectedDate(newDate);
-    getMealsByDate(newDate).then(setMeals);
+    macrosDb.getMealsByDate(newDate).then(setMeals);
   }, [selectedDate]);
 
   const handleNextDay = useCallback(() => {
@@ -122,7 +115,7 @@ export function ProteinScreen() {
     d.setDate(d.getDate() + 1);
     const newDate = getLocalDateString(d);
     setSelectedDate(newDate);
-    getMealsByDate(newDate).then(setMeals);
+    macrosDb.getMealsByDate(newDate).then(setMeals);
   }, [selectedDate, isToday]);
 
   const handleAddMeal = useCallback(() => {
@@ -130,16 +123,16 @@ export function ProteinScreen() {
     setModalVisible(true);
   }, []);
 
-  const handleEdit = useCallback((meal: Meal) => {
+  const handleEdit = useCallback((meal: MacroMeal) => {
     setEditingMeal(meal);
     setModalVisible(true);
   }, []);
 
   const handleDelete = useCallback(
-    (meal: Meal) => {
+    (meal: MacroMeal) => {
       Alert.alert(
         'Delete Meal',
-        `Delete this ${meal.mealType} entry (${meal.proteinGrams}g)?`,
+        `Delete this ${meal.mealType} entry?`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -147,7 +140,7 @@ export function ProteinScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                await deleteMeal(meal.id);
+                await macrosDb.deleteMeal(meal.id);
                 await refreshData();
               } catch (_err) {
                 Alert.alert('Error', 'Failed to delete meal');
@@ -167,17 +160,6 @@ export function ProteinScreen() {
   const handleCloseModal = useCallback(() => {
     setModalVisible(false);
   }, []);
-
-  const handleQuickAdd = useCallback(async (meal: { description: string; proteinGrams: number; mealType: MealType }) => {
-    try {
-      await addMeal(meal.proteinGrams, meal.description, meal.mealType);
-      setToastMessage(`${meal.description} ${meal.proteinGrams}g logged`);
-      setTimeout(() => setToastMessage(null), 2000);
-      await refreshData();
-    } catch (_err) {
-      Alert.alert('Error', 'Failed to log meal');
-    }
-  }, [refreshData]);
 
   if (isLoading) {
     return (
@@ -224,8 +206,6 @@ export function ProteinScreen() {
         <TouchableOpacity style={styles.addMealButton} onPress={() => navigation.navigate('MealLibrary')}>
           <Text style={styles.addMealButtonText}>Meal Library</Text>
         </TouchableOpacity>
-
-        <QuickAddButtons meals={recentMeals} onQuickAdd={handleQuickAdd} />
 
         {/* LOGS */}
         <View style={styles.logsSection}>

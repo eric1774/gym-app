@@ -1,19 +1,28 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { AddMealModal } from '../AddMealModal';
-import { addMeal } from '../../db';
+import { MacroMeal } from '../../types';
+
+const mockAddMeal = jest.fn().mockResolvedValue(undefined);
+const mockUpdateMeal = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../../db', () => ({
-  addMeal: jest.fn().mockResolvedValue(undefined),
-  updateMeal: jest.fn().mockResolvedValue(undefined),
+  macrosDb: {
+    addMeal: (...args: unknown[]) => mockAddMeal(...args),
+    updateMeal: (...args: unknown[]) => mockUpdateMeal(...args),
+    getMacroGoals: jest.fn().mockResolvedValue(null),
+  },
 }));
 
-const mockAddMeal = addMeal as jest.Mock;
+jest.mock('../../utils/macros', () => ({
+  computeCalories: jest.fn().mockReturnValue(0),
+}));
 
 describe('AddMealModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAddMeal.mockResolvedValue(undefined);
+    mockUpdateMeal.mockResolvedValue(undefined);
   });
 
   it('renders Add Meal title when visible', () => {
@@ -26,7 +35,7 @@ describe('AddMealModal', () => {
     expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('submit button is disabled when protein is empty and meal type not selected', () => {
+  it('submit button is disabled when all macros are empty and meal type not selected', () => {
     const onSaved = jest.fn();
 
     const { getAllByText } = render(
@@ -44,12 +53,13 @@ describe('AddMealModal', () => {
   it('submit button is disabled when only protein is filled but meal type not selected', () => {
     const onSaved = jest.fn();
 
-    const { getByPlaceholderText, getAllByText } = render(
+    const { getAllByText, getAllByPlaceholderText } = render(
       <AddMealModal visible={true} onClose={jest.fn()} onSaved={onSaved} />,
     );
 
-    // Fill protein but leave meal type unselected
-    fireEvent.changeText(getByPlaceholderText('0'), '30');
+    // Fill protein (first '0' placeholder is protein)
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '30');
 
     const buttons = getAllByText('Add Meal');
     fireEvent.press(buttons[buttons.length - 1]);
@@ -57,37 +67,44 @@ describe('AddMealModal', () => {
     expect(mockAddMeal).not.toHaveBeenCalled();
   });
 
-  it('calls addMeal and onSaved when form is valid', async () => {
+  it('calls macrosDb.addMeal and onSaved when form is valid', async () => {
     const onSaved = jest.fn();
 
-    const { getByText, getByPlaceholderText, getAllByText } = render(
+    const { getByText, getAllByPlaceholderText, getAllByText } = render(
       <AddMealModal visible={true} onClose={jest.fn()} onSaved={onSaved} />,
     );
 
     // Select meal type
     fireEvent.press(getByText('Lunch'));
-    // Fill protein grams
-    fireEvent.changeText(getByPlaceholderText('0'), '30');
+    // Fill protein grams (first '0' input)
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '30');
     // Press submit button (last occurrence)
     const buttons = getAllByText('Add Meal');
     fireEvent.press(buttons[buttons.length - 1]);
 
     await waitFor(() => {
-      expect(mockAddMeal).toHaveBeenCalledWith(30, '', 'lunch', expect.any(Date));
+      expect(mockAddMeal).toHaveBeenCalledWith(
+        '', // description
+        'lunch',
+        { protein: 30, carbs: 0, fat: 0 },
+        expect.any(Date),
+      );
     });
 
     expect(onSaved).toHaveBeenCalled();
   });
 
-  it('calls onClose when Cancel is pressed and resets state', () => {
+  it('calls onClose when Discard is pressed and resets state', () => {
     const onClose = jest.fn();
-    const { getByText, getByPlaceholderText } = render(
+    const { getByText, getAllByPlaceholderText } = render(
       <AddMealModal visible={true} onClose={onClose} onSaved={jest.fn()} />,
     );
     // Fill some state first
-    fireEvent.changeText(getByPlaceholderText('0'), '50');
-    // Press cancel
-    fireEvent.press(getByText('Cancel'));
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '50');
+    // Press Discard button
+    fireEvent.press(getByText('Discard'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -132,15 +149,15 @@ describe('AddMealModal', () => {
   });
 
   it('shows error message when addMeal fails', async () => {
-    const { updateMeal } = require('../../db');
-    (addMeal as jest.Mock).mockRejectedValueOnce(new Error('DB error'));
+    mockAddMeal.mockRejectedValueOnce(new Error('DB error'));
 
-    const { getByText, getByPlaceholderText, getAllByText } = render(
+    const { getByText, getAllByPlaceholderText, getAllByText } = render(
       <AddMealModal visible={true} onClose={jest.fn()} onSaved={jest.fn()} />,
     );
 
     fireEvent.press(getByText('Breakfast'));
-    fireEvent.changeText(getByPlaceholderText('0'), '25');
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '25');
     const buttons = getAllByText('Add Meal');
     fireEvent.press(buttons[buttons.length - 1]);
 
@@ -148,9 +165,12 @@ describe('AddMealModal', () => {
   });
 
   it('shows Edit Meal title and Update Meal button in edit mode', () => {
-    const editMeal = {
+    const editMeal: MacroMeal = {
       id: 5,
-      proteinGrams: 40,
+      protein: 40,
+      carbs: 0,
+      fat: 0,
+      calories: 160,
       description: 'Chicken',
       mealType: 'dinner',
       loggedAt: new Date().toISOString(),
@@ -163,7 +183,7 @@ describe('AddMealModal', () => {
         visible={true}
         onClose={jest.fn()}
         onSaved={jest.fn()}
-        editMeal={editMeal as any}
+        editMeal={editMeal}
       />,
     );
 
@@ -171,12 +191,14 @@ describe('AddMealModal', () => {
     expect(getByText('Update Meal')).toBeTruthy();
   });
 
-  it('calls updateMeal in edit mode when form is submitted', async () => {
-    const { updateMeal } = require('../../db');
+  it('calls macrosDb.updateMeal in edit mode when form is submitted', async () => {
     const onSaved = jest.fn();
-    const editMeal = {
+    const editMeal: MacroMeal = {
       id: 5,
-      proteinGrams: 40,
+      protein: 40,
+      carbs: 0,
+      fat: 0,
+      calories: 160,
       description: 'Chicken',
       mealType: 'dinner',
       loggedAt: new Date().toISOString(),
@@ -189,14 +211,14 @@ describe('AddMealModal', () => {
         visible={true}
         onClose={jest.fn()}
         onSaved={onSaved}
-        editMeal={editMeal as any}
+        editMeal={editMeal}
       />,
     );
 
     fireEvent.press(getByText('Update Meal'));
 
     await waitFor(() => {
-      expect(updateMeal).toHaveBeenCalled();
+      expect(mockUpdateMeal).toHaveBeenCalled();
     });
     expect(onSaved).toHaveBeenCalled();
   });
@@ -208,32 +230,32 @@ describe('AddMealModal', () => {
     // Open date edit
     fireEvent.press(getByText('Now'));
     expect(queryByPlaceholderText('YYYY-MM-DD')).toBeTruthy();
-    // Close date edit by tapping again
-    // The button text has changed to show the date
-    const dateButton = queryByPlaceholderText('YYYY-MM-DD');
-    // The date edit close is handled by pressing the date text button
-    // Find the date display button and press it again
-    // (it shows "Now" initially, becomes a date string after edit toggle)
-    // After first press it shows date/time — press again to toggle off
-    // Actually, the toggle only closes when showDateEdit is true already
-    // We just verify the fields are visible after first open
+    // Verify fields are visible after open
     expect(queryByPlaceholderText('YYYY-MM-DD')).toBeTruthy();
   });
 
-  it('includes description when submitting', async () => {
+  it('includes description and all macros when submitting', async () => {
     const onSaved = jest.fn();
-    const { getByText, getByPlaceholderText, getAllByText } = render(
+    const { getByText, getAllByPlaceholderText, getByPlaceholderText, getAllByText } = render(
       <AddMealModal visible={true} onClose={jest.fn()} onSaved={onSaved} />,
     );
 
     fireEvent.press(getByText('Snack'));
-    fireEvent.changeText(getByPlaceholderText('0'), '15');
+    const zeroInputs = getAllByPlaceholderText('0');
+    fireEvent.changeText(zeroInputs[0], '15'); // protein
+    fireEvent.changeText(zeroInputs[1], '30'); // carbs
+    fireEvent.changeText(zeroInputs[2], '10'); // fat
     fireEvent.changeText(getByPlaceholderText('e.g. Chicken breast'), 'Greek yogurt');
     const buttons = getAllByText('Add Meal');
     fireEvent.press(buttons[buttons.length - 1]);
 
     await waitFor(() => {
-      expect(mockAddMeal).toHaveBeenCalledWith(15, 'Greek yogurt', 'snack', expect.any(Date));
+      expect(mockAddMeal).toHaveBeenCalledWith(
+        'Greek yogurt',
+        'snack',
+        { protein: 15, carbs: 30, fat: 10 },
+        expect.any(Date),
+      );
     });
   });
 });
