@@ -99,7 +99,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 **Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
 
 - [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
-- [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
+- [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
 - [ ] **Phase 32: Screens & Meal Entry** — MacrosScreen, AddMealModal with 3-macro inputs, meal library macro support, macro badges
 - [ ] **Phase 33: Navigation Rename** — Protein tab renamed to Macros, all route/stack type names updated
 
@@ -147,7 +147,10 @@ Plans:
   4. Quick-add buttons display non-zero macro values as compact colored pills
   5. User can save a library meal with protein, carbs, and fat grams, then tap it to log all three macros to today's totals in one tap
   6. Protein streak counts only consecutive days meeting the protein goal — adding carbs/fat goals does not reset or alter the existing streak count
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 32-01-PLAN.md — MacroPills component, MealListItem migration, AddMealModal 3-macro rewrite, ProteinScreen cleanup
+- [ ] 32-02-PLAN.md — AddLibraryMealModal 3-macro rewrite, MealLibraryScreen migration to macrosDb
 **UI hint**: yes
 
 ### Phase 33: Navigation Rename
@@ -192,5 +195,5 @@ Plans:
 | 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
 | 30. DB Foundation | v1.7 | 2/2 | Complete   | 2026-04-02 |
 | 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete    | 2026-04-02 |
-| 32. Screens & Meal Entry | v1.7 | 0/? | Not started | - |
+| 32. Screens & Meal Entry | v1.7 | 0/2 | Not started | - |
 | 33. Navigation Rename | v1.7 | 0/? | Not started | - |
