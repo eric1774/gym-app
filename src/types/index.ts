@@ -395,3 +395,26 @@ export const HR_ZONES: HRZoneInfo[] = [
   { zone: 4, name: 'Threshold', minPercent: 80, maxPercent: 90, color: '#FF8C00' },
   { zone: 5, name: 'Max',       minPercent: 90, maxPercent: 100, color: '#FF4500' },
 ];
+
+// -- Hydration domain types (Phase 34) --
+
+/** A single water intake log entry. */
+export interface WaterLog {
+  id: number;
+  /** Amount in fluid ounces (always whole number per D-05) */
+  amountOz: number;
+  /** Local datetime string in YYYY-MM-DDTHH:MM:SS format */
+  loggedAt: string;
+  /** Local date string in YYYY-MM-DD format for day-boundary queries */
+  localDate: string;
+  createdAt: string;
+}
+
+/** User's hydration goal settings. goal_oz is nullable — null means no goal set yet (per D-08). */
+export interface WaterSettings {
+  id: number;
+  /** Daily water goal in fluid ounces, or null if not yet configured */
+  goalOz: number | null;
+  createdAt: string;
+  updatedAt: string;
+}

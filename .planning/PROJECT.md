@@ -58,23 +58,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-- Multi-macro goal setting with per-macro daily targets and live calorie estimation — Validated in Phase 31: goal-setting-progress-charts
-- Three stacked progress bars showing P/C/F progress with calorie breakdown — Validated in Phase 31: goal-setting-progress-charts
-- Per-macro chart with tab selector and color-coded lines — Validated in Phase 31: goal-setting-progress-charts
-
-## Current Milestone: v1.7 Macros Tracking
-
-**Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with intuitive multi-macro UI, per-macro goals, charts, calorie computation, and meal library support.
-
-**Target features:**
-- Multi-macro goal setting with per-macro daily targets and live calorie estimation
-- Three stacked progress bars showing P/C/F progress with calorie breakdown
-- Per-macro chart with tab selector and color-coded lines
-- 3-macro meal entry with colored inputs and calorie preview
-- 3-macro meal library support
-- Colored macro badges on meal list and quick-add buttons
-- Existing user upgrade path (protein preserved, carbs/fat show "tap to set")
-- DB migration v10, navigation rename (Protein → Macros)
+None — v1.6 milestone complete.
 
 ### Out of Scope
 
@@ -96,8 +80,6 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
 - **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring (BLE, connection management, HR persistence, live display, settings, bug fixes)
-- **DB Schema**: Migration v9 (current); v10 planned for macro columns
-- **Phase 31 Complete**: MacroProgressCard (3-bar P/C/F), MacroGoalSetupForm (3-input), MacroChart (tabbed) — all wired into ProteinScreen, data via macrosDb
 
 ## Constraints
 
@@ -127,22 +109,5 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Exponential backoff reconnect | 1/2/4/8/16s intervals, max 5 attempts — prevents BLE stack flooding | ✓ Good |
 | Two-row workout header | Row 1 (timer, volume, End Workout) always fits; Row 2 (HR) only when device paired | ✓ Good |
 
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd:transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd:complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2026-04-02 after Phase 31 completion*
+*Last updated: 2026-03-30 after v1.6 milestone*
