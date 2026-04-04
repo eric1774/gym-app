@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 describe('runMigrations', () => {
-  it('runs all 10 migrations on a fresh database (version 0)', async () => {
+  it('runs all 11 migrations on a fresh database (version 0)', async () => {
     const { transaction, txExecuteSql } = makeMockDatabase();
     const db = { transaction } as any;
 
@@ -36,20 +36,20 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([{ max_version: null }]));  // SELECT MAX -> 0
 
     // After each migration: INSERT version
-    // 10 migrations = 10 INSERT version calls
-    for (let i = 0; i < 10; i++) {
+    // 11 migrations = 11 INSERT version calls
+    for (let i = 0; i < 11; i++) {
       mockExecuteSql.mockResolvedValueOnce(mockResultSet([], i + 1));
     }
 
     await runMigrations(db);
 
-    // 10 migrations ran
-    expect(transaction).toHaveBeenCalledTimes(10);
+    // 11 migrations ran
+    expect(transaction).toHaveBeenCalledTimes(11);
     // Each migration inserts a version
     const insertVersionCalls = mockExecuteSql.mock.calls.filter(
       ([, sql]) => typeof sql === 'string' && sql.includes('INSERT INTO schema_version'),
     );
-    expect(insertVersionCalls.length).toBe(10);
+    expect(insertVersionCalls.length).toBe(11);
   });
 
   it('skips already-applied migrations when at version 3', async () => {
@@ -66,22 +66,22 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([]))  // CREATE TABLE IF NOT EXISTS (no-op)
       .mockResolvedValueOnce(mockResultSet([{ max_version: 3 }]));  // version = 3
 
-    // migrations 4, 5, 6, 7, 8, 9, 10 remaining
-    for (let i = 4; i <= 10; i++) {
+    // migrations 4, 5, 6, 7, 8, 9, 10, 11 remaining
+    for (let i = 4; i <= 11; i++) {
       mockExecuteSql.mockResolvedValueOnce(mockResultSet([], i));
     }
 
     await runMigrations(db);
 
-    // Only 7 migrations ran (4,5,6,7,8,9,10)
-    expect(transaction).toHaveBeenCalledTimes(7);
-    // 7 version records inserted
+    // Only 8 migrations ran (4,5,6,7,8,9,10,11)
+    expect(transaction).toHaveBeenCalledTimes(8);
+    // 8 version records inserted
     const insertCalls = mockExecuteSql.mock.calls.filter(
       ([, sql]) => typeof sql === 'string' && sql.includes('INSERT INTO schema_version'),
     );
-    expect(insertCalls).toHaveLength(7);
+    expect(insertCalls).toHaveLength(8);
     const versions = insertCalls.map(([, , params]) => (params as number[])[0]);
-    expect(versions).toEqual([4, 5, 6, 7, 8, 9, 10]);
+    expect(versions).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
   it('skips all migrations when already at latest version', async () => {
@@ -93,10 +93,10 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([{ name: 'exercises' }]))
       .mockResolvedValueOnce(mockResultSet([{ name: 'schema_version' }]));
 
-    // getCurrentVersion = 10 (latest)
+    // getCurrentVersion = 11 (latest)
     mockExecuteSql
       .mockResolvedValueOnce(mockResultSet([]))
-      .mockResolvedValueOnce(mockResultSet([{ max_version: 10 }]));
+      .mockResolvedValueOnce(mockResultSet([{ max_version: 11 }]));
 
     await runMigrations(db);
 
@@ -122,15 +122,15 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([]))   // CREATE TABLE IF NOT EXISTS (no-op)
       .mockResolvedValueOnce(mockResultSet([{ max_version: 2 }]));  // version = 2
 
-    // Remaining migrations: 3,4,5,6,7,8,9,10
-    for (let i = 3; i <= 10; i++) {
+    // Remaining migrations: 3,4,5,6,7,8,9,10,11
+    for (let i = 3; i <= 11; i++) {
       mockExecuteSql.mockResolvedValueOnce(mockResultSet([], i));
     }
 
     await runMigrations(db);
 
-    // 8 remaining migrations ran
-    expect(transaction).toHaveBeenCalledTimes(8);
+    // 9 remaining migrations ran
+    expect(transaction).toHaveBeenCalledTimes(9);
   });
 
   it('runs migration DDL inside a transaction', async () => {
@@ -142,17 +142,17 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([]))
       .mockResolvedValueOnce(mockResultSet([]))
       .mockResolvedValueOnce(mockResultSet([]))
-      .mockResolvedValueOnce(mockResultSet([{ max_version: 9 }]));
+      .mockResolvedValueOnce(mockResultSet([{ max_version: 10 }]));
 
-    // Only migration 10 remains
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([], 10));
+    // Only migration 11 remains
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([], 11));
 
     await runMigrations(db);
 
     expect(transaction).toHaveBeenCalledTimes(1);
-    // Migration 10 adds macro columns and macro_settings table
+    // Migration 11 creates water_logs and water_settings tables
     expect(txExecuteSql).toHaveBeenCalledWith(
-      expect.stringContaining('carb_grams'),
+      expect.stringContaining('water_logs'),
     );
   });
 
@@ -172,7 +172,7 @@ describe('runMigrations', () => {
       .mockResolvedValueOnce(mockResultSet([]))  // create schema_version
       .mockResolvedValueOnce(mockResultSet([{ max_version: null }]));  // version = 0
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 11; i++) {
       mockExecuteSql.mockResolvedValueOnce(mockResultSet([], i));
     }
 
@@ -216,5 +216,11 @@ describe('runMigrations', () => {
     expect(txCalls.some(s => s.includes('fat_grams'))).toBe(true);
     expect(txCalls.some(s => s.includes('CREATE TABLE IF NOT EXISTS macro_settings'))).toBe(true);
     expect(txCalls.some(s => s.includes('INSERT INTO macro_settings'))).toBe(true);
+
+    // Migration 11: water_logs and water_settings tables
+    expect(txCalls.some(s => s.includes('CREATE TABLE IF NOT EXISTS water_logs'))).toBe(true);
+    expect(txCalls.some(s => s.includes('CREATE TABLE IF NOT EXISTS water_settings'))).toBe(true);
+    expect(txCalls.some(s => s.includes('amount_oz'))).toBe(true);
+    expect(txCalls.some(s => s.includes('goal_oz'))).toBe(true);
   });
 });

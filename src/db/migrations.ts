@@ -23,6 +23,7 @@ interface Migration {
  * - Version 8: Create heart_rate_samples table, add avg_hr/peak_hr to workout_sessions
  * - Version 9: Repair program_week values (migration 5 backfill set all to 1)
  * - Version 10: Add macro columns to meals/meal_library and create macro_settings table
+ * - Version 11: Create water_logs and water_settings tables for hydration tracking
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -331,6 +332,29 @@ const MIGRATIONS: Migration[] = [
         SELECT daily_goal_grams, NULL, NULL, created_at, updated_at
         FROM protein_settings
         LIMIT 1
+      `);
+    },
+  },
+  {
+    version: 11,
+    description: 'Create water_logs and water_settings tables for hydration tracking',
+    up: (tx: Transaction) => {
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS water_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          amount_oz INTEGER NOT NULL,
+          logged_at TEXT NOT NULL,
+          local_date TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `);
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS water_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          goal_oz INTEGER,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
       `);
     },
   },
