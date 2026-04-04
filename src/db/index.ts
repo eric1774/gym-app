@@ -66,3 +66,6 @@ export { repairProgramData } from './repair';
 // Macro-aware DB functions (Phase 30) — namespaced to avoid collision with frozen protein.ts
 import * as macrosDb from './macros';
 export { macrosDb };
+// Hydration DB functions (Phase 34) — namespaced for water tracking
+import * as hydrationDb from './hydration';
+export { hydrationDb };

@@ -38,7 +38,6 @@ module.exports = {
 
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/.claude/worktrees/',
     '/.gsd/',
     '/.scannerwork/',
   ],
