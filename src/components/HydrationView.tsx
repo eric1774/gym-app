@@ -11,27 +11,31 @@ import { useFocusEffect } from '@react-navigation/native';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { hydrationDb } from '../db';
 import { WaterCup } from './WaterCup';
+import { GoalSetupCard } from './GoalSetupCard';
 import { LogWaterModal } from '../screens/LogWaterModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize, weightBold, weightRegular } from '../theme/typography';
 
 export function HydrationView() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentTotal, setCurrentTotal] = useState(0);
-  const [goalOz, setGoalOz] = useState<number>(64); // D-09: hardcoded 64 default
+  const [goalOz, setGoalOz] = useState<number | null>(null);
+  const [streakDays, setStreakDays] = useState<number>(0);
+  const [weeklyAvgOz, setWeeklyAvgOz] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const refreshData = useCallback(async () => {
-    const [total, settings] = await Promise.all([
+    const [total, settings, streak, avgOz] = await Promise.all([
       hydrationDb.getTodayWaterTotal(),
       hydrationDb.getWaterGoal(),
+      hydrationDb.getStreakDays(),
+      hydrationDb.get7DayAverage(),
     ]);
     setCurrentTotal(total);
-    if (settings?.goalOz != null) {
-      setGoalOz(settings.goalOz);
-    }
-    // else keep default 64 per D-09
+    setGoalOz(settings?.goalOz ?? null);
+    setStreakDays(streak);
+    setWeeklyAvgOz(avgOz);
   }, []);
 
   useFocusEffect(
@@ -61,16 +65,26 @@ export function HydrationView() {
     await refreshData();
   }, [refreshData]);
 
+  // Suppress unused variable warning — weeklyAvgOz will be used in Plan 02 stat cards
+  void weeklyAvgOz;
+  void weightRegular;
+
   return (
     <View style={styles.container}>
       {isLoading ? (
         <ActivityIndicator size="large" color={colors.accent} />
+      ) : goalOz === null ? (
+        <View style={styles.setupContainer}>
+          <GoalSetupCard onGoalSet={refreshData} />
+        </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Cup visualization — centered hero */}
           <View style={styles.cupSection}>
             <WaterCup currentOz={currentTotal} goalOz={goalOz} />
           </View>
+
+          {/* Goal label and stat cards will be added in Plan 02 here */}
 
           {/* Quick-add section */}
           <View style={styles.quickAddSection}>
@@ -113,6 +127,7 @@ export function HydrationView() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  setupContainer: { flex: 1, justifyContent: 'center' },
   scrollContent: { paddingBottom: 100 },
   cupSection: {
     marginTop: spacing.xl,
