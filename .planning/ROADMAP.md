@@ -113,7 +113,7 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future
 **Milestone Goal:** Add daily hydration tracking to the Macros page via a tab bar with cup visualization, water goal setting, quick-add logging, and hydration stats.
 
 - [x] **Phase 34: DB Foundation** — DB migration v11, water_logs and water_settings tables, hydration.ts module with all 6 DB functions (completed 2026-04-04)
-- [x] **Phase 35: Tab Bar & Hydration Core** — TabBar component, MacrosView extraction, HydrationView with cup visualization, LogWaterModal, quick-add buttons (completed 2026-04-05)
+- [x] **Phase 35: Tab Bar & Hydration Core** — TabBar component, MacrosView extraction, HydrationView with cup visualization, LogWaterModal, quick-add buttons (completed 2026-04-05)
 - [ ] **Phase 36: Goal Setting & Stats** — First-use goal prompt, inline goal editing, hydration streak, and weekly average stats cards
 
 ## Phase Details
@@ -215,7 +215,10 @@ Plans:
   3. Saving a new goal immediately recalculates the cup fill percentage, streak, and weekly average based on the updated goal value
   4. Streak card shows the count of consecutive calendar days where the logged water total met or exceeded the goal — a day with no logs counts as zero (streak breaks)
   5. Weekly average card shows the percentage of the daily goal met averaged over the last 7 days (e.g., "72%" means user averaged 72% of goal over the past week)
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 36-01-PLAN.md — GoalSetupCard component, HydrationView null-aware state expansion and conditional rendering
+- [ ] 36-02-PLAN.md — HydrationStatCards component, inline goal editing, goal label, full layout wiring
 **UI hint**: yes
 
 ## Progress
@@ -255,4 +258,4 @@ Plans:
 | 33. Navigation Rename | — | — | Deferred | — |
 | 34. DB Foundation | v1.8 | 2/2 | Complete    | 2026-04-05 |
 | 35. Tab Bar & Hydration Core | v1.8 | 2/2 | Complete    | 2026-04-05 |
-| 36. Goal Setting & Stats | v1.8 | 0/TBD | Not started | - |
+| 36. Goal Setting & Stats | v1.8 | 0/2 | Not started | - |
