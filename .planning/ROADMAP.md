@@ -9,6 +9,8 @@
 - ✅ **v1.4 Test Coverage** — Phases 15-21 (shipped 2026-03-17)
 - ✅ **v1.5 Program Data Export** — Phases 22-23 (shipped 2026-03-22)
 - ✅ **v1.6 Heart Rate Monitoring** — Phases 24-29 (shipped 2026-03-30)
+- ✅ **v1.7 Macros Tracking** — Phases 30-32 (shipped 2026-04-03)
+- 🚧 **v1.8 Hydration Tracker** — Phases 34-36 (in progress)
 
 ## Phases
 
@@ -86,12 +88,135 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 
 - [x] **Phase 24: BLE Foundation** — Android permissions, BleManager singleton, DB migration v8, shared HR types, and HRSettingsService (completed 2026-03-24)
 - [x] **Phase 25: Connection Management** — Device scan, connect, paired device persistence, auto-reconnect, connection state indicator, disconnect UX (completed 2026-03-25)
-- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-27)
+- [x] **Phase 26: HR Data Persistence** — In-session sample buffering, batch flush on session end, avg/peak HR aggregates, summary card stats, calendar day details (completed 2026-03-28)
 - [x] **Phase 27: Live Display & Settings UI** — Live BPM in workout header, zone coloring, zone label, age/max HR settings, pairing from Settings (completed 2026-03-29)
 - [x] **Phase 28: Bug Fixes & Dead Code Cleanup** — Fix unpair disconnect bug, zone clamping for below-zone BPM, remove dead code (completed 2026-03-30)
 - [x] **Phase 29: Milestone Bookkeeping** — Update SUMMARY.md frontmatter, check DATA requirements, update coverage counts (completed 2026-03-30)
 
 </details>
+
+<details>
+<summary>✅ v1.7 Macros Tracking (Phases 30-32) — SHIPPED 2026-04-03</summary>
+
+**Milestone Goal:** Transform protein tracking into full macronutrient tracking (protein, carbs, fat) with multi-macro UI, per-macro goals, charts, calorie computation, and meal library support. protein.ts remains frozen throughout.
+
+- [x] **Phase 30: DB Foundation** — DB migration v10, macro types and constants, macros.ts module, computeCalories utility (completed 2026-04-02)
+- [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
+- [x] **Phase 32: Screens & Meal Entry** — MacroPills component, AddMealModal with 3-macro inputs, meal library macro support, macro badges (completed 2026-04-03)
+
+Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future milestone.
+
+</details>
+
+### v1.8 Hydration Tracker (In Progress)
+
+**Milestone Goal:** Add daily hydration tracking to the Macros page via a tab bar with cup visualization, water goal setting, quick-add logging, and hydration stats.
+
+- [x] **Phase 34: DB Foundation** — DB migration v11, water_logs and water_settings tables, hydration.ts module with all 6 DB functions (completed 2026-04-04)
+- [ ] **Phase 35: Tab Bar & Hydration Core** — TabBar component, MacrosView extraction, HydrationView with cup visualization, LogWaterModal, quick-add buttons
+- [ ] **Phase 36: Goal Setting & Stats** — First-use goal prompt, inline goal editing, hydration streak, and weekly average stats cards
+
+## Phase Details
+
+### Phase 30: DB Foundation
+**Goal**: The app stores carbs and fat for every meal, has a macro_settings table, and all macro-aware DB functions compile and pass tests
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: DB-01, DB-02, DB-03, DB-04
+**Success Criteria** (what must be TRUE):
+  1. App opens on a v9 database and successfully migrates to v10 — meals and meal_library have carb_grams and fat_grams columns defaulting to 0, with no NaN or null values visible anywhere in the UI
+  2. A new macro_settings row exists after migration and contains the protein goal value carried over from the existing protein_settings row
+  3. computeCalories(p, c, f) returns the correct calorie value (p*4 + c*4 + f*9) and is importable by any component without a theme dependency
+  4. macros.ts exports all required DB functions (addMeal, getMacroGoals, setMacroGoals, getTodayMacroTotals, getDailyMacroTotals, get7DayAverage, getStreakDays) and its test suite passes — streak counts protein-goal-only days
+  5. Jest test suite passes with migration count updated to 10 and mealRow/proteinSettingsRow fixtures updated to include the new columns
+**Plans**: 2 plans
+Plans:
+- [x] 30-01-PLAN.md — Types, constants, computeCalories utility, migration v10, migration test updates (completed 2026-04-02)
+- [x] 30-02-PLAN.md — macros.ts DB module with all functions, test suite, barrel exports
+
+### Phase 31: Goal Setting, Progress & Charts
+**Goal**: Users can see all three macro progress bars, set goals for each macro, and view per-macro history charts
+**Depends on**: Phase 30
+**Requirements**: GOAL-01, GOAL-02, GOAL-03, GOAL-04, GOAL-05, GOAL-06, CHART-01, CHART-02, CHART-03
+**Success Criteria** (what must be TRUE):
+  1. User can open the goal form and set separate gram targets for protein, carbs, and fat — a calorie estimate updates live as numbers are typed
+  2. The progress card shows three separate P/C/F bars, each with current grams, goal grams, and percentage filled — all on one screen without scrolling
+  3. An existing user who has only a protein goal sees protein bar filled correctly and carbs/fat bars showing "Tap to set" instead of broken 0/0 state
+  4. User can tap the progress card to inline-edit any of the three macro goals and save or cancel without leaving the screen
+  5. User can tap Protein, Carbs, or Fat tabs above the chart and see a line chart for the selected macro using its color (mint #8DC28A / blue #5B9BF0 / coral #E8845C) — tab switch is instant with no re-fetch
+**Plans**: 2 plans
+Plans:
+- [x] 31-01-PLAN.md — MacroProgressCard and MacroGoalSetupForm components (completed 2026-04-02)
+- [x] 31-02-PLAN.md — MacroChart component and ProteinScreen wiring
+**UI hint**: yes
+
+### Phase 32: Screens & Meal Entry
+**Goal**: Users can log meals with all three macros, see macro badges on every meal, and the meal library stores and logs full macro data
+**Depends on**: Phase 31
+**Requirements**: MEAL-01, MEAL-02, MEAL-03, MEAL-04, MEAL-05, MEAL-06, LIB-01, LIB-02, LIB-03
+**Success Criteria** (what must be TRUE):
+  1. User can open the add meal form, enter protein, carbs, and fat grams (at least one > 0 required), and see a calorie total update live with each keystroke before saving
+  2. User can edit an existing meal and change any of its three macro values — all changes persist correctly
+  3. Every meal row in today's history shows colored badges for non-zero macros only (zero-value macros are hidden, not shown as "0g")
+  4. Quick-add buttons display non-zero macro values as compact colored pills
+  5. User can save a library meal with protein, carbs, and fat grams, then tap it to log all three macros to today's totals in one tap
+  6. Protein streak counts only consecutive days meeting the protein goal — adding carbs/fat goals does not reset or alter the existing streak count
+**Plans**: 2 plans
+Plans:
+- [x] 32-01-PLAN.md — MacroPills component, MealListItem migration, AddMealModal 3-macro rewrite, ProteinScreen cleanup
+- [x] 32-02-PLAN.md — AddLibraryMealModal 3-macro rewrite, MealLibraryScreen migration to macrosDb
+**UI hint**: yes
+
+### Phase 33: Navigation Rename
+**Goal**: The bottom tab and all internal route names consistently say "Macros" — no visible or type-level reference to "Protein" remains in the navigation layer
+**Depends on**: Phase 32
+**Requirements**: NAV-01, NAV-02
+**Success Criteria** (what must be TRUE):
+  1. The bottom navigation tab shows "Macros" label with the correct icon — "Protein" label is gone
+  2. tsc --noEmit exits with zero errors after all route and stack type renames (ProteinStack → MacrosStack, ProteinHome → MacrosHome, ProteinStackParamList → MacrosStackParamList)
+**Plans**: TBD
+
+### Phase 34: DB Foundation
+**Goal**: The app stores water logs and water settings in SQLite with a complete hydration.ts module that all UI phases can call
+**Depends on**: Phase 32
+**Requirements**: DB-01, DB-02
+**Success Criteria** (what must be TRUE):
+  1. App running on a v10 database migrates cleanly to v11 — water_logs and water_settings tables exist with correct columns, no existing data is lost or corrupted
+  2. hydration.ts exports all 6 required functions (getWaterGoal, setWaterGoal, logWater, getTodayWaterTotal, getStreakDays, get7DayAverage) and each compiles without TypeScript errors
+  3. getWaterGoal returns null on a fresh database (no goal row set yet) and returns the saved oz value after setWaterGoal is called
+  4. getTodayWaterTotal sums only today's water_logs entries (local date match), returning 0 when no logs exist for today
+**Plans**: 2 plans
+Plans:
+- [x] 34-01-PLAN.md — WaterLog/WaterSettings types, migration v11 (water_logs + water_settings tables), migration test updates
+- [x] 34-02-PLAN.md — hydration.ts module with all 6 DB functions, row mapper tests, full test suite, hydrationDb barrel export
+
+### Phase 35: Tab Bar & Hydration Core
+**Goal**: Users can switch between Macros and Hydration tabs on the Protein screen and log water via quick-add buttons or a custom modal, with the cup filling as they log
+**Depends on**: Phase 34
+**Requirements**: TAB-01, TAB-02, HYD-01, HYD-02, HYD-03
+**Success Criteria** (what must be TRUE):
+  1. Protein screen opens on the Macros tab by default — all existing macros content is visible and behaves identically to before the refactor
+  2. User can tap "Hydration" tab and see HydrationView replace MacrosView — tab bar active state updates with mint underline, no navigation occurs
+  3. User can tap "+16 oz" (or +8 or +24) quick-add button and see the cup fill update immediately with haptic feedback — no modal opens
+  4. User can tap "+ Log Water", enter a custom fl oz amount in the modal, tap Save, and see the cup fill and running total update
+  5. Cup fill is proportional to currentTotal / goalOz — at 50% of goal the cup appears half full, at or above 100% the cup shows full
+**Plans**: 2 plans
+Plans:
+- [ ] 35-01-PLAN.md — TabBar component, MacrosView extraction from ProteinScreen, ProteinScreen thin shell refactor
+- [ ] 35-02-PLAN.md — WaterCup visualization, HydrationView with quick-add buttons, LogWaterModal, ProteinScreen wiring
+**UI hint**: yes
+
+### Phase 36: Goal Setting & Stats
+**Goal**: Users can set and edit their daily water goal, and see hydration streak and weekly average stats below the cup
+**Depends on**: Phase 35
+**Requirements**: GOAL-01, GOAL-02, HYD-04
+**Success Criteria** (what must be TRUE):
+  1. A first-time user who has never set a water goal sees a setup card with a pre-filled 64 oz input instead of the cup visualization — saving the goal transitions immediately to the full hydration view
+  2. User can tap the "GOAL: X fl oz" label below the cup to enter inline edit mode — a numeric input appears with Save and Cancel buttons without leaving the screen
+  3. Saving a new goal immediately recalculates the cup fill percentage, streak, and weekly average based on the updated goal value
+  4. Streak card shows the count of consecutive calendar days where the logged water total met or exceeded the goal — a day with no logs counts as zero (streak breaks)
+  5. Weekly average card shows the percentage of the daily goal met averaged over the last 7 days (e.g., "72%" means user averaged 72% of goal over the past week)
+**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
@@ -123,4 +248,11 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 | 26. HR Data Persistence | v1.6 | 2/2 | Complete | 2026-03-28 |
 | 27. Live Display & Settings UI | v1.6 | 4/4 | Complete | 2026-03-29 |
 | 28. Bug Fixes & Dead Code Cleanup | v1.6 | 2/2 | Complete | 2026-03-30 |
-| 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete    | 2026-03-30 |
+| 29. Milestone Bookkeeping | v1.6 | 1/1 | Complete | 2026-03-30 |
+| 30. DB Foundation | v1.7 | 2/2 | Complete | 2026-04-02 |
+| 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete | 2026-04-02 |
+| 32. Screens & Meal Entry | v1.7 | 2/2 | Complete | 2026-04-03 |
+| 33. Navigation Rename | — | — | Deferred | — |
+| 34. DB Foundation | v1.8 | 2/2 | Complete    | 2026-04-05 |
+| 35. Tab Bar & Hydration Core | v1.8 | 0/2 | Not started | - |
+| 36. Goal Setting & Stats | v1.8 | 0/TBD | Not started | - |

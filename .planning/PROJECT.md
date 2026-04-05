@@ -58,7 +58,40 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-None — v1.6 milestone complete.
+- [ ] Tab bar on ProteinScreen switching between Macros and Hydration views
+- [ ] Cup visualization with gradient fill proportional to daily water progress
+- [ ] Water goal setting in fl oz with first-use prompt and inline editing
+- [ ] Log Water modal for custom amounts
+- [ ] Quick-add buttons (+8/+16/+24 oz) with haptic feedback
+- [ ] Add-only water logging with daily running total
+- [ ] Hydration streak (consecutive days meeting goal) and weekly average stats
+- [ ] DB migration v11 with water_logs and water_settings tables
+
+### Recently Validated
+
+- ✓ Multi-macro goal setting with per-macro daily targets and live calorie estimation — Validated in Phase 31: goal-setting-progress-charts
+- ✓ Three stacked progress bars showing P/C/F progress with calorie breakdown — Validated in Phase 31: goal-setting-progress-charts
+- ✓ Per-macro chart with tab selector and color-coded lines — Validated in Phase 31: goal-setting-progress-charts
+- ✓ 3-macro meal entry with colored inputs and calorie preview — Validated in Phase 32: screens-meal-entry
+- ✓ 3-macro meal library support with one-tap logging — Validated in Phase 32: screens-meal-entry
+- ✓ Colored macro badges on meal list items — Validated in Phase 32: screens-meal-entry
+- ✓ Protein streak unchanged by carbs/fat goal additions — Validated in Phase 32: screens-meal-entry
+
+## Current Milestone: v1.8 Hydration Tracker
+
+**Goal:** Add daily hydration tracking to the Macros page via a tab bar with cup visualization, water goal setting, quick-add logging, and hydration stats.
+
+**Target features:**
+- Tab bar on ProteinScreen switching between Macros and Hydration views (default: Macros)
+- MacrosView extraction (pure refactor of existing ProteinScreen content)
+- Cup visualization with gradient fill proportional to daily progress
+- Water goal setting in fl oz with first-use prompt (default 64 oz) and inline editing
+- Log Water modal for custom amounts
+- Fixed quick-add buttons (+8 oz, +16 oz, +24 oz) with haptic feedback
+- Add-only water logging (no delete/edit)
+- Today's stats: current streak and weekly average (% of goal)
+- DB migration v11: water_logs and water_settings tables
+- hydration.ts DB module
 
 ### Out of Scope
 
@@ -79,7 +112,8 @@ None — v1.6 milestone complete.
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring (BLE, connection management, HR persistence, live display, settings, bug fixes)
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring → v1.7 Macros Tracking
+- **DB Schema**: Migration v10 (current) — macro columns on meals/library_meals, macro_settings table
 
 ## Constraints
 
@@ -109,5 +143,22 @@ None — v1.6 milestone complete.
 | Exponential backoff reconnect | 1/2/4/8/16s intervals, max 5 attempts — prevents BLE stack flooding | ✓ Good |
 | Two-row workout header | Row 1 (timer, volume, End Workout) always fits; Row 2 (HR) only when device paired | ✓ Good |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-30 after v1.6 milestone*
+*Last updated: 2026-04-04 after milestone v1.8 start*
