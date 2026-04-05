@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.8 Hydration Tracker (Shipped: 2026-04-05)
+
+**Phases:** 34-36 (3 phases, 6 plans, 12 tasks) | **Commits:** 17 | **Lines:** +3,917
+**Timeline:** 2026-04-04 → 2026-04-05 (2 days)
+**Git range:** feat(34-01) → feat(36-02)
+**Requirements:** 10/10 satisfied (TAB-01–02, HYD-01–04, GOAL-01–02, DB-01–02)
+
+**Delivered:** Daily hydration tracking on the Macros page with cup visualization, water goal setting, quick-add logging, and hydration stats.
+
+**Key accomplishments:**
+
+- DB migration v11 with water_logs and water_settings tables, hydration.ts module exporting all 6 DB functions
+- TabBar component with underline active state, MacrosView extraction refactoring ProteinScreen into thin shell
+- WaterCup gradient fill visualization proportional to daily water progress vs goal
+- Quick-add buttons (+8/+16/+24 oz) with haptic feedback and LogWaterModal for custom amounts
+- GoalSetupCard with pre-filled 64 oz default for first-use, inline goal editing with Save/Cancel
+- HydrationStatCards showing hydration streak (consecutive days meeting goal) and weekly average (% of goal)
+
+---
+
 ## v1.6 Heart Rate Monitoring (Shipped: 2026-03-30)
 
 **Phases:** 24-29 (6 phases, 14 plans) | **Files:** 78 changed | **Lines:** +7,942

@@ -2,6 +2,50 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.8 — Hydration Tracker
+
+**Shipped:** 2026-04-05
+**Phases:** 3 | **Plans:** 6 | **Sessions:** ~2
+
+### What Was Built
+- DB migration v11 with water_logs and water_settings tables, hydration.ts module with 6 functions (getWaterGoal, setWaterGoal, logWater, getTodayWaterTotal, getStreakDays, get7DayAverage)
+- TabBar component with underline active state, MacrosView extraction refactoring ProteinScreen into thin shell
+- WaterCup gradient fill visualization proportional to daily water progress vs goal
+- Quick-add buttons (+8/+16/+24 oz) with haptic feedback and LogWaterModal for custom amounts
+- GoalSetupCard with pre-filled 64 oz default, inline goal editing with Save/Cancel
+- HydrationStatCards showing hydration streak and weekly average stats
+
+### What Worked
+- Three-phase split (DB → core UI → polish) continues to be the right granularity for feature milestones — each phase was self-contained
+- Thin shell refactor pattern (ProteinScreen → MacrosView + HydrationView with TabBar) kept the parent screen simple while enabling tab switching without navigation changes
+- Reusing established patterns (GoalSetupCard mirrors MacroGoalSetupForm, HydrationStatCards mirrors stat card patterns from macros) made UI phases fast
+- Promise.all for parallel data fetching in HydrationView refreshData (total + goal + streak + avg) — single stable useCallback called on focus, quick-add, and modal save
+- Add-only water logging design decision eliminated edit/delete complexity — kept implementation scope tight
+
+### What Was Inefficient
+- REQUIREMENTS.md checkboxes for Phase 34 and 36 requirements weren't updated at phase transitions — 5 of 10 were still unchecked despite all phases being complete
+- One-liner extraction from SUMMARY.md continues to be unreliable — CLI extracted "One-liner:" empty strings for 4 of 6 summaries
+- No milestone audit was run before completion — all phases were complete but formal verification was skipped
+
+### Patterns Established
+- Tab-based view switching pattern: state-based activeTab on parent screen, no navigation stack changes
+- CUP_HEIGHT constant pattern: fill visualization uses fixed dimension constant so fillFraction * height is consistent with rendered dimensions
+- Math.round validation before DB write: prevents fractional oz injection (threat mitigation pattern)
+- Null-aware goal conditional render: goalOz===null shows GoalSetupCard, non-null shows full content
+
+### Key Lessons
+1. REQUIREMENTS.md traceability status should be updated at each phase transition — stale checkboxes create false incompleteness signals at milestone completion
+2. SUMMARY.md one-liner fields need consistent formatting for CLI extraction to work — consider enforcing a stricter template
+3. The ProteinScreen thin-shell + tab-switching pattern works well for adding parallel tracking features (macros, hydration) without navigation complexity
+4. Two-day milestones with 3 phases are the sweet spot for focused feature additions — minimal context loss between sessions
+
+### Cost Observations
+- Model mix: ~90% opus, ~10% sonnet
+- Sessions: ~2 across 2 days
+- Notable: Fastest feature milestone relative to scope — 3 phases in 2 days, all TDD with tests included
+
+---
+
 ## Milestone: v1.6 — Heart Rate Monitoring
 
 **Shipped:** 2026-03-30
@@ -147,6 +191,8 @@
 | v1.4 Test Coverage | ~6 | 7 | First non-feature milestone, test-only |
 | v1.5 Program Data Export | 1 | 2 | Smallest milestone, single-session completion |
 | v1.6 Heart Rate Monitoring | ~8 | 6 | First hardware-integration milestone, BLE + DB migration v8 |
+| v1.7 Macros Tracking | ~3 | 3 | Parallel DB module pattern (macros.ts alongside protein.ts) |
+| v1.8 Hydration Tracker | ~2 | 3 | Tab-based view switching, fastest feature milestone |
 
 ### Cumulative Quality
 
@@ -156,11 +202,15 @@
 | v1.4 | ~358 | 82.26% | Full test suite from zero |
 | v1.5 | ~14 | 82%+ | Export tests (10 unit + 4 toast) |
 | v1.6 | ~20 | 82%+ | HRSettingsService tests (10), hrZones tests, SettingsScreen tests |
+| v1.7 | ~14 | 82%+ | macros.ts tests, MacroProgressCard tests, MacroPills tests |
+| v1.8 | ~14 | 82%+ | GoalSetupCard tests (7), HydrationStatCards tests (7) |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Infrastructure phases pay compound dividends — Jest setup in Phase 15 was reused by all 6 subsequent phases
 2. Mock isolation matters — side effects in shared test utilities cause hard-to-debug conflicts across test files
-3. Small milestones (1-2 phases) with clear data/UI splits execute in a single session with zero waste — confirmed by v1.5
+3. Small milestones (2-3 phases) with clear data/UI splits execute fast with zero waste — confirmed by v1.5 (1 session), v1.8 (2 days)
 4. Hardware-integration milestones need a cleanup/bug-fix phase budgeted upfront — confirmed by v1.6 (Phases 28-29 added post-audit)
 5. Milestone audits catch real bugs that verification misses — v1.6 audit found unpair disconnect bug and zone clamping issue
+6. REQUIREMENTS.md traceability must be updated at phase transitions, not deferred — stale checkboxes cause false incompleteness at milestone completion (v1.8)
+7. Thin shell + tab-switching pattern scales well for parallel tracking features — confirmed by v1.8 (Macros + Hydration on same screen)

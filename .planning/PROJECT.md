@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A local-only Android gym tracking app built with React Native. Designed for use in the gym — minimal UI that gets out of the way so you can focus on lifting. Tracks exercises, sets, reps, and weights across fully configurable multi-week programs, with progress graphs, protein tracking, workout intelligence (PR detection, calendar, supersets), and 82%+ test coverage.
+A local-only Android gym tracking app built with React Native. Designed for use in the gym — minimal UI that gets out of the way so you can focus on lifting. Tracks exercises, sets, reps, and weights across fully configurable multi-week programs, with progress graphs, full macronutrient tracking (protein/carbs/fat), daily hydration tracking, workout intelligence (PR detection, calendar, supersets), live heart rate monitoring via BLE, and 82%+ test coverage.
 
 ## Core Value
 
@@ -58,40 +58,29 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-- [ ] Tab bar on ProteinScreen switching between Macros and Hydration views
-- [ ] Cup visualization with gradient fill proportional to daily water progress
-- [ ] Water goal setting in fl oz with first-use prompt and inline editing
-- [ ] Log Water modal for custom amounts
-- [ ] Quick-add buttons (+8/+16/+24 oz) with haptic feedback
-- [ ] Add-only water logging with daily running total
-- [ ] Hydration streak (consecutive days meeting goal) and weekly average stats
-- [ ] DB migration v11 with water_logs and water_settings tables
+(None — planning next milestone)
 
 ### Recently Validated
 
-- ✓ Multi-macro goal setting with per-macro daily targets and live calorie estimation — Validated in Phase 31: goal-setting-progress-charts
-- ✓ Three stacked progress bars showing P/C/F progress with calorie breakdown — Validated in Phase 31: goal-setting-progress-charts
-- ✓ Per-macro chart with tab selector and color-coded lines — Validated in Phase 31: goal-setting-progress-charts
-- ✓ 3-macro meal entry with colored inputs and calorie preview — Validated in Phase 32: screens-meal-entry
-- ✓ 3-macro meal library support with one-tap logging — Validated in Phase 32: screens-meal-entry
-- ✓ Colored macro badges on meal list items — Validated in Phase 32: screens-meal-entry
-- ✓ Protein streak unchanged by carbs/fat goal additions — Validated in Phase 32: screens-meal-entry
+- ✓ Tab bar on ProteinScreen switching between Macros and Hydration views — v1.8
+- ✓ Cup visualization with gradient fill proportional to daily water progress — v1.8
+- ✓ Water goal setting in fl oz with first-use prompt and inline editing — v1.8
+- ✓ Log Water modal for custom amounts — v1.8
+- ✓ Quick-add buttons (+8/+16/+24 oz) with haptic feedback — v1.8
+- ✓ Add-only water logging with daily running total — v1.8
+- ✓ Hydration streak (consecutive days meeting goal) and weekly average stats — v1.8
+- ✓ DB migration v11 with water_logs and water_settings tables — v1.8
+- ✓ Multi-macro goal setting with per-macro daily targets and live calorie estimation — v1.7
+- ✓ Three stacked progress bars showing P/C/F progress with calorie breakdown — v1.7
+- ✓ Per-macro chart with tab selector and color-coded lines — v1.7
+- ✓ 3-macro meal entry with colored inputs and calorie preview — v1.7
+- ✓ 3-macro meal library support with one-tap logging — v1.7
+- ✓ Colored macro badges on meal list items — v1.7
+- ✓ Protein streak unchanged by carbs/fat goal additions — v1.7
 
-## Current Milestone: v1.8 Hydration Tracker
+## Current Milestone: Planning Next
 
-**Goal:** Add daily hydration tracking to the Macros page via a tab bar with cup visualization, water goal setting, quick-add logging, and hydration stats.
-
-**Target features:**
-- Tab bar on ProteinScreen switching between Macros and Hydration views (default: Macros)
-- MacrosView extraction (pure refactor of existing ProteinScreen content)
-- Cup visualization with gradient fill proportional to daily progress
-- Water goal setting in fl oz with first-use prompt (default 64 oz) and inline editing
-- Log Water modal for custom amounts
-- Fixed quick-add buttons (+8 oz, +16 oz, +24 oz) with haptic feedback
-- Add-only water logging (no delete/edit)
-- Today's stats: current streak and weekly average (% of goal)
-- DB migration v11: water_logs and water_settings tables
-- hydration.ts DB module
+v1.8 Hydration Tracker shipped 2026-04-05. Use `/gsd-new-milestone` to start the next milestone.
 
 ### Out of Scope
 
@@ -106,14 +95,13 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Platform**: Android only, local storage (no internet)
 - **Framework**: React Native with local SQLite for persistence
 - **Test Coverage**: 82.26% lines, 75.37% functions, 72.09% branches — Jest with 80/70 thresholds enforced
-- **DB Schema**: Migration v8 (latest — heart_rate_samples table, avg_hr/peak_hr on workout_sessions)
+- **DB Schema**: Migration v11 (latest — water_logs and water_settings tables for hydration tracking)
 - **UI Directive**: Use ui-ux-pro-max for mobile UX best practices and dark-mint-card-ui for visual/aesthetic design — clean, minimal dark theme with mint accents
 - **UX Priority**: Speed of data entry during an active workout is the #1 UX constraint
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring → v1.7 Macros Tracking
-- **DB Schema**: Migration v10 (current) — macro columns on meals/library_meals, macro_settings table
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring → v1.7 Macros Tracking → v1.8 Hydration Tracker
 
 ## Constraints
 
@@ -142,6 +130,11 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | HR samples buffered in useRef | Batch flush on session end protects set-logging speed from per-sample DB writes | ✓ Good |
 | Exponential backoff reconnect | 1/2/4/8/16s intervals, max 5 attempts — prevents BLE stack flooding | ✓ Good |
 | Two-row workout header | Row 1 (timer, volume, End Workout) always fits; Row 2 (HR) only when device paired | ✓ Good |
+| water_settings separate from macro_settings | Hydration and macros are independent features with no shared state | ✓ Good |
+| Add-only water logging | No delete/edit keeps hydration UX fast and simple — consistent with core value | ✓ Good |
+| Tab-based Macros/Hydration switching | State-based activeTab on ProteinScreen, no new navigation dependencies | ✓ Good |
+| WaterCup CUP_HEIGHT=200 constant | Fill fraction * constant height ensures consistent visual rendering | ✓ Good |
+| LogWaterModal Math.round validation | Prevents fractional oz injection into DB — threat mitigation T-35-03 | ✓ Good |
 
 ## Evolution
 
@@ -161,4 +154,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after milestone v1.8 start*
+*Last updated: 2026-04-05 after v1.8 Hydration Tracker milestone*
