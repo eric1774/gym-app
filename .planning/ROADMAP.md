@@ -201,7 +201,7 @@ Plans:
   5. Cup fill is proportional to currentTotal / goalOz — at 50% of goal the cup appears half full, at or above 100% the cup shows full
 **Plans**: 2 plans
 Plans:
-- [ ] 35-01-PLAN.md — TabBar component, MacrosView extraction from ProteinScreen, ProteinScreen thin shell refactor
+- [x] 35-01-PLAN.md — TabBar component, MacrosView extraction from ProteinScreen, ProteinScreen thin shell refactor
 - [ ] 35-02-PLAN.md — WaterCup visualization, HydrationView with quick-add buttons, LogWaterModal, ProteinScreen wiring
 **UI hint**: yes
 
@@ -254,5 +254,5 @@ Plans:
 | 32. Screens & Meal Entry | v1.7 | 2/2 | Complete | 2026-04-03 |
 | 33. Navigation Rename | — | — | Deferred | — |
 | 34. DB Foundation | v1.8 | 2/2 | Complete    | 2026-04-05 |
-| 35. Tab Bar & Hydration Core | v1.8 | 0/2 | Not started | - |
+| 35. Tab Bar & Hydration Core | v1.8 | 1/2 | In Progress|  |
 | 36. Goal Setting & Stats | v1.8 | 0/TBD | Not started | - |
