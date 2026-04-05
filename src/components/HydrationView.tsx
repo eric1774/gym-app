@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -12,6 +13,7 @@ import HapticFeedback from 'react-native-haptic-feedback';
 import { hydrationDb } from '../db';
 import { WaterCup } from './WaterCup';
 import { GoalSetupCard } from './GoalSetupCard';
+import { HydrationStatCards } from './HydrationStatCards';
 import { LogWaterModal } from '../screens/LogWaterModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -24,6 +26,9 @@ export function HydrationView() {
   const [streakDays, setStreakDays] = useState<number>(0);
   const [weeklyAvgOz, setWeeklyAvgOz] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [editGoalValue, setEditGoalValue] = useState('');
+  const [editGoalError, setEditGoalError] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
     const [total, settings, streak, avgOz] = await Promise.all([
@@ -49,6 +54,33 @@ export function HydrationView() {
     }, [refreshData]),
   );
 
+  const handleStartGoalEdit = useCallback(() => {
+    setEditGoalValue(goalOz !== null ? String(goalOz) : '64');
+    setEditGoalError(null);
+    setIsEditingGoal(true);
+  }, [goalOz]);
+
+  const handleSaveGoal = useCallback(async () => {
+    const parsed = parseInt(editGoalValue, 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      setEditGoalError('Please enter a number greater than 0');
+      return;
+    }
+    setEditGoalError(null);
+    try {
+      await hydrationDb.setWaterGoal(parsed);
+      await refreshData();
+      setIsEditingGoal(false);
+    } catch {
+      setEditGoalError('Failed to update goal. Please try again.');
+    }
+  }, [editGoalValue, refreshData]);
+
+  const handleCancelGoalEdit = useCallback(() => {
+    setIsEditingGoal(false);
+    setEditGoalError(null);
+  }, []);
+
   const handleQuickAdd = useCallback(async (oz: number) => {
     HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
     try {
@@ -65,10 +97,6 @@ export function HydrationView() {
     await refreshData();
   }, [refreshData]);
 
-  // Suppress unused variable warning — weeklyAvgOz will be used in Plan 02 stat cards
-  void weeklyAvgOz;
-  void weightRegular;
-
   return (
     <View style={styles.container}>
       {isLoading ? (
@@ -84,7 +112,58 @@ export function HydrationView() {
             <WaterCup currentOz={currentTotal} goalOz={goalOz} />
           </View>
 
-          {/* Goal label and stat cards will be added in Plan 02 here */}
+          {/* Goal label (display) or inline edit */}
+          {isEditingGoal ? (
+            <View style={styles.goalEditContainer}>
+              <View style={styles.goalEditInputRow}>
+                <TextInput
+                  style={styles.goalEditInput}
+                  value={editGoalValue}
+                  onChangeText={setEditGoalValue}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleSaveGoal}
+                />
+                <Text style={styles.goalEditSuffix}>fl oz</Text>
+              </View>
+              {editGoalError ? (
+                <Text style={styles.goalEditError}>{editGoalError}</Text>
+              ) : null}
+              <View style={styles.goalEditButtonRow}>
+                <TouchableOpacity
+                  style={styles.goalSaveButton}
+                  onPress={handleSaveGoal}
+                >
+                  <Text style={styles.goalSaveButtonText}>Save Goal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.goalCancelButton}
+                  onPress={handleCancelGoalEdit}
+                >
+                  <Text style={styles.goalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handleStartGoalEdit}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Edit water goal"
+              style={styles.goalLabelTouchable}
+            >
+              <Text style={styles.goalLabel}>GOAL: {goalOz} fl oz</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Stat cards row */}
+          <HydrationStatCards
+            streakDays={streakDays}
+            weeklyAvgOz={weeklyAvgOz}
+            goalOz={goalOz}
+          />
 
           {/* Quick-add section */}
           <View style={styles.quickAddSection}>
@@ -174,6 +253,76 @@ const styles = StyleSheet.create({
   logWaterButtonText: {
     color: colors.onAccent,
     fontSize: fontSize.base,
+    fontWeight: weightBold,
+  },
+  goalLabelTouchable: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.md,
+  },
+  goalLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+    textAlign: 'center',
+  },
+  goalEditContainer: {
+    paddingHorizontal: spacing.base,
+    marginTop: spacing.md,
+  },
+  goalEditInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  goalEditInput: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    fontSize: fontSize.base,
+    color: colors.primary,
+  },
+  goalEditSuffix: {
+    fontSize: fontSize.base,
+    color: colors.secondary,
+    marginLeft: spacing.sm,
+  },
+  goalEditError: {
+    fontSize: fontSize.sm,
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
+  goalEditButtonRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  goalSaveButton: {
+    flex: 1,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  goalSaveButtonText: {
+    color: colors.onAccent,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+  },
+  goalCancelButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  goalCancelButtonText: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
     fontWeight: weightBold,
   },
 });
