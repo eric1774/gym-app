@@ -6,6 +6,7 @@ import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBar } from '../components/TabBar';
 import { MacrosView } from '../components/MacrosView';
+import { HydrationView } from '../components/HydrationView';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold } from '../theme/typography';
@@ -26,9 +27,7 @@ export function ProteinScreen() {
       {activeTab === 0 ? (
         <MacrosView navigation={navigation} />
       ) : (
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>Hydration coming in Plan 02</Text>
-        </View>
+        <HydrationView />
       )}
     </View>
   );
@@ -38,6 +37,4 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { paddingHorizontal: spacing.base, paddingTop: spacing.md, paddingBottom: spacing.sm },
   title: { fontSize: fontSize.xl, fontWeight: weightBold, color: colors.primary },
-  placeholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  placeholderText: { color: colors.secondary, fontSize: fontSize.base },
 });
