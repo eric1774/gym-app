@@ -14,9 +14,9 @@ Requirements for Hydration Tracker milestone. Each maps to roadmap phases.
 
 ### Hydration
 
-- [ ] **HYD-01**: User can see a cup visualization with gradient fill proportional to their daily water intake vs goal
-- [ ] **HYD-02**: User can tap "+ Log Water" to open a modal, enter a custom fl oz amount, and save it to today's total
-- [ ] **HYD-03**: User can tap +8 oz, +16 oz, or +24 oz quick-add buttons to instantly log water with haptic feedback
+- [x] **HYD-01**: User can see a cup visualization with gradient fill proportional to their daily water intake vs goal
+- [x] **HYD-02**: User can tap "+ Log Water" to open a modal, enter a custom fl oz amount, and save it to today's total
+- [x] **HYD-03**: User can tap +8 oz, +16 oz, or +24 oz quick-add buttons to instantly log water with haptic feedback
 - [ ] **HYD-04**: User can see their current hydration streak (consecutive days meeting goal) and weekly average (% of goal met over 7 days)
 
 ### Goals
@@ -52,9 +52,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | TAB-01 | Phase 35 | Complete |
 | TAB-02 | Phase 35 | Complete |
-| HYD-01 | Phase 35 | Pending |
-| HYD-02 | Phase 35 | Pending |
-| HYD-03 | Phase 35 | Pending |
+| HYD-01 | Phase 35 | Complete |
+| HYD-02 | Phase 35 | Complete |
+| HYD-03 | Phase 35 | Complete |
 | HYD-04 | Phase 36 | Pending |
 | GOAL-01 | Phase 36 | Pending |
 | GOAL-02 | Phase 36 | Pending |

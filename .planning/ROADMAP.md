@@ -113,7 +113,7 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future
 **Milestone Goal:** Add daily hydration tracking to the Macros page via a tab bar with cup visualization, water goal setting, quick-add logging, and hydration stats.
 
 - [x] **Phase 34: DB Foundation** — DB migration v11, water_logs and water_settings tables, hydration.ts module with all 6 DB functions (completed 2026-04-04)
-- [ ] **Phase 35: Tab Bar & Hydration Core** — TabBar component, MacrosView extraction, HydrationView with cup visualization, LogWaterModal, quick-add buttons
+- [x] **Phase 35: Tab Bar & Hydration Core** — TabBar component, MacrosView extraction, HydrationView with cup visualization, LogWaterModal, quick-add buttons (completed 2026-04-05)
 - [ ] **Phase 36: Goal Setting & Stats** — First-use goal prompt, inline goal editing, hydration streak, and weekly average stats cards
 
 ## Phase Details
@@ -202,7 +202,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 35-01-PLAN.md — TabBar component, MacrosView extraction from ProteinScreen, ProteinScreen thin shell refactor
-- [ ] 35-02-PLAN.md — WaterCup visualization, HydrationView with quick-add buttons, LogWaterModal, ProteinScreen wiring
+- [x] 35-02-PLAN.md — WaterCup visualization, HydrationView with quick-add buttons, LogWaterModal, ProteinScreen wiring
 **UI hint**: yes
 
 ### Phase 36: Goal Setting & Stats
@@ -254,5 +254,5 @@ Plans:
 | 32. Screens & Meal Entry | v1.7 | 2/2 | Complete | 2026-04-03 |
 | 33. Navigation Rename | — | — | Deferred | — |
 | 34. DB Foundation | v1.8 | 2/2 | Complete    | 2026-04-05 |
-| 35. Tab Bar & Hydration Core | v1.8 | 1/2 | In Progress|  |
+| 35. Tab Bar & Hydration Core | v1.8 | 2/2 | Complete    | 2026-04-05 |
 | 36. Goal Setting & Stats | v1.8 | 0/TBD | Not started | - |
