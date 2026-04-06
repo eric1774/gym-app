@@ -4,6 +4,72 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v1.8 — Hydration Tracker
+*April 5, 2026*
+
+### New
+
+- **Hydration Tracking**: Track your daily water intake with a dedicated Hydration tab. Log water in customizable cup sizes, see an animated water cup visualization filling up as you drink, and monitor your progress throughout the day.
+
+- **Hydration Goal Setup**: First-time users are guided through a simple setup card to set their daily water target. Edit your goal inline anytime without leaving the screen.
+
+- **Hydration Stats Dashboard**: View your hydration stats at a glance — daily progress, streaks, and trends displayed in easy-to-read stat cards right on the Hydration tab.
+
+### Improved
+
+- **Tabbed Nutrition Screen**: The nutrition screen now uses a clean tab bar with an underline active indicator, letting you switch between Macros and Hydration views without extra navigation.
+
+---
+
+## v1.7 — Macros Tracking
+*March 2026*
+
+### New
+
+- **Full Macro Tracking**: Log protein, carbs, and fat for every meal — not just protein. Each meal entry now shows all three macros with an auto-calculated calorie count, giving you a complete picture of your nutrition.
+
+- **Macro Goals & Progress Charts**: Set daily targets for protein, carbs, and fat, then track your progress with a three-bar visual breakdown. A chart lets you review macro trends over selectable time ranges — week, month, or 3 months.
+
+- **Macro Progress Card**: See your daily macro intake at a glance with a compact progress card showing each macro as a colored bar against your goal, with inline editing to adjust targets on the fly.
+
+### Improved
+
+- **Meal Logging Redesigned**: The Add Meal and Add Library Meal dialogs now have three-macro inputs (protein, carbs, fat) with a live calorie preview, replacing the old protein-only entry flow.
+
+- **Meal Library Updated**: Saved meals now display full macro breakdowns with colorful macro pills, making it easy to see the nutritional profile of each meal at a glance.
+
+### Fixed
+
+- Fixed a database query bug that could cause incorrect results in certain conditions
+
+---
+
+## v1.6 — Heart Rate Monitoring
+*March 2026*
+
+### New
+
+- **Bluetooth Heart Rate Pairing**: Connect any standard Bluetooth heart rate monitor from a scan sheet. The app handles permissions, scanning, and pairing — just strap on your sensor and tap to connect.
+
+- **Live BPM During Workouts**: See your current heart rate in the workout header while you train. The display changes color based on your heart rate zone (warm-up, fat burn, cardio, peak) so you can train at the right intensity.
+
+- **Heart Rate Data Saved With Workouts**: Your average and peak heart rate are automatically recorded for every workout session. View them on the workout summary card after finishing, or revisit them anytime in the calendar day detail.
+
+- **Heart Rate in Settings**: A dedicated Heart Rate Monitor card in Settings lets you pair a new device, see your connected sensor, or unpair when needed.
+
+### Improved
+
+- **Auto-Reconnect**: If your heart rate monitor briefly drops connection during a workout, the app automatically reconnects without interrupting your session. A haptic pulse lets you know if the connection is lost.
+
+- **Dashboard Navigation**: A gear icon in the dashboard header gives you quick access to Settings.
+
+### Fixed
+
+- Fixed a hooks ordering crash that could occur when navigating to the workout screen
+- Fixed BPM display flickering during sensor reconnection
+
+---
+
 ## v1.5 — Program Data Export
 *March 22, 2026*
 
