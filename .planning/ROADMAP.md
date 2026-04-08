@@ -105,7 +105,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
 - [x] **Phase 32: Screens & Meal Entry** — MacroPills component, AddMealModal with 3-macro inputs, meal library macro support, macro badges (completed 2026-04-03)
 
-Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future milestone.
+Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08.
 
 </details>
 
@@ -167,7 +167,7 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future
 
 ### Deferred
 
-- [ ] **Phase 33: Navigation Rename** — Rename "Protein" tab → "Macros" in bottom navigation and all route/stack types
+- [x] **Phase 33: Navigation Rename** — Rename "Protein" tab → "Macros" in bottom navigation (completed 2026-04-08)
 
 ## Progress
 
@@ -203,7 +203,7 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future
 | 30. DB Foundation | v1.7 | 2/2 | Complete | 2026-04-02 |
 | 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete | 2026-04-02 |
 | 32. Screens & Meal Entry | v1.7 | 2/2 | Complete | 2026-04-03 |
-| 33. Navigation Rename | — | — | Deferred | — |
+| 33. Navigation Rename | — | 1/1 | Complete | 2026-04-08 |
 | 34. DB Foundation | v1.8 | 2/2 | Complete | 2026-04-04 |
 | 35. Tab Bar & Hydration Core | v1.8 | 2/2 | Complete | 2026-04-05 |
 | 36. Goal Setting & Stats | v1.8 | 2/2 | Complete | 2026-04-05 |
