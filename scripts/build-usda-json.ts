@@ -14,6 +14,7 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as path from 'path';
 import * as https from 'https';
+import * as readline from 'readline';
 import * as unzipper from 'unzipper';
 
 // ---------------------------------------------------------------------------
@@ -273,15 +274,48 @@ function buildCategoryMap(
   return map;
 }
 
-function buildNutrientMap(
-  foodNutrientRows: Record<string, string>[],
-): Map<number, NutrientEntry> {
+/**
+ * Stream food_nutrient.csv line-by-line to build the nutrient map without
+ * loading the entire ~150 MB file into memory at once.
+ */
+async function buildNutrientMapStreaming(
+  filePath: string,
+): Promise<Map<number, NutrientEntry>> {
   const map = new Map<number, NutrientEntry>();
 
-  for (const row of foodNutrientRows) {
-    const fdcId = parseInt(row['fdc_id'] ?? '', 10);
-    const nutrientId = parseInt(row['nutrient_id'] ?? '', 10);
-    const amountStr = row['amount'] ?? '';
+  const rl = readline.createInterface({
+    input: fs.createReadStream(filePath, { encoding: 'utf-8' }),
+    crlfDelay: Infinity,
+  });
+
+  let headers: string[] | null = null;
+  let fdcIdIdx = -1;
+  let nutrientIdIdx = -1;
+  let amountIdx = -1;
+
+  for await (const line of rl) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    const fields = parseCsvLine(trimmed);
+
+    if (headers === null) {
+      // First line is the header row
+      headers = fields.map((h) => h.replace(/^"|"$/g, '').trim());
+      fdcIdIdx = headers.indexOf('fdc_id');
+      nutrientIdIdx = headers.indexOf('nutrient_id');
+      amountIdx = headers.indexOf('amount');
+      if (fdcIdIdx === -1 || nutrientIdIdx === -1 || amountIdx === -1) {
+        throw new Error(
+          `food_nutrient.csv is missing expected columns. Found: ${headers.join(', ')}`,
+        );
+      }
+      continue;
+    }
+
+    const fdcId = parseInt(fields[fdcIdIdx] ?? '', 10);
+    const nutrientId = parseInt(fields[nutrientIdIdx] ?? '', 10);
+    const amountStr = (fields[amountIdx] ?? '').replace(/^"|"$/g, '').trim();
 
     if (isNaN(fdcId) || isNaN(nutrientId) || amountStr === '') continue;
 
@@ -339,13 +373,14 @@ async function main(): Promise<void> {
   const categoryRows = parseCsv(path.join(extractedDir, 'food_category.csv'));
   console.log(`  food_category.csv: ${categoryRows.length} rows`);
 
-  console.log('Parsing food_nutrient.csv (this may take a moment)...');
-  const nutrientRows = parseCsv(path.join(extractedDir, 'food_nutrient.csv'));
-  console.log(`  food_nutrient.csv: ${nutrientRows.length} rows`);
-
   // Build lookup maps
   const categoryMap = buildCategoryMap(categoryRows);
-  const nutrientMap = buildNutrientMap(nutrientRows);
+
+  console.log('Parsing food_nutrient.csv (streaming to reduce memory usage)...');
+  const nutrientMap = await buildNutrientMapStreaming(
+    path.join(extractedDir, 'food_nutrient.csv'),
+  );
+  console.log(`  food_nutrient.csv: ${nutrientMap.size} unique fdc_ids indexed`);
 
   // Step 4: Join and filter
   console.log('Joining and filtering foods...');
