@@ -1,6 +1,16 @@
 import { SQLiteDatabase, Transaction } from 'react-native-sqlite-storage';
 import { executeSql } from './database';
 
+// USDA food data for migration v12 bulk seed (per D-06: require() bundles into JS payload)
+const usdaFoods: Array<{
+  fdc_id: number;
+  name: string;
+  category: string;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+}> = require('../../assets/usda-foods.json');
+
 /**
  * A single schema migration with a version number and DDL statements.
  */
@@ -24,6 +34,7 @@ interface Migration {
  * - Version 9: Repair program_week values (migration 5 backfill set all to 1)
  * - Version 10: Add macro columns to meals/meal_library and create macro_settings table
  * - Version 11: Create water_logs and water_settings tables for hydration tracking
+ * - Version 12: Create foods and meal_foods tables, bulk-seed USDA food data
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -358,6 +369,70 @@ const MIGRATIONS: Migration[] = [
       `);
     },
   },
+  {
+    version: 12,
+    description: 'Create foods and meal_foods tables, bulk-seed USDA food data',
+    up: (tx: Transaction) => {
+      // 1. Create foods table
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS foods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          fdc_id INTEGER,
+          name TEXT NOT NULL,
+          category TEXT,
+          protein_per_100g REAL NOT NULL,
+          carbs_per_100g REAL NOT NULL,
+          fat_per_100g REAL NOT NULL,
+          search_text TEXT NOT NULL,
+          is_custom INTEGER NOT NULL DEFAULT 0
+        )
+      `);
+
+      // 2. Create meal_foods junction table with CASCADE foreign keys
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS meal_foods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+          food_id INTEGER NOT NULL REFERENCES foods(id),
+          grams REAL NOT NULL,
+          protein REAL NOT NULL,
+          carbs REAL NOT NULL,
+          fat REAL NOT NULL
+        )
+      `);
+
+      // 3. Create indexes for search and lookup performance
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_foods_search_text ON foods(search_text)',
+      );
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_meal_foods_meal_id ON meal_foods(meal_id)',
+      );
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_meal_foods_food_id ON meal_foods(food_id)',
+      );
+
+      // 4. Bulk-insert USDA foods (per D-06: loaded via require())
+      // All inserts run inside the same transaction for atomicity (per D-05)
+      for (const food of usdaFoods) {
+        const searchText = food.category
+          ? `${food.name} ${food.category}`.toLowerCase()
+          : food.name.toLowerCase();
+        tx.executeSql(
+          'INSERT INTO foods (fdc_id, name, category, protein_per_100g, carbs_per_100g, fat_per_100g, search_text, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+          [
+            food.fdc_id,
+            food.name,
+            food.category || null,
+            food.protein_per_100g,
+            food.carbs_per_100g,
+            food.fat_per_100g,
+            searchText,
+          ],
+        );
+      }
+    },
+  },
 ];
 
 /**
@@ -430,7 +505,10 @@ async function bootstrapExistingDatabase(
  * DDL in transactions is supported but keeping version tracking separate
  * avoids edge cases).
  */
-export async function runMigrations(database: SQLiteDatabase): Promise<void> {
+export async function runMigrations(
+  database: SQLiteDatabase,
+  onStatus?: (message: string) => void,
+): Promise<void> {
   // Bootstrap pre-migration databases before checking version
   await bootstrapExistingDatabase(database);
 
@@ -442,6 +520,10 @@ export async function runMigrations(database: SQLiteDatabase): Promise<void> {
   );
 
   for (const migration of pending) {
+    if (migration.version === 12 && onStatus) {
+      onStatus('Setting up food database...');
+    }
+
     // Run DDL inside a transaction
     await database.transaction(migration.up);
 

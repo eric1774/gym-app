@@ -71,12 +71,6 @@ vendor/
 .cache/
 tmp/
 
-# USDA build script cache (downloaded ZIP files)
-scripts/.cache/
-
-# Deploy backups (local APK/DB snapshots)
-.deploy-backups/
-
 # Tool/build artifacts
 .agent/
 .agents/
