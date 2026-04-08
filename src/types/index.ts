@@ -418,3 +418,24 @@ export interface WaterSettings {
   createdAt: string;
   updatedAt: string;
 }
+
+// -- Food domain types (Phase 38) --
+
+/** A food item from the USDA database or user-created custom food. */
+export interface Food {
+  id: number;
+  fdcId: number | null;
+  name: string;
+  category: string | null;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  caloriesPer100g: number;
+  searchText: string;
+  isCustom: boolean;
+}
+
+/** A food search result — Food plus usage frequency count. */
+export interface FoodSearchResult extends Food {
+  usageCount: number;
+}
