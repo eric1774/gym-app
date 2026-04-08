@@ -134,6 +134,11 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08
 - [ ] **Phase 38: Food Search & Custom Foods** — Fuzzy token search with frequency boost, frequent foods list, custom food creation, foods.ts DB module
   - Requirements: SRCH-01, SRCH-02, SRCH-03, SRCH-04, CUST-01, CUST-02
   - Depends on: Phase 37
+  - **Plans:** 3 plans
+  - Plans:
+    - [ ] 38-01-PLAN.md — Food types, foods.ts DB module with search/frequency/CRUD, mapper tests
+    - [ ] 38-02-PLAN.md — FoodSearchModal UI with search bar, results, frequent foods section
+    - [ ] 38-03-PLAN.md — Custom food creation (NoResultsCard, CustomFoodForm, modal integration)
   - Success criteria:
     1. User can type a food name and see matching results within 250ms (max 20 results)
     2. User sees frequently-logged foods before typing, ranked by usage count
@@ -208,6 +213,6 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08
 | 35. Tab Bar & Hydration Core | v1.8 | 2/2 | Complete | 2026-04-05 |
 | 36. Goal Setting & Stats | v1.8 | 2/2 | Complete | 2026-04-05 |
 | 37. Data Foundation | v1.9 | 2/2 | Complete | 2026-04-08 |
-| 38. Food Search & Custom Foods | v1.9 | — | Pending | — |
+| 38. Food Search & Custom Foods | v1.9 | 0/3 | Planned | — |
 | 39. Meal Builder | v1.9 | — | Pending | — |
 | 40. Smart Features & Integration | v1.9 | — | Pending | — |
