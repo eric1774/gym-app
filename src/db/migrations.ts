@@ -377,7 +377,7 @@ const MIGRATIONS: Migration[] = [
       tx.executeSql(`
         CREATE TABLE IF NOT EXISTS foods (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          fdc_id INTEGER,
+          fdc_id INTEGER UNIQUE,
           name TEXT NOT NULL,
           category TEXT,
           protein_per_100g REAL NOT NULL,
@@ -419,7 +419,7 @@ const MIGRATIONS: Migration[] = [
           ? `${food.name} ${food.category}`.toLowerCase()
           : food.name.toLowerCase();
         tx.executeSql(
-          'INSERT INTO foods (fdc_id, name, category, protein_per_100g, carbs_per_100g, fat_per_100g, search_text, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+          'INSERT OR IGNORE INTO foods (fdc_id, name, category, protein_per_100g, carbs_per_100g, fat_per_100g, search_text, is_custom) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
           [
             food.fdc_id,
             food.name,
