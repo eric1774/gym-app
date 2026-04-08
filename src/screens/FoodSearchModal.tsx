@@ -11,8 +11,10 @@ import {
   View,
   Vibration,
 } from 'react-native';
+import { CustomFoodForm } from '../components/CustomFoodForm';
 import { FoodResultItem } from '../components/FoodResultItem';
 import { FrequentFoodsSection } from '../components/FrequentFoodsSection';
+import { NoResultsCard } from '../components/NoResultsCard';
 import { foodsDb } from '../db';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -103,63 +105,79 @@ export function FoodSearchModal({ visible, onClose, onFoodSelected }: FoodSearch
           <View style={styles.headerSpacer} />
         </View>
 
-        {/* Search bar */}
-        <View style={styles.searchBarContainer}>
-          <TextInput
-            ref={searchInputRef}
-            style={styles.searchBar}
-            placeholder="Search foods..."
-            placeholderTextColor={colors.secondary}
-            value={query}
-            onChangeText={setQuery}
-            autoFocus
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="none"
-            selectionColor={colors.accent}
-            accessibilityLabel="Search foods"
-            accessibilityRole="search"
+        {showCustomForm ? (
+          /* Custom food creation form */
+          <CustomFoodForm
+            initialName={query}
+            onFoodCreated={(food) => {
+              Vibration.vibrate(10);
+              onFoodSelected(food);
+              onClose();
+            }}
+            onBack={() => setShowCustomForm(false)}
           />
-          {query.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setQuery('')}
-              style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>X</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Content area */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.contentArea}>
-          {query.trim().length === 0 ? (
-            /* Pre-search: show frequent foods */
-            <FrequentFoodsSection
-              foods={frequentFoods}
-              onFoodPress={handleFoodSelect}
-              loading={frequentLoading}
-            />
-          ) : results.length > 0 ? (
-            /* Search results */
-            <FlatList
-              data={results}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <FoodResultItem food={item} onPress={handleFoodSelect} />
+        ) : (
+          <>
+            {/* Search bar */}
+            <View style={styles.searchBarContainer}>
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchBar}
+                placeholder="Search foods..."
+                placeholderTextColor={colors.secondary}
+                value={query}
+                onChangeText={setQuery}
+                autoFocus
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+                selectionColor={colors.accent}
+                accessibilityLabel="Search foods"
+                accessibilityRole="search"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setQuery('')}
+                  style={styles.clearButton}>
+                  <Text style={styles.clearButtonText}>X</Text>
+                </TouchableOpacity>
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-            />
-          ) : (
-            /* No results — placeholder for Plan 03's NoResultsCard */
-            <View style={styles.noResults}>
-              <Text style={styles.noResultsText}>No results for "{query}"</Text>
             </View>
-          )}
-        </KeyboardAvoidingView>
+
+            {/* Content area */}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={styles.contentArea}>
+              {query.trim().length === 0 ? (
+                /* Pre-search: show frequent foods */
+                <FrequentFoodsSection
+                  foods={frequentFoods}
+                  onFoodPress={handleFoodSelect}
+                  loading={frequentLoading}
+                />
+              ) : results.length > 0 ? (
+                /* Search results */
+                <FlatList
+                  data={results}
+                  keyExtractor={(item) => String(item.id)}
+                  renderItem={({ item }) => (
+                    <FoodResultItem food={item} onPress={handleFoodSelect} />
+                  )}
+                  ItemSeparatorComponent={() => <View style={styles.separator} />}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.listContent}
+                />
+              ) : (
+                /* No results — show NoResultsCard with Create Custom Food CTA */
+                <NoResultsCard
+                  query={query}
+                  onCreateCustomFood={() => setShowCustomForm(true)}
+                />
+              )}
+            </KeyboardAvoidingView>
+          </>
+        )}
       </View>
     </Modal>
   );
@@ -231,13 +249,5 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: spacing.xxxl,
-  },
-  noResults: {
-    paddingTop: spacing.xl,
-    alignItems: 'center',
-  },
-  noResultsText: {
-    fontSize: fontSize.md,
-    color: colors.secondary,
   },
 });
