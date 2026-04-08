@@ -43,12 +43,12 @@ describe('HydrationStatCards', () => {
     expect(getByText('7-day avg')).toBeTruthy();
   });
 
-  it('renders SVG icon containers for streak and weekly avg cards', () => {
-    const { getByTestId } = render(
+  it('renders fire emoji and droplet emoji in the respective cards', () => {
+    const { getByText } = render(
       <HydrationStatCards streakDays={5} weeklyAvgOz={46.08} goalOz={64} />,
     );
-    expect(getByTestId('streak-icon-container')).toBeTruthy();
-    expect(getByTestId('weeklyavg-icon-container')).toBeTruthy();
+    expect(getByText('\uD83D\uDD25')).toBeTruthy(); // 🔥 fire emoji
+    expect(getByText('\uD83D\uDCA7')).toBeTruthy(); // 💧 droplet emoji
   });
 
   it('has correct accessibility labels "Streak: 5 days" and "Weekly average: 72%"', () => {

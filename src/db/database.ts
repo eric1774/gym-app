@@ -41,13 +41,8 @@ export async function runTransaction(
  *
  * Call this once from App.tsx on mount:
  *   useEffect(() => { initDatabase(); }, []);
- *
- * @param onMigrationStatus - Optional callback invoked with a status message
- *   when a migration that warrants user feedback is running (e.g. v12 food seeding).
  */
-export async function initDatabase(
-  onMigrationStatus?: (message: string) => void,
-): Promise<void> {
+export async function initDatabase(): Promise<void> {
   const database = await db;
 
   // Enable foreign key enforcement (required for ON DELETE CASCADE)
@@ -55,7 +50,7 @@ export async function initDatabase(
 
   // Lazy import to avoid circular dependency at module load time
   const { runMigrations } = await import('./migrations');
-  await runMigrations(database, onMigrationStatus);
+  await runMigrations(database);
 
   // Lazy import to avoid circular dependency at module load time
   const { seedIfEmpty } = await import('./seed');

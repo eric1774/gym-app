@@ -343,10 +343,9 @@ function SupersetContainer({
   onViewHistory,
   onRestChange,
 }: SupersetContainerProps) {
+  // Round = min completed sets across all exercises + 1
+  const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
   const total = Math.max(...exerciseIds.map(id => programTargetsMap.get(id)?.targetSets ?? 3));
-  // Round = min completed sets across all exercises + 1, capped at total
-  const minSets = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0));
-  const round = Math.min(minSets + 1, total);
 
   return (
     <View style={supersetStyles.container}>
