@@ -1,121 +1,81 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightRegular } from '../theme/typography';
 
 interface WaterCupProps {
-  currentOz: number;  // Today's total water intake
-  goalOz: number;     // Daily goal (will be 64 as default from parent, never 0)
+  currentOz: number;
+  goalOz: number;
 }
 
-const CUP_WIDTH = 120;
-const CUP_HEIGHT = 200;
+const CUP_WIDTH = 192;
+const CUP_HEIGHT = 256;
 
 export const WaterCup = React.memo(function WaterCup({ currentOz, goalOz }: WaterCupProps) {
-  const percentage = Math.min(Math.round((currentOz / goalOz) * 100), 100);
-  const fillFraction = Math.min(currentOz / goalOz, 1); // 0 to 1, capped at 1
-  const isGoalMet = currentOz >= goalOz;
-  const fillHeight = fillFraction * CUP_HEIGHT;
+  const fillFraction = Math.min(currentOz / goalOz, 1);
+  const fillHeight = Math.round(fillFraction * CUP_HEIGHT);
+  const fillY = CUP_HEIGHT - fillHeight;
 
   return (
-    <View style={styles.container}>
-      {/* Cup */}
-      <View
-        style={styles.cup}
-        accessibilityLabel={`Water intake: ${currentOz} of ${goalOz} fl oz (${percentage}%)`}
-        accessibilityRole="progressbar"
-      >
-        {/* Fill (water) — rises from the bottom */}
-        {fillHeight > 0 && (
-          <View style={[styles.fill, { height: fillHeight }]}>
-            {/* Soft water-surface gradient at top edge of fill */}
-            <View style={styles.fillSurface} />
-          </View>
-        )}
+    <View
+      style={styles.cup}
+      accessibilityLabel={`Water intake: ${currentOz} of ${goalOz} fl oz`}
+      accessibilityRole="progressbar"
+    >
+      {fillHeight > 0 && (
+        <Svg width={CUP_WIDTH} height={CUP_HEIGHT} style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="waterFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#5A93AE" stopOpacity="0.85" />
+              <Stop offset="1" stopColor="#1E3D56" stopOpacity="1" />
+            </LinearGradient>
+          </Defs>
+          {/* Water body */}
+          <Rect
+            x={0}
+            y={fillY}
+            width={CUP_WIDTH}
+            height={fillHeight}
+            fill="url(#waterFill)"
+          />
+          {/* Surface shimmer */}
+          <Rect
+            x={0}
+            y={fillY}
+            width={CUP_WIDTH}
+            height={3}
+            fill="#7EC5D8"
+            opacity={0.45}
+          />
+        </Svg>
+      )}
 
-        {/* Goal met checkmark overlay */}
-        {isGoalMet && (
-          <View style={styles.goalMetOverlay} pointerEvents="none">
-            <Text style={styles.checkmark}>{'\u2713'}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Labels to the right of the cup */}
-      <View style={styles.labels}>
-        <Text style={styles.primaryLabel}>
-          {currentOz} / {goalOz} oz
-        </Text>
-        <Text style={styles.percentageLabel}>{percentage}%</Text>
-        {isGoalMet && (
-          <Text style={styles.goalMetLabel}>Goal met!</Text>
-        )}
-      </View>
+      {/* Glass highlight — thin sheen on left side */}
+      <View style={styles.glassHighlight} />
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xl,
-  },
   cup: {
     width: CUP_WIDTH,
     height: CUP_HEIGHT,
-    borderRadius: 16,
+    backgroundColor: '#1A1C1D',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    backgroundColor: colors.accentDim,
   },
-  fill: {
+  glassHighlight: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.accent,
-  },
-  fillSurface: {
-    height: 8,
-    backgroundColor: colors.accent,
-    opacity: 0.6,
-  },
-  goalMetOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkmark: {
-    fontSize: 32,
-    fontWeight: weightBold,
-    color: colors.onAccent,
-  },
-  labels: {
-    justifyContent: 'center',
-  },
-  primaryLabel: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  percentageLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: weightRegular,
-    color: colors.secondary,
-    marginTop: spacing.xs,
-  },
-  goalMetLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.accent,
-    marginTop: spacing.sm,
+    top: 14,
+    left: 18,
+    width: 4,
+    height: '55%',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 2,
   },
 });

@@ -247,7 +247,7 @@ export function TabNavigator() {
         name="ProteinTab"
         component={ProteinStackNavigator}
         options={{
-          tabBarLabel: 'Protein',
+          tabBarLabel: 'Macros',
           tabBarIcon: ({ color }) => <CarrotIcon color={color} />,
         }}
       />
