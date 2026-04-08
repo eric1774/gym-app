@@ -231,6 +231,6 @@ describe('runMigrations', () => {
     expect(txCalls.some(s => s.includes('CREATE TABLE IF NOT EXISTS meal_foods'))).toBe(true);
     expect(txCalls.some(s => s.includes('idx_foods_search_text'))).toBe(true);
     expect(txCalls.some(s => s.includes('idx_meal_foods_meal_id'))).toBe(true);
-    expect(txCalls.some(s => s.includes('INSERT INTO foods'))).toBe(true);
+    expect(txCalls.some(s => s.includes('INSERT OR IGNORE INTO foods'))).toBe(true);
   });
 });
