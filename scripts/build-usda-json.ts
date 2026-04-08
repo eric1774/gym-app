@@ -11,6 +11,7 @@
  */
 
 import * as fs from 'fs';
+import * as http from 'http';
 import * as path from 'path';
 import * as https from 'https';
 import * as unzipper from 'unzipper';
@@ -61,7 +62,8 @@ async function downloadFile(url: string, dest: string): Promise<void> {
         return;
       }
 
-      https.get(requestUrl, (response) => {
+      const protocol = requestUrl.startsWith('http://') ? http : https;
+      protocol.get(requestUrl, (response) => {
         if (response.statusCode === 301 || response.statusCode === 302) {
           const location = response.headers.location;
           if (!location) {
