@@ -15,6 +15,7 @@ import { ExerciseProgressScreen } from '../screens/ExerciseProgressScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ProteinScreen } from '../screens/ProteinScreen';
 import { MealLibraryScreen } from '../screens/MealLibraryScreen';
+import { MealBuilderScreen } from '../screens/MealBuilderScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
 import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
@@ -54,6 +55,7 @@ export type DashboardStackParamList = {
 export type ProteinStackParamList = {
   ProteinHome: undefined;
   MealLibrary: undefined;
+  MealBuilder: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -175,6 +177,7 @@ function ProteinStackNavigator() {
     <ProteinStack.Navigator screenOptions={{ headerShown: false }}>
       <ProteinStack.Screen name="ProteinHome" component={ProteinScreen} />
       <ProteinStack.Screen name="MealLibrary" component={MealLibraryScreen} />
+      <ProteinStack.Screen name="MealBuilder" component={MealBuilderScreen} />
     </ProteinStack.Navigator>
   );
 }

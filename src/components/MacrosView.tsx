@@ -124,6 +124,10 @@ export function MacrosView({ navigation }: MacrosViewProps) {
     setModalVisible(true);
   }, []);
 
+  const handleBuildMeal = useCallback(() => {
+    navigation.navigate('MealBuilder');
+  }, [navigation]);
+
   const handleEdit = useCallback((meal: MacroMeal) => {
     setEditingMeal(meal);
     setModalVisible(true);
@@ -251,6 +255,7 @@ export function MacrosView({ navigation }: MacrosViewProps) {
         onClose={handleCloseModal}
         onSaved={handleMealSaved}
         editMeal={editingMeal}
+        onBuildMeal={handleBuildMeal}
       />
     </View>
   );

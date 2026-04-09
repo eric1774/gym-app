@@ -24,6 +24,7 @@ interface AddMealModalProps {
   onClose: () => void;
   onSaved: () => void;
   editMeal?: MacroMeal | null;
+  onBuildMeal?: () => void;
 }
 
 function formatDateForInput(date: Date): string {
@@ -75,7 +76,7 @@ function parseTime(timeStr: string): { hours: number; minutes: number } | null {
   return { hours, minutes };
 }
 
-export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealModalProps) {
+export function AddMealModal({ visible, onClose, onSaved, editMeal, onBuildMeal }: AddMealModalProps) {
   const isEditMode = !!editMeal;
 
   const [proteinGrams, setProteinGrams] = useState('');
@@ -340,6 +341,17 @@ export function AddMealModal({ visible, onClose, onSaved, editMeal }: AddMealMod
               </Text>
             </TouchableOpacity>
 
+            {!isEditMode && onBuildMeal && (
+              <TouchableOpacity
+                style={styles.buildMealButton}
+                onPress={() => {
+                  handleClose();
+                  setTimeout(() => onBuildMeal(), 150);
+                }}>
+                <Text style={styles.buildMealButtonText}>Build Meal</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
               <Text style={styles.cancelText}>Discard</Text>
             </TouchableOpacity>
@@ -459,6 +471,22 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: colors.background,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  buildMealButton: {
+    backgroundColor: colors.accentDim,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  buildMealButtonText: {
+    color: colors.accent,
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
   },
