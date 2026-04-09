@@ -1,6 +1,7 @@
-import { db, executeSql } from './database';
-import { Food, FoodSearchResult } from '../types';
+import { db, executeSql, runTransaction } from './database';
+import { Food, FoodSearchResult, MealFood, MealFoodInput, MealType } from '../types';
 import { computeCalories } from '../utils/macros';
+import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
 
 // ── Row mappers ──────────────────────────────────────────────────────
 
@@ -190,4 +191,126 @@ export async function getFoodById(id: number): Promise<Food | null> {
     return null;
   }
   return rowToFood(result.rows.item(0));
+}
+
+// ── Meal Foods ───────────────────────────────────────────────────────
+
+/** Map a raw SQLite result row to the MealFood domain type. */
+export function rowToMealFood(row: {
+  id: number;
+  meal_id: number;
+  food_id: number;
+  food_name: string;
+  grams: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}): MealFood {
+  return {
+    id: row.id,
+    mealId: row.meal_id,
+    foodId: row.food_id,
+    foodName: row.food_name,
+    grams: row.grams,
+    protein: row.protein,
+    carbs: row.carbs,
+    fat: row.fat,
+    calories: computeCalories(row.protein, row.carbs, row.fat),
+  };
+}
+
+/**
+ * Log a multi-food meal in a single transaction.
+ *
+ * 1. Insert meals row with summed macros (compatible with existing MacrosView, charts, streaks)
+ * 2. Insert one meal_foods row per food with snapshotted macros
+ *
+ * All parameters are passed via parameterized queries (T-39-01: SQL injection prevention).
+ *
+ * @param description - Meal description (auto-generated from food names, user-editable)
+ * @param mealType - One of: breakfast, lunch, dinner, snack
+ * @param foods - Array of MealFoodInput objects from the builder
+ * @param loggedAt - When the meal was consumed; defaults to now
+ * @returns The meal ID of the inserted meals row
+ * @throws Error if foods array is empty
+ */
+export async function addMealWithFoods(
+  description: string,
+  mealType: MealType,
+  foods: MealFoodInput[],
+  loggedAt?: Date,
+): Promise<number> {
+  if (foods.length === 0) {
+    throw new Error('At least one food is required');
+  }
+
+  const database = await db;
+  const effectiveDate = loggedAt ?? new Date();
+  const localDate = getLocalDateString(effectiveDate);
+  const loggedAtStr = getLocalDateTimeString(effectiveDate);
+  const createdAt = getLocalDateTimeString(new Date());
+
+  // Compute snapshotted macros per food and summed totals for the meals row
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
+
+  const foodRows = foods.map(f => {
+    const protein = (f.grams / 100) * f.proteinPer100g;
+    const carbs = (f.grams / 100) * f.carbsPer100g;
+    const fat = (f.grams / 100) * f.fatPer100g;
+    totalProtein += protein;
+    totalCarbs += carbs;
+    totalFat += fat;
+    return { ...f, protein, carbs, fat };
+  });
+
+  // Transaction 1: Insert the meals row with summed macros
+  await runTransaction(database, (tx) => {
+    tx.executeSql(
+      'INSERT INTO meals (protein_grams, carb_grams, fat_grams, description, meal_type, logged_at, local_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [totalProtein, totalCarbs, totalFat, description, mealType, loggedAtStr, localDate, createdAt],
+    );
+  });
+
+  // Retrieve the inserted meal ID (using the unique loggedAt + createdAt combination)
+  const mealResult = await executeSql(
+    database,
+    'SELECT id FROM meals WHERE logged_at = ? AND created_at = ? ORDER BY id DESC LIMIT 1',
+    [loggedAtStr, createdAt],
+  );
+  const mealId = mealResult.rows.item(0).id as number;
+
+  // Transaction 2: Insert meal_foods rows with snapshotted macros
+  await runTransaction(database, (tx) => {
+    for (const f of foodRows) {
+      tx.executeSql(
+        'INSERT INTO meal_foods (meal_id, food_id, food_name, grams, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [mealId, f.foodId, f.foodName, f.grams, f.protein, f.carbs, f.fat],
+      );
+    }
+  });
+
+  return mealId;
+}
+
+/**
+ * Get the food breakdown for a logged meal.
+ *
+ * @param mealId - The meal's primary key
+ * @returns Array of MealFood records, ordered by id (insertion order)
+ */
+export async function getMealFoods(mealId: number): Promise<MealFood[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT * FROM meal_foods WHERE meal_id = ? ORDER BY id ASC',
+    [mealId],
+  );
+
+  const mealFoods: MealFood[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    mealFoods.push(rowToMealFood(result.rows.item(i)));
+  }
+  return mealFoods;
 }

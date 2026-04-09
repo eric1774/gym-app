@@ -439,3 +439,28 @@ export interface Food {
 export interface FoodSearchResult extends Food {
   usageCount: number;
 }
+
+// -- Meal Food domain types (Phase 39) --
+
+/** A food entry within a logged meal — snapshot of macros at log time. */
+export interface MealFood {
+  id: number;
+  mealId: number;
+  foodId: number;
+  foodName: string;
+  grams: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+}
+
+/** Input for adding a food to a meal — builder passes this to addMealWithFoods. */
+export interface MealFoodInput {
+  foodId: number;
+  foodName: string;
+  grams: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+}
