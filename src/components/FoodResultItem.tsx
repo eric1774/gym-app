@@ -9,10 +9,12 @@ interface FoodResultItemProps {
   food: FoodSearchResult;
   onPress: (food: FoodSearchResult) => void;
   showUsageBadge?: boolean;
+  /** Last gram quantity used for this food — shows "last: Xg" reference badge (D-03). */
+  lastUsedGrams?: number;
 }
 
-function FoodResultItemComponent({ food, onPress, showUsageBadge }: FoodResultItemProps) {
-  const accessibilityLabel = `${food.name}, ${food.category ?? 'uncategorized'}, ${food.proteinPer100g}g protein, ${food.carbsPer100g}g carbs, ${food.fatPer100g}g fat, ${Math.round(food.caloriesPer100g)} calories per 100g${food.usageCount > 0 ? `, logged ${food.usageCount} times` : ''}`;
+function FoodResultItemComponent({ food, onPress, showUsageBadge, lastUsedGrams }: FoodResultItemProps) {
+  const accessibilityLabel = `${food.name}, ${food.category ?? 'uncategorized'}, ${food.proteinPer100g}g protein, ${food.carbsPer100g}g carbs, ${food.fatPer100g}g fat, ${Math.round(food.caloriesPer100g)} calories per 100g${food.usageCount > 0 ? `, logged ${food.usageCount} times` : ''}${lastUsedGrams != null ? `, last used ${lastUsedGrams}g` : ''}`;
 
   return (
     <TouchableOpacity
@@ -33,6 +35,9 @@ function FoodResultItemComponent({ food, onPress, showUsageBadge }: FoodResultIt
       <Text style={styles.macroSummary}>
         {`P:${food.proteinPer100g}g  C:${food.carbsPer100g}g  F:${food.fatPer100g}g  |  ${Math.round(food.caloriesPer100g)}kcal  per 100g`}
       </Text>
+      {lastUsedGrams != null && (
+        <Text style={styles.lastUsedBadge}>{`last: ${lastUsedGrams}g`}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -73,6 +78,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   macroSummary: {
+    fontSize: fontSize.sm,
+    fontWeight: weightRegular,
+    color: colors.secondary,
+    marginTop: spacing.xs,
+  },
+  lastUsedBadge: {
     fontSize: fontSize.sm,
     fontWeight: weightRegular,
     color: colors.secondary,

@@ -22,7 +22,7 @@ export function FrequentFoodsSection({ foods, onFoodPress, loading }: FrequentFo
         <View>
           {foods.map((food, index) => (
             <View key={food.id} style={index > 0 ? styles.cardGap : undefined}>
-              <FoodResultItem food={food} onPress={onFoodPress} showUsageBadge={true} />
+              <FoodResultItem food={food} onPress={onFoodPress} showUsageBadge={true} lastUsedGrams={food.lastUsedGrams} />
             </View>
           ))}
         </View>

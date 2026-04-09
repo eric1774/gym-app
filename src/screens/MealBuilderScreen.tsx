@@ -164,6 +164,7 @@ export function MealBuilderScreen({ navigation }: Props) {
   const [gramInputVisible, setGramInputVisible] = useState(false);
   const [gramInputFood, setGramInputFood] = useState<Food | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [lastUsedGrams, setLastUsedGrams] = useState<number | null>(null);
   const [mealType, setMealType] = useState<MealType | null>(null);
   const [description, setDescription] = useState('');
   const [loggedAt, setLoggedAt] = useState(new Date());
@@ -232,10 +233,13 @@ export function MealBuilderScreen({ navigation }: Props) {
     }
   }, [gramInputVisible]);
 
-  const handleFoodSelected = useCallback((food: Food) => {
+  const handleFoodSelected = useCallback(async (food: Food) => {
     setSearchVisible(false);
     setGramInputFood(food);
     setEditingIndex(null);
+    // Fetch remembered portion for ghost text pre-fill (D-01)
+    const portion = await foodsDb.getLastUsedPortion(food.id);
+    setLastUsedGrams(portion);
     setGramInputVisible(true);
   }, []);
 
@@ -255,6 +259,8 @@ export function MealBuilderScreen({ navigation }: Props) {
       isCustom: false,
     });
     setEditingIndex(index);
+    // Edit mode: clear lastUsedGrams so ghost text is not shown (initialGrams takes precedence)
+    setLastUsedGrams(null);
     setGramInputVisible(true);
   }, [foods]);
 
@@ -289,6 +295,7 @@ export function MealBuilderScreen({ navigation }: Props) {
   const handleGramDismiss = useCallback(() => {
     setGramInputVisible(false);
     setEditingIndex(null);
+    setLastUsedGrams(null);
   }, []);
 
   // ── Date/time handlers ──────────────────────────────────────────────
@@ -482,6 +489,7 @@ export function MealBuilderScreen({ navigation }: Props) {
         food={gramInputFoodProp}
         visible={gramInputVisible}
         initialGrams={gramInitialGrams}
+        lastUsedGrams={lastUsedGrams ?? undefined}
         buttonLabel={editingIndex !== null ? 'Update' : 'Add to Meal'}
         onSubmit={handleGramSubmit}
         onDismiss={handleGramDismiss}

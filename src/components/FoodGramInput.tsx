@@ -24,6 +24,8 @@ interface FoodGramInputProps {
     fatPer100g: number;
   };
   initialGrams?: string;
+  /** Last gram quantity used for this food — shown as ghost placeholder text (D-01). */
+  lastUsedGrams?: number;
   onSubmit: (grams: number) => void;
   onDismiss: () => void;
   visible: boolean;
@@ -34,6 +36,7 @@ interface FoodGramInputProps {
 export function FoodGramInput({
   food,
   initialGrams,
+  lastUsedGrams,
   onSubmit,
   onDismiss,
   visible,
@@ -119,7 +122,13 @@ export function FoodGramInput({
               value={gramsText}
               onChangeText={setGramsText}
               keyboardType="numeric"
-              placeholder="0"
+              placeholder={
+                initialGrams != null
+                  ? '0'
+                  : lastUsedGrams != null
+                    ? String(lastUsedGrams)
+                    : '0'
+              }
               placeholderTextColor={colors.secondary}
               returnKeyType="done"
               onSubmitEditing={handleSubmit}
