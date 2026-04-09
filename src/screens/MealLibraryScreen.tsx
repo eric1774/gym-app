@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { macrosDb } from '../db';
 import { MacroLibraryMeal, MealType, MEAL_TYPES } from '../types';
@@ -99,7 +101,7 @@ const LibraryMealRow = React.memo(function LibraryMealRow({
 
 export function MealLibraryScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ProteinStackParamList, 'MealLibrary'>>();
   const [sections, setSections] = useState<MealSection[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -263,6 +265,10 @@ export function MealLibraryScreen() {
         visible={modalVisible}
         onClose={handleCloseModal}
         onSaved={handleSaved}
+        onBuildMeal={() => {
+          setModalVisible(false);
+          navigation.navigate('MealBuilder', { mode: 'library' });
+        }}
       />
     </View>
   );

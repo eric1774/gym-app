@@ -3,6 +3,7 @@ import {
   FlatList,
   SafeAreaView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,7 +15,7 @@ import { MealFoodCard } from '../components/MealFoodCard';
 import { MealTotalsBar, formatDisplayDate } from '../components/MealTotalsBar';
 import { FoodGramInput } from '../components/FoodGramInput';
 import { FoodSearchModal } from './FoodSearchModal';
-import { foodsDb } from '../db';
+import { foodsDb, macrosDb } from '../db';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightSemiBold } from '../theme/typography';
@@ -179,6 +180,7 @@ export function MealBuilderScreen({ navigation, route }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalsBarHeight, setTotalsBarHeight] = useState(0);
+  const [saveToLibrary, setSaveToLibrary] = useState(mode === 'library');
 
   // Track description override for edit mode pre-fill (used once, then auto-generate takes over)
   const [descriptionOverride, setDescriptionOverride] = useState<string | null>(
@@ -400,10 +402,35 @@ export function MealBuilderScreen({ navigation, route }: Props) {
         fatPer100g: f.fatPer100g,
       }));
 
+      // Compute summed macros for library save paths
+      let totalProteinSum = 0, totalCarbsSum = 0, totalFatSum = 0;
+      for (const f of mealFoodInputs) {
+        totalProteinSum += (f.grams / 100) * f.proteinPer100g;
+        totalCarbsSum += (f.grams / 100) * f.carbsPer100g;
+        totalFatSum += (f.grams / 100) * f.fatPer100g;
+      }
+
       if (mode === 'edit' && editMealId != null) {
+        // Edit mode — update existing meal (T-40-03)
         await foodsDb.updateMealWithFoods(editMealId, description, mealType!, mealFoodInputs, loggedAt);
+      } else if (mode === 'library') {
+        // Library mode — save to library only, no daily log (D-15, T-40-07)
+        await macrosDb.addLibraryMeal(description, mealType!, {
+          protein: totalProteinSum,
+          carbs: totalCarbsSum,
+          fat: totalFatSum,
+        });
       } else {
+        // Normal mode — log to daily meals
         await foodsDb.addMealWithFoods(description, mealType!, mealFoodInputs, loggedAt);
+        // Also save to library if toggle is on (D-16)
+        if (saveToLibrary) {
+          await macrosDb.addLibraryMeal(description, mealType!, {
+            protein: totalProteinSum,
+            carbs: totalCarbsSum,
+            fat: totalFatSum,
+          });
+        }
       }
 
       // Light haptic feedback on success (D-18)
@@ -412,10 +439,10 @@ export function MealBuilderScreen({ navigation, route }: Props) {
       // Navigate back — MacrosView useFocusEffect will refresh data (D-18)
       navigation.goBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to log meal. Please try again.');
+      setError(err instanceof Error ? err.message : "Couldn't save meal. Try again.");
       setIsSubmitting(false);
     }
-  }, [canLog, isSubmitting, foods, description, mealType, loggedAt, navigation, mode, editMealId]);
+  }, [canLog, isSubmitting, foods, description, mealType, loggedAt, navigation, mode, editMealId, saveToLibrary]);
 
   // ── FlatList render helpers ─────────────────────────────────────────
 
@@ -507,6 +534,24 @@ export function MealBuilderScreen({ navigation, route }: Props) {
           onDateChange={handleDateChange}
           onTimeChange={handleTimeChange}
         />
+      )}
+
+      {/* Save-to-library toggle (hidden in edit mode per UI-SPEC section 6) */}
+      {mode !== 'edit' && (
+        <View style={styles.saveToLibraryRow}>
+          <Text style={styles.saveToLibraryLabel}>Save to Meal Library</Text>
+          <Switch
+            value={saveToLibrary}
+            onValueChange={mode === 'library' ? undefined : setSaveToLibrary}
+            disabled={mode === 'library'}
+            trackColor={{ false: colors.surfaceElevated, true: colors.accentDim }}
+            thumbColor={saveToLibrary ? colors.accent : colors.secondary}
+            ios_backgroundColor={colors.surfaceElevated}
+            style={mode === 'library' ? styles.saveToLibrarySwitchLocked : undefined}
+            accessibilityLabel="Save to Meal Library"
+            accessibilityRole="switch"
+          />
+        </View>
       )}
 
       {/* Sticky bottom totals bar */}
@@ -684,5 +729,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.danger,
     marginTop: spacing.xs,
+  },
+  // ── Save-to-library toggle ──────────────────────────────────────────
+  saveToLibraryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  saveToLibraryLabel: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontWeight: '400',
+    color: colors.primary,
+  },
+  saveToLibrarySwitchLocked: {
+    opacity: 0.5,
   },
 });

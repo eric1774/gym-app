@@ -23,9 +23,10 @@ interface AddLibraryMealModalProps {
   visible: boolean;
   onClose: () => void;
   onSaved: () => void;
+  onBuildMeal?: () => void;
 }
 
-export function AddLibraryMealModal({ visible, onClose, onSaved }: AddLibraryMealModalProps) {
+export function AddLibraryMealModal({ visible, onClose, onSaved, onBuildMeal }: AddLibraryMealModalProps) {
   const [name, setName] = useState('');
   const [proteinGrams, setProteinGrams] = useState('');
   const [carbsGrams, setCarbsGrams] = useState('');
@@ -96,6 +97,17 @@ export function AddLibraryMealModal({ visible, onClose, onSaved }: AddLibraryMea
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
             <Text style={styles.title}>Add to Library</Text>
+
+            {onBuildMeal && (
+              <TouchableOpacity
+                style={styles.buildMealButton}
+                onPress={() => { handleClose(); onBuildMeal(); }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Build Meal">
+                <Text style={styles.buildMealButtonText}>BUILD MEAL</Text>
+              </TouchableOpacity>
+            )}
 
             <Text style={styles.label}>Meal Type</Text>
             <MealTypePills selected={mealType} onSelect={setMealType} />
@@ -254,5 +266,19 @@ const styles = StyleSheet.create({
   cancelText: {
     color: colors.secondary,
     fontSize: fontSize.sm,
+  },
+  buildMealButton: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.md,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  buildMealButtonText: {
+    color: colors.onAccent,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
   },
 });
