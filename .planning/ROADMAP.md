@@ -11,7 +11,6 @@
 - ✅ **v1.6 Heart Rate Monitoring** — Phases 24-29 (shipped 2026-03-30)
 - ✅ **v1.7 Macros Tracking** — Phases 30-32 (shipped 2026-04-03)
 - ✅ **v1.8 Hydration Tracker** — Phases 34-36 (shipped 2026-04-05)
-- ◆ **v1.9 Food Database & Meal Builder** — Phases 37-40 (in progress)
 
 ## Phases
 
@@ -105,7 +104,7 @@ Phases 1-3 delivered core workout tracking: programs, exercise logging, rest tim
 - [x] **Phase 31: Goal Setting, Progress & Charts** — MacroProgressBars, GoalSetupForm, MacroChart with tab selector, per-macro colors (completed 2026-04-02)
 - [x] **Phase 32: Screens & Meal Entry** — MacroPills component, AddMealModal with 3-macro inputs, meal library macro support, macro badges (completed 2026-04-03)
 
-Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08.
+Phase 33 (Navigation Rename — "Protein" tab → "Macros") deferred to a future milestone.
 
 </details>
 
@@ -120,59 +119,9 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08
 
 </details>
 
-### v1.9 Food Database & Meal Builder (Phases 37-40)
-
-**Milestone Goal:** Eliminate manual nutrition lookups by bundling an offline USDA food database with a multi-food meal builder that auto-calculates macros from gram weights.
-
-- [x] **Phase 37: Data Foundation** — USDA build pipeline, migration v12 (foods + meal_foods tables), bulk seeding of ~8,000 foods, first-launch splash screen (completed 2026-04-08)
-  - Requirements: DATA-01, DATA-02, DATA-03
-  - Success criteria:
-    1. User upgrades app and ~8,000 USDA foods are seeded into SQLite via migration v12
-    2. User sees a full-screen "Setting up food database..." indicator during first-launch seeding
-    3. User's custom foods (is_custom = 1) are never touched by USDA seed operations
-
-- [ ] **Phase 38: Food Search & Custom Foods** — Fuzzy token search with frequency boost, frequent foods list, custom food creation, foods.ts DB module
-  - Requirements: SRCH-01, SRCH-02, SRCH-03, SRCH-04, CUST-01, CUST-02
-  - Depends on: Phase 37
-  - **Plans:** 3 plans
-  - Plans:
-    - [ ] 38-01-PLAN.md — Food types, foods.ts DB module with search/frequency/CRUD, mapper tests
-    - [ ] 38-02-PLAN.md — FoodSearchModal UI with search bar, results, frequent foods section
-    - [ ] 38-03-PLAN.md — Custom food creation (NoResultsCard, CustomFoodForm, modal integration)
-  - Success criteria:
-    1. User can type a food name and see matching results within 250ms (max 20 results)
-    2. User sees frequently-logged foods before typing, ranked by usage count
-    3. User's frequently-logged foods are boosted higher in search results
-    4. User can create a custom food (name + macros per 100g) when search yields no results
-    5. User's custom food appears in future searches and behaves identically to USDA foods
-
-- [ ] **Phase 39: Meal Builder** — Multi-food meal composition UI with per-food gram entry, live macro preview, running totals, meal type/date selection, and logging
-  - Requirements: BLDR-01, BLDR-02, BLDR-03, BLDR-04, BLDR-05, BLDR-06, BLDR-07
-  - Depends on: Phase 38
-  - Success criteria:
-    1. User can search and add multiple foods to a single meal, each with an exact gram weight
-    2. User sees live-computed per-food macro breakdown (P/C/F) and calories as grams are entered
-    3. User sees a running total of combined macros and calories across all meal foods
-    4. User can remove a food or tap to adjust grams before logging
-    5. User selects meal type and date/time at the end of the builder flow
-    6. User sees an auto-generated description from food names, editable before logging
-    7. Logging writes both meals row (summed) and meal_foods rows (per-food) in a single transaction
-
-- [ ] **Phase 40: Smart Features & Integration** — Remembered portions, copy/repeat meals, edit logged meals, integration with Add Meal and Meal Library flows
-  - Requirements: SMRT-01, SMRT-02, INTG-01, INTG-02, INTG-03, INTG-04, INTG-05
-  - Depends on: Phase 39
-  - Success criteria:
-    1. User's gram input pre-fills with last-used quantity for a previously-logged food
-    2. User can repeat a previous meal (builder pre-loaded with that meal's foods and quantities)
-    3. User can open the meal builder from both Add Meal (FAB) and Add Library Meal flows
-    4. User can save a built meal to the meal library (summed macros, explicit opt-in)
-    5. User can edit a logged meal's individual food components after logging
-    6. User can still log meals via manual macro entry (existing flow preserved)
-    7. Existing charts, progress cards, streaks, and averages work without modification
-
 ### Deferred
 
-- [x] **Phase 33: Navigation Rename** — Rename "Protein" tab → "Macros" in bottom navigation (completed 2026-04-08)
+- [ ] **Phase 33: Navigation Rename** — Rename "Protein" tab → "Macros" in bottom navigation and all route/stack types
 
 ## Progress
 
@@ -208,11 +157,7 @@ Phase 33 (Navigation Rename — "Protein" tab → "Macros") completed 2026-04-08
 | 30. DB Foundation | v1.7 | 2/2 | Complete | 2026-04-02 |
 | 31. Goal Setting, Progress & Charts | v1.7 | 2/2 | Complete | 2026-04-02 |
 | 32. Screens & Meal Entry | v1.7 | 2/2 | Complete | 2026-04-03 |
-| 33. Navigation Rename | — | 1/1 | Complete | 2026-04-08 |
+| 33. Navigation Rename | — | — | Deferred | — |
 | 34. DB Foundation | v1.8 | 2/2 | Complete | 2026-04-04 |
 | 35. Tab Bar & Hydration Core | v1.8 | 2/2 | Complete | 2026-04-05 |
 | 36. Goal Setting & Stats | v1.8 | 2/2 | Complete | 2026-04-05 |
-| 37. Data Foundation | v1.9 | 2/2 | Complete | 2026-04-08 |
-| 38. Food Search & Custom Foods | v1.9 | 0/3 | Planned | — |
-| 39. Meal Builder | v1.9 | — | Pending | — |
-| 40. Smart Features & Integration | v1.9 | — | Pending | — |

@@ -69,6 +69,3 @@ export { macrosDb };
 // Hydration DB functions (Phase 34) — namespaced for water tracking
 import * as hydrationDb from './hydration';
 export { hydrationDb };
-// Food database functions (Phase 38) — namespaced for food search and custom foods
-import * as foodsDb from './foods';
-export { foodsDb };
