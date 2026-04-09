@@ -318,6 +318,166 @@ export async function getMealFoods(mealId: number): Promise<MealFood[]> {
   return mealFoods;
 }
 
+// ── Meal Copy / Edit ─────────────────────────────────────────────────
+
+/**
+ * Return the food breakdown for a logged meal in MealFoodInput format,
+ * ready to pre-load the builder for repeat or edit flows (per D-08).
+ *
+ * Uses LEFT JOIN so deleted foods don't lose their name/gram data.
+ * Per-100g macros fall back to 0 when the foods row is missing.
+ *
+ * All parameters are passed via parameterized queries (T-40-04).
+ *
+ * @param mealId - The meal's primary key
+ * @returns Array of MealFoodInput records in insertion order, or empty array
+ */
+export async function duplicateMealFoods(mealId: number): Promise<MealFoodInput[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT mf.food_id, mf.food_name, mf.grams,
+            f.protein_per_100g, f.carbs_per_100g, f.fat_per_100g
+     FROM meal_foods mf
+     LEFT JOIN foods f ON f.id = mf.food_id
+     WHERE mf.meal_id = ?
+     ORDER BY mf.id ASC`,
+    [mealId],
+  );
+
+  const foods: MealFoodInput[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    foods.push({
+      foodId: row.food_id,
+      foodName: row.food_name,
+      grams: row.grams,
+      proteinPer100g: row.protein_per_100g ?? 0,
+      carbsPer100g: row.carbs_per_100g ?? 0,
+      fatPer100g: row.fat_per_100g ?? 0,
+    });
+  }
+  return foods;
+}
+
+/**
+ * Update an existing meal with a new set of foods, recalculating totals (per D-11).
+ *
+ * Atomically in a single transaction:
+ * 1. Delete all existing meal_foods rows for the meal
+ * 2. Insert new meal_foods rows with snapshotted macros
+ * 3. Update the meals row with recalculated totals
+ *
+ * All SQL uses parameterized queries (T-40-03).
+ *
+ * @param mealId - The meal's primary key
+ * @param description - Updated meal description
+ * @param mealType - Updated meal type
+ * @param foods - Updated list of foods with gram amounts
+ * @param loggedAt - When the meal was consumed; defaults to now
+ * @throws Error if foods array is empty
+ */
+export async function updateMealWithFoods(
+  mealId: number,
+  description: string,
+  mealType: MealType,
+  foods: MealFoodInput[],
+  loggedAt?: Date,
+): Promise<void> {
+  if (foods.length === 0) {
+    throw new Error('At least one food is required');
+  }
+
+  const database = await db;
+
+  // Compute snapshotted macros per food and summed totals
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
+
+  const foodRows = foods.map(f => {
+    const protein = (f.grams / 100) * f.proteinPer100g;
+    const carbs = (f.grams / 100) * f.carbsPer100g;
+    const fat = (f.grams / 100) * f.fatPer100g;
+    totalProtein += protein;
+    totalCarbs += carbs;
+    totalFat += fat;
+    return { ...f, protein, carbs, fat };
+  });
+
+  const effectiveDate = loggedAt ?? new Date();
+  const loggedAtStr = getLocalDateTimeString(effectiveDate);
+  const localDate = getLocalDateString(effectiveDate);
+
+  // Single transaction: delete old meal_foods, insert new ones, update meals row
+  await runTransaction(database, (tx) => {
+    // Delete old food rows
+    tx.executeSql('DELETE FROM meal_foods WHERE meal_id = ?', [mealId]);
+
+    // Insert new food rows
+    for (const f of foodRows) {
+      tx.executeSql(
+        'INSERT INTO meal_foods (meal_id, food_id, food_name, grams, protein, carbs, fat) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [mealId, f.foodId, f.foodName, f.grams, f.protein, f.carbs, f.fat],
+      );
+    }
+
+    // Update meals row with recalculated totals (D-11: single source of truth)
+    tx.executeSql(
+      'UPDATE meals SET protein_grams = ?, carb_grams = ?, fat_grams = ?, description = ?, meal_type = ?, logged_at = ?, local_date = ? WHERE id = ?',
+      [totalProtein, totalCarbs, totalFat, description, mealType, loggedAtStr, localDate, mealId],
+    );
+  });
+}
+
+/**
+ * Check whether a meal has any meal_foods rows (per D-05, D-06).
+ *
+ * Used to determine whether to show the repeat icon on a meal card
+ * and whether to route edit to builder or AddMealModal.
+ *
+ * All SQL uses parameterized queries.
+ *
+ * @param mealId - The meal's primary key
+ * @returns true if the meal has at least one meal_foods row
+ */
+export async function hasMealFoods(mealId: number): Promise<boolean> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT COUNT(*) as cnt FROM meal_foods WHERE meal_id = ?',
+    [mealId],
+  );
+  return result.rows.item(0).cnt > 0;
+}
+
+/**
+ * Batch query to count meal_foods rows per meal ID (per D-05, D-06).
+ *
+ * Avoids N+1 queries when rendering a list of meals. The IN clause is
+ * built from integer IDs from the DB — never user-supplied strings (T-40-05).
+ * Limited to a day's meals (typically < 20).
+ *
+ * @param mealIds - Array of meal IDs to check
+ * @returns Record mapping each meal ID to its meal_foods row count
+ */
+export async function getMealFoodsCounts(mealIds: number[]): Promise<Record<number, number>> {
+  if (mealIds.length === 0) { return {}; }
+  const database = await db;
+  const placeholders = mealIds.map(() => '?').join(',');
+  const result = await executeSql(
+    database,
+    `SELECT meal_id, COUNT(*) as cnt FROM meal_foods WHERE meal_id IN (${placeholders}) GROUP BY meal_id`,
+    mealIds,
+  );
+  const counts: Record<number, number> = {};
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    counts[row.meal_id] = row.cnt;
+  }
+  return counts;
+}
+
 // ── Remembered Portions ──────────────────────────────────────────────
 
 /**
