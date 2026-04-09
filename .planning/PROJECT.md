@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A local-only Android gym tracking app built with React Native. Designed for use in the gym — minimal UI that gets out of the way so you can focus on lifting. Tracks exercises, sets, reps, and weights across fully configurable multi-week programs, with progress graphs, full macronutrient tracking (protein/carbs/fat), daily hydration tracking, workout intelligence (PR detection, calendar, supersets), live heart rate monitoring via BLE, and 82%+ test coverage.
+A local-only Android gym tracking app built with React Native. Designed for use in the gym — minimal UI that gets out of the way so you can focus on lifting. Tracks exercises, sets, reps, and weights across fully configurable multi-week programs, with progress graphs, full macronutrient tracking (protein/carbs/fat) powered by an offline USDA food database and multi-food meal builder, daily hydration tracking, workout intelligence (PR detection, calendar, supersets), live heart rate monitoring via BLE, and 82%+ test coverage.
 
 ## Core Value
 
@@ -58,47 +58,26 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-- [ ] Offline USDA food database (~8,000 foods) bundled and seeded via migration v12
-- [ ] Multi-food meal builder with search, per-food gram entry, running macro totals
-- [ ] Per-food macro breakdown alongside combined meal totals
-- [ ] Copy/repeat previous meals
-- [ ] Edit logged meals at individual food level
-- [ ] Food search available from both Add Meal and Meal Library flows
+(None — planning next milestone)
 
 ### Recently Validated
 
-- ✓ Custom food creation for items not in USDA database — v1.9 (Phase 38)
-- ✓ Fuzzy search with debounce and frequency boosting — v1.9 (Phase 38)
-- ✓ Frequent foods list and remembered portions — v1.9 (Phase 38)
-- ✓ Tab bar on ProteinScreen switching between Macros and Hydration views — v1.8
-- ✓ Cup visualization with gradient fill proportional to daily water progress — v1.8
-- ✓ Water goal setting in fl oz with first-use prompt and inline editing — v1.8
-- ✓ Log Water modal for custom amounts — v1.8
-- ✓ Quick-add buttons (+8/+16/+24 oz) with haptic feedback — v1.8
-- ✓ Add-only water logging with daily running total — v1.8
-- ✓ Hydration streak (consecutive days meeting goal) and weekly average stats — v1.8
-- ✓ DB migration v11 with water_logs and water_settings tables — v1.8
-- ✓ Multi-macro goal setting with per-macro daily targets and live calorie estimation — v1.7
-- ✓ Three stacked progress bars showing P/C/F progress with calorie breakdown — v1.7
-- ✓ Per-macro chart with tab selector and color-coded lines — v1.7
-- ✓ 3-macro meal entry with colored inputs and calorie preview — v1.7
-- ✓ 3-macro meal library support with one-tap logging — v1.7
-- ✓ Colored macro badges on meal list items — v1.7
-- ✓ Protein streak unchanged by carbs/fat goal additions — v1.7
+- ✓ Copy/repeat previous meals — v1.9
+- ✓ Edit logged meals at individual food level — v1.9
+- ✓ Food search available from both Add Meal and Meal Library flows — v1.9
+- ✓ Remembered portions (ghost text pre-fill) — v1.9
+- ✓ Save built meals to library — v1.9
+- ✓ Offline USDA food database (~8,000 foods) bundled and seeded via migration v12 — v1.9
+- ✓ Multi-food meal builder with search, per-food gram entry, running macro totals — v1.9
+- ✓ Per-food macro breakdown alongside combined meal totals — v1.9
+- ✓ Custom food creation for items not in USDA database — v1.9
+- ✓ Fuzzy search with debounce and frequency boosting — v1.9
+- ✓ Frequent foods list and remembered portions — v1.9
 
-## Current Milestone: v1.9 Food Database & Meal Builder
+## Current State
 
-**Goal:** Eliminate manual nutrition lookups by bundling an offline USDA food database with a multi-food meal builder that auto-calculates macros from gram weights.
-
-**Target features:**
-- Offline USDA food database (~8,000 foods) seeded via migration v12
-- Multi-food meal builder with search, per-food gram entry, and running totals
-- Custom food creation for items not in USDA database
-- Fuzzy search with frequency boosting and remembered portions
-- Copy/repeat previous meals
-- Edit logged meals at individual food level
-
-**Spec:** `docs/superpowers/specs/2026-04-08-food-database-meal-builder-design.md`
+**Shipped:** v1.9 Food Database & Meal Builder (2026-04-09)
+**Next:** Planning next milestone (`/gsd-new-milestone`)
 
 ### Out of Scope
 
@@ -119,7 +98,7 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - **Rest Timer**: Manual start, configurable duration per exercise
 - **Progression Display**: Show last session's weight/reps as ghost data while logging
 - **Data Backup**: Manual export to JSON/CSV file (Android file system)
-- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring → v1.7 Macros Tracking → v1.8 Hydration Tracker
+- **Shipped**: v1.0 MVP → v1.1 Protein → v1.2 Meal Library → v1.3 Workout Intelligence → v1.4 Test Coverage → v1.5 Program Data Export → v1.6 Heart Rate Monitoring → v1.7 Macros Tracking → v1.8 Hydration Tracker → v1.9 Food Database & Meal Builder
 
 ## Constraints
 
@@ -153,6 +132,12 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 | Tab-based Macros/Hydration switching | State-based activeTab on ProteinScreen, no new navigation dependencies | ✓ Good |
 | WaterCup CUP_HEIGHT=200 constant | Fill fraction * constant height ensures consistent visual rendering | ✓ Good |
 | LogWaterModal Math.round validation | Prevents fractional oz injection into DB — threat mitigation T-35-03 | ✓ Good |
+| Bundled USDA JSON asset for offline food DB | ~8,000 foods seeded on first launch — no internet dependency | ✓ Good |
+| Token-based fuzzy search with frequency boost | Matches partial words, ranks by usage count for personalization | ✓ Good |
+| Two-transaction addMealWithFoods | SQLite callback doesn't expose insertId synchronously — first insert meals, second insert meal_foods | ✓ Good |
+| FoodGramInput absolute positioning (not Modal) | MealBuilderScreen controls z-ordering, avoids modal stacking issues | ✓ Good |
+| getLastUsedPortion for ghost text pre-fill | Reduces friction on repeated food logging — remembered portions | ✓ Good |
+| onBuildMeal callback prop pattern | Same as AddMealModal D-13 — avoids useNavigation in modal, keeps modal testable | ✓ Good |
 
 ## Evolution
 
@@ -172,4 +157,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after v1.9 Food Database & Meal Builder milestone start*
+*Last updated: 2026-04-09 after v1.9 Food Database & Meal Builder milestone complete*

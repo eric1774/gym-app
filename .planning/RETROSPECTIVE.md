@@ -2,6 +2,53 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v1.9 — Food Database & Meal Builder
+
+**Shipped:** 2026-04-09
+**Phases:** 4 | **Plans:** 11 | **Sessions:** ~3
+
+### What Was Built
+- USDA build pipeline script generating ~8,000 food entries as bundled JSON asset, migration v12 with foods and meal_foods tables, first-launch seeding splash screen
+- Fuzzy token search with 200ms debounce, frequency boosting, frequent foods list, FoodSearchModal with FoodResultItem and FrequentFoodsSection
+- NoResultsCard and CustomFoodForm for inline custom food creation with macro validation and auto-computed calories
+- MealBuilderScreen with multi-food composition, FoodGramInput slide-up component, MealFoodCard, MealTotalsBar with running macro totals
+- Remembered portions via getLastUsedPortion — ghost text pre-fill in gram input, "last: Xg" badges on search results
+- Meal repeat/edit: duplicateMealFoods, updateMealWithFoods, repeat icon on meal cards, builder edit mode with navigation params
+- Library integration: BUILD MEAL button from AddLibraryMealModal, save-to-library toggle on MealBuilderScreen
+
+### What Worked
+- Four-phase split (DB foundation → search/custom → builder UI → smart features) kept each phase focused with clear boundaries
+- Two-transaction pattern for addMealWithFoods (insert meals first, then meal_foods) worked around SQLite callback insertId limitation cleanly
+- FoodGramInput as absolute-positioned component (not Modal) avoided modal stacking issues and kept MealBuilderScreen in control of z-ordering
+- onBuildMeal callback prop pattern (same as AddMealModal D-13) kept modals testable without useNavigation dependency
+- Reusing established patterns (FoodResultItem mirrors MealListItem, MealTotalsBar mirrors MacroProgressBars) made UI phases fast
+- Phase 37 USDA pipeline was self-contained — no GSD phase directory needed, just the build script and migration
+
+### What Was Inefficient
+- Phase 37 had no `.planning/phases/37-*` directory — SUMMARY files are missing for archival, making one-liner extraction impossible
+- SUMMARY one-liner extraction continues to be unreliable — CLI returned empty strings for several summaries (pattern from v1.8 persists)
+- No REQUIREMENTS.md existed for v1.9 — requirements were tracked inline in PROJECT.md, which worked but broke the standard traceability flow
+
+### Patterns Established
+- Bundled asset seeding pattern: JSON asset in android/app/src/main/assets/, bulk INSERT via executeSql in migration callback
+- Token-based fuzzy search: split query into tokens, match each with LIKE '%token%', boost by frequency count
+- Slide-up gram input pattern: absolute-positioned component with Animated.Value for entry animation, onBlur dismiss
+- Ghost text pre-fill: getLastUsedPortion query → placeholder text in TextInput, cleared on edit mode
+- Navigation params for screen mode routing: `mode: 'add' | 'edit' | 'repeat' | 'library'` passed via route.params
+
+### Key Lessons
+1. Phase directories should always be created even for simple phases — missing Phase 37 directory means no SUMMARY files for automated extraction
+2. Requirements tracking without a standalone REQUIREMENTS.md works for small milestones but loses traceability structure — consider always creating one
+3. The four-phase pattern (data → search → builder → integration) is the right granularity for "add a data source + UI" features
+4. Two-day milestones with 4 phases and 11 plans remain fast when building on established DB and component patterns
+
+### Cost Observations
+- Model mix: ~85% opus, ~15% sonnet
+- Sessions: ~3 across 2 days
+- Notable: 11 plans across 4 phases in 2 days — fastest plans-per-day rate, driven by pattern reuse from v1.7/v1.8
+
+---
+
 ## Milestone: v1.8 — Hydration Tracker
 
 **Shipped:** 2026-04-05
@@ -193,6 +240,7 @@
 | v1.6 Heart Rate Monitoring | ~8 | 6 | First hardware-integration milestone, BLE + DB migration v8 |
 | v1.7 Macros Tracking | ~3 | 3 | Parallel DB module pattern (macros.ts alongside protein.ts) |
 | v1.8 Hydration Tracker | ~2 | 3 | Tab-based view switching, fastest feature milestone |
+| v1.9 Food Database & Meal Builder | ~3 | 4 | Bundled USDA DB, multi-food meal builder, 11 plans in 2 days |
 
 ### Cumulative Quality
 
@@ -204,6 +252,7 @@
 | v1.6 | ~20 | 82%+ | HRSettingsService tests (10), hrZones tests, SettingsScreen tests |
 | v1.7 | ~14 | 82%+ | macros.ts tests, MacroProgressCard tests, MacroPills tests |
 | v1.8 | ~14 | 82%+ | GoalSetupCard tests (7), HydrationStatCards tests (7) |
+| v1.9 | 0 | 82%+ | No new tests — focused on feature delivery, existing coverage maintained |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -214,3 +263,5 @@
 5. Milestone audits catch real bugs that verification misses — v1.6 audit found unpair disconnect bug and zone clamping issue
 6. REQUIREMENTS.md traceability must be updated at phase transitions, not deferred — stale checkboxes cause false incompleteness at milestone completion (v1.8)
 7. Thin shell + tab-switching pattern scales well for parallel tracking features — confirmed by v1.8 (Macros + Hydration on same screen)
+8. Phase directories should always be created, even for simple phases — missing Phase 37 directory in v1.9 means no SUMMARY files for automated extraction
+9. Four-phase data→search→builder→integration pattern is the right granularity for "add data source + UI" features — confirmed by v1.9 (11 plans, 2 days)

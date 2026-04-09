@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.9 Food Database & Meal Builder (Shipped: 2026-04-09)
+
+**Phases:** 37-40 (4 phases, 11 plans) | **Commits:** 29 | **Lines:** +5,401
+**Timeline:** 2026-04-08 → 2026-04-09 (2 days)
+**Git range:** feat(37-01) → feat(40-03)
+
+**Delivered:** Offline USDA food database with multi-food meal builder that auto-calculates macros from gram weights, plus smart features like remembered portions, meal repeat/edit, and library integration.
+
+**Key accomplishments:**
+
+- USDA build pipeline + migration v12 seeding ~8,000 foods into SQLite with first-launch splash screen
+- Fuzzy token search with 200ms debounce, frequency boosting, frequent foods list, and custom food creation
+- Multi-food meal builder with per-food gram entry, live macro preview, running totals, and atomic multi-food logging
+- Remembered portions with ghost text pre-fill and "last: Xg" badges on search results
+- Meal repeat/edit — repeat icon to pre-load builder from previous meals, edit mode for logged meal food components
+- Library integration — BUILD MEAL button from library flow, save-to-library toggle for built meals
+
+---
+
 ## v1.8 Hydration Tracker (Shipped: 2026-04-05)
 
 **Phases:** 34-36 (3 phases, 6 plans, 12 tasks) | **Commits:** 17 | **Lines:** +3,917
