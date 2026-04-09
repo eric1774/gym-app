@@ -158,7 +158,11 @@ function DateEditSection({
 
 // ── Main screen ──────────────────────────────────────────────────────
 
-export function MealBuilderScreen({ navigation }: Props) {
+export function MealBuilderScreen({ navigation, route }: Props) {
+  const params = route.params;
+  const mode = params?.mode ?? 'normal';
+  const editMealId = params?.editMealId;
+
   const [foods, setFoods] = useState<BuilderFood[]>([]);
   const [searchVisible, setSearchVisible] = useState(false);
   const [gramInputVisible, setGramInputVisible] = useState(false);
@@ -175,6 +179,11 @@ export function MealBuilderScreen({ navigation }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalsBarHeight, setTotalsBarHeight] = useState(0);
+
+  // Track description override for edit mode pre-fill (used once, then auto-generate takes over)
+  const [descriptionOverride, setDescriptionOverride] = useState<string | null>(
+    mode === 'edit' && params?.prefillDescription ? params.prefillDescription : null,
+  );
 
   // ── Computed macros per food ────────────────────────────────────────
 
@@ -203,9 +212,38 @@ export function MealBuilderScreen({ navigation }: Props) {
     [totalProtein, totalCarbs, totalFat],
   );
 
+  // ── Pre-load foods/mealType/loggedAt from params (repeat or edit mode) ─
+
+  useEffect(() => {
+    if (params?.prefillFoods && params.prefillFoods.length > 0) {
+      const preloaded: BuilderFood[] = params.prefillFoods.map((f, i) => ({
+        key: `${f.foodId}-prefill-${i}`,
+        foodId: f.foodId,
+        foodName: f.foodName,
+        grams: f.grams,
+        proteinPer100g: f.proteinPer100g,
+        carbsPer100g: f.carbsPer100g,
+        fatPer100g: f.fatPer100g,
+      }));
+      setFoods(preloaded);
+    }
+    if (params?.prefillMealType) {
+      setMealType(params.prefillMealType);
+    }
+    if (params?.prefillLoggedAt) {
+      setLoggedAt(new Date(params.prefillLoggedAt));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount only
+
   // ── Auto-generate description from food names (D-14) ───────────────
 
   useEffect(() => {
+    if (descriptionOverride !== null) {
+      setDescription(descriptionOverride);
+      setDescriptionOverride(null); // Only use once, then auto-generate takes over on food changes
+      return;
+    }
     if (foods.length === 0) {
       setDescription('');
       return;
@@ -215,7 +253,7 @@ export function MealBuilderScreen({ navigation }: Props) {
       ? names.join(', ')
       : names.slice(0, 3).join(', ') + '...';
     setDescription(display);
-  }, [foods]);
+  }, [foods, descriptionOverride]);
 
   // ── canLog gate (D-16, T-39-10) ────────────────────────────────────
 
@@ -345,6 +383,8 @@ export function MealBuilderScreen({ navigation }: Props) {
 
   // ── Log meal (D-16, D-17, D-18, T-39-07, T-39-10) ─────────────────
 
+  const ctaLabel = mode === 'edit' ? 'SAVE CHANGES' : mode === 'library' ? 'SAVE TO LIBRARY' : 'LOG MEAL';
+
   const handleLogMeal = useCallback(async () => {
     if (!canLog || isSubmitting) { return; }
     setIsSubmitting(true);
@@ -360,7 +400,11 @@ export function MealBuilderScreen({ navigation }: Props) {
         fatPer100g: f.fatPer100g,
       }));
 
-      await foodsDb.addMealWithFoods(description, mealType!, mealFoodInputs, loggedAt);
+      if (mode === 'edit' && editMealId != null) {
+        await foodsDb.updateMealWithFoods(editMealId, description, mealType!, mealFoodInputs, loggedAt);
+      } else {
+        await foodsDb.addMealWithFoods(description, mealType!, mealFoodInputs, loggedAt);
+      }
 
       // Light haptic feedback on success (D-18)
       Vibration.vibrate(10);
@@ -371,7 +415,7 @@ export function MealBuilderScreen({ navigation }: Props) {
       setError(err instanceof Error ? err.message : 'Failed to log meal. Please try again.');
       setIsSubmitting(false);
     }
-  }, [canLog, isSubmitting, foods, description, mealType, loggedAt, navigation]);
+  }, [canLog, isSubmitting, foods, description, mealType, loggedAt, navigation, mode, editMealId]);
 
   // ── FlatList render helpers ─────────────────────────────────────────
 
@@ -428,7 +472,7 @@ export function MealBuilderScreen({ navigation }: Props) {
           accessibilityRole="button">
           <Text style={styles.backButtonText}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>BUILD MEAL</Text>
+        <Text style={styles.headerTitle}>{mode === 'edit' ? 'EDIT MEAL' : 'BUILD MEAL'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -482,6 +526,7 @@ export function MealBuilderScreen({ navigation }: Props) {
         canLog={canLog}
         error={error}
         onLayout={e => setTotalsBarHeight(e.nativeEvent.layout.height)}
+        ctaLabel={ctaLabel}
       />
 
       {/* Gram input overlay (slide-up) */}

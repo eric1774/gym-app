@@ -17,6 +17,8 @@ interface MealListItemProps {
   meal: MacroMeal;
   onEdit: (meal: MacroMeal) => void;
   onDelete: (meal: MacroMeal) => void;
+  onRepeat?: (meal: MacroMeal) => void;
+  hasMealFoods?: boolean;
   isLast?: boolean;
 }
 
@@ -30,6 +32,8 @@ export const MealListItem = React.memo(function MealListItem({
   meal,
   onEdit,
   onDelete,
+  onRepeat,
+  hasMealFoods = false,
   isLast = false,
 }: MealListItemProps) {
   const translateX = useRef(new Animated.Value(0)).current;
@@ -89,6 +93,18 @@ export const MealListItem = React.memo(function MealListItem({
             ) : null}
             <MacroPills protein={meal.protein} carbs={meal.carbs} fat={meal.fat} />
           </View>
+          {hasMealFoods && onRepeat && (
+            <TouchableOpacity
+              onPress={() => onRepeat(meal)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.repeatButton}
+              accessibilityLabel="Repeat meal"
+              accessibilityHint="Opens builder pre-loaded with this meal's foods"
+              accessibilityRole="button">
+              <Text style={styles.repeatIcon}>{'\u21BA'}</Text>
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -146,6 +162,17 @@ const styles = StyleSheet.create({
   },
   leftContent: {
     flex: 1,
+  },
+  repeatButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.md,
+  },
+  repeatIcon: {
+    fontSize: 20,
+    color: colors.accent,
   },
   mealTypeLabel: {
     fontSize: fontSize.xs,

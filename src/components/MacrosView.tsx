@@ -7,12 +7,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  Vibration,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProteinStackParamList } from '../navigation/TabNavigator';
-import { macrosDb } from '../db';
+import { macrosDb, foodsDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
 import { MacroMeal, MacroSettings, MacroValues } from '../types';
 import { MacroProgressCard } from './MacroProgressCard';
@@ -40,6 +41,7 @@ export function MacrosView({ navigation }: MacrosViewProps) {
   const [streak, setStreak] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [mealFoodsCounts, setMealFoodsCounts] = useState<Record<number, number>>({});
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
 
@@ -67,6 +69,10 @@ export function MacrosView({ navigation }: MacrosViewProps) {
     setAverage(fetchedAverage?.protein ?? null);
     setStreak(fetchedStreak);
     setChartRefreshKey(k => k + 1);
+    // Fetch which meals have food data for repeat icon / edit routing
+    const mealIds = fetchedMeals.map(m => m.id);
+    const counts = await foodsDb.getMealFoodsCounts(mealIds);
+    setMealFoodsCounts(counts);
   }, [selectedDate]);
 
   const handleRefresh = useCallback(async () => {
@@ -95,6 +101,12 @@ export function MacrosView({ navigation }: MacrosViewProps) {
           setAverage(fetchedAverage?.protein ?? null);
           setStreak(fetchedStreak);
           setIsLoading(false);
+          // Fetch which meals have food data for repeat icon / edit routing
+          const mealIds = fetchedMeals.map(m => m.id);
+          const counts = await foodsDb.getMealFoodsCounts(mealIds);
+          if (!cancelled) {
+            setMealFoodsCounts(counts);
+          }
         }
       }
       load();
@@ -125,13 +137,41 @@ export function MacrosView({ navigation }: MacrosViewProps) {
   }, []);
 
   const handleBuildMeal = useCallback(() => {
-    navigation.navigate('MealBuilder');
+    navigation.navigate('MealBuilder', { mode: 'normal' });
   }, [navigation]);
 
   const handleEdit = useCallback((meal: MacroMeal) => {
-    setEditingMeal(meal);
-    setModalVisible(true);
-  }, []);
+    const hasFoods = (mealFoodsCounts[meal.id] ?? 0) > 0;
+    if (hasFoods) {
+      // Builder-logged meal -> open in builder edit mode
+      foodsDb.duplicateMealFoods(meal.id).then(foods => {
+        navigation.navigate('MealBuilder', {
+          mode: 'edit',
+          editMealId: meal.id,
+          prefillFoods: foods,
+          prefillMealType: meal.mealType,
+          prefillDescription: meal.description,
+          prefillLoggedAt: meal.loggedAt,
+        });
+      });
+    } else {
+      // Manual-entry meal -> open in existing AddMealModal
+      setEditingMeal(meal);
+      setModalVisible(true);
+    }
+  }, [mealFoodsCounts, navigation]);
+
+  const handleRepeat = useCallback(async (meal: MacroMeal) => {
+    const foods = await foodsDb.duplicateMealFoods(meal.id);
+    if (foods.length > 0) {
+      Vibration.vibrate(10);
+      navigation.navigate('MealBuilder', {
+        mode: 'normal',
+        prefillFoods: foods,
+        prefillMealType: meal.mealType,
+      });
+    }
+  }, [navigation]);
 
   const handleDelete = useCallback(
     (meal: MacroMeal) => {
@@ -229,6 +269,8 @@ export function MacrosView({ navigation }: MacrosViewProps) {
                   meal={meal}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onRepeat={handleRepeat}
+                  hasMealFoods={(mealFoodsCounts[meal.id] ?? 0) > 0}
                   isLast={index === meals.length - 1}
                 />
               ))

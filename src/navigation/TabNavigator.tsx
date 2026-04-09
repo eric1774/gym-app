@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, View, Text } from 'react-native';
+import { MealType } from '../types';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,7 +56,21 @@ export type DashboardStackParamList = {
 export type ProteinStackParamList = {
   ProteinHome: undefined;
   MealLibrary: undefined;
-  MealBuilder: undefined;
+  MealBuilder: {
+    mode: 'normal' | 'edit' | 'library';
+    editMealId?: number;
+    prefillFoods?: Array<{
+      foodId: number;
+      foodName: string;
+      grams: number;
+      proteinPer100g: number;
+      carbsPer100g: number;
+      fatPer100g: number;
+    }>;
+    prefillMealType?: MealType;
+    prefillDescription?: string;
+    prefillLoggedAt?: string;
+  } | undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();

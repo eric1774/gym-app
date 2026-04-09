@@ -30,6 +30,7 @@ interface MealTotalsBarProps {
   canLog: boolean;
   error: string | null;
   onLayout: (event: LayoutChangeEvent) => void;
+  ctaLabel?: string;
 }
 
 /** Format date for display: "Today H:MM AM/PM" if today, else "M/D/YYYY at H:MM AM/PM" */
@@ -72,6 +73,7 @@ export function MealTotalsBar({
   canLog,
   error,
   onLayout,
+  ctaLabel,
 }: MealTotalsBarProps) {
   const isDisabled = !canLog || isSubmitting;
 
@@ -126,7 +128,7 @@ export function MealTotalsBar({
         {isSubmitting ? (
           <ActivityIndicator color={colors.onAccent} size="small" />
         ) : (
-          <Text style={styles.logButtonText}>LOG MEAL</Text>
+          <Text style={styles.logButtonText}>{ctaLabel ?? 'LOG MEAL'}</Text>
         )}
       </TouchableOpacity>
 
