@@ -58,10 +58,18 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Offline USDA food database (~8,000 foods) bundled and seeded via migration v12
+- [ ] Multi-food meal builder with search, per-food gram entry, running macro totals
+- [ ] Per-food macro breakdown alongside combined meal totals
+- [ ] Copy/repeat previous meals
+- [ ] Edit logged meals at individual food level
+- [ ] Food search available from both Add Meal and Meal Library flows
 
 ### Recently Validated
 
+- ✓ Custom food creation for items not in USDA database — v1.9 (Phase 38)
+- ✓ Fuzzy search with debounce and frequency boosting — v1.9 (Phase 38)
+- ✓ Frequent foods list and remembered portions — v1.9 (Phase 38)
 - ✓ Tab bar on ProteinScreen switching between Macros and Hydration views — v1.8
 - ✓ Cup visualization with gradient fill proportional to daily water progress — v1.8
 - ✓ Water goal setting in fl oz with first-use prompt and inline editing — v1.8
@@ -78,9 +86,19 @@ Fast, frictionless set logging mid-workout — log weight + reps in two taps, st
 - ✓ Colored macro badges on meal list items — v1.7
 - ✓ Protein streak unchanged by carbs/fat goal additions — v1.7
 
-## Current Milestone: Planning Next
+## Current Milestone: v1.9 Food Database & Meal Builder
 
-v1.8 Hydration Tracker shipped 2026-04-05. Use `/gsd-new-milestone` to start the next milestone.
+**Goal:** Eliminate manual nutrition lookups by bundling an offline USDA food database with a multi-food meal builder that auto-calculates macros from gram weights.
+
+**Target features:**
+- Offline USDA food database (~8,000 foods) seeded via migration v12
+- Multi-food meal builder with search, per-food gram entry, and running totals
+- Custom food creation for items not in USDA database
+- Fuzzy search with frequency boosting and remembered portions
+- Copy/repeat previous meals
+- Edit logged meals at individual food level
+
+**Spec:** `docs/superpowers/specs/2026-04-08-food-database-meal-builder-design.md`
 
 ### Out of Scope
 
@@ -95,7 +113,7 @@ v1.8 Hydration Tracker shipped 2026-04-05. Use `/gsd-new-milestone` to start the
 - **Platform**: Android only, local storage (no internet)
 - **Framework**: React Native with local SQLite for persistence
 - **Test Coverage**: 82.26% lines, 75.37% functions, 72.09% branches — Jest with 80/70 thresholds enforced
-- **DB Schema**: Migration v11 (latest — water_logs and water_settings tables for hydration tracking)
+- **DB Schema**: Migration v12 (latest — foods and meal_foods tables for food search and custom foods). v11 added water_logs and water_settings.
 - **UI Directive**: Use ui-ux-pro-max for mobile UX best practices and dark-mint-card-ui for visual/aesthetic design — clean, minimal dark theme with mint accents
 - **UX Priority**: Speed of data entry during an active workout is the #1 UX constraint
 - **Rest Timer**: Manual start, configurable duration per exercise
@@ -154,4 +172,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-05 after v1.8 Hydration Tracker milestone*
+*Last updated: 2026-04-08 after v1.9 Food Database & Meal Builder milestone start*

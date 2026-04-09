@@ -265,7 +265,7 @@ export async function addMealWithFoods(
     return { ...f, protein, carbs, fat };
   });
 
-  // Transaction 1: Insert the meals row with summed macros
+  // Insert the meals row with summed macros
   await runTransaction(database, (tx) => {
     tx.executeSql(
       'INSERT INTO meals (protein_grams, carb_grams, fat_grams, description, meal_type, logged_at, local_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -273,7 +273,7 @@ export async function addMealWithFoods(
     );
   });
 
-  // Retrieve the inserted meal ID (using the unique loggedAt + createdAt combination)
+  // Retrieve the inserted meal ID
   const mealResult = await executeSql(
     database,
     'SELECT id FROM meals WHERE logged_at = ? AND created_at = ? ORDER BY id DESC LIMIT 1',
@@ -281,7 +281,7 @@ export async function addMealWithFoods(
   );
   const mealId = mealResult.rows.item(0).id as number;
 
-  // Transaction 2: Insert meal_foods rows with snapshotted macros
+  // Insert meal_foods rows with snapshotted macros
   await runTransaction(database, (tx) => {
     for (const f of foodRows) {
       tx.executeSql(

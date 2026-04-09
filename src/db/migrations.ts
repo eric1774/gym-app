@@ -24,6 +24,8 @@ interface Migration {
  * - Version 9: Repair program_week values (migration 5 backfill set all to 1)
  * - Version 10: Add macro columns to meals/meal_library and create macro_settings table
  * - Version 11: Create water_logs and water_settings tables for hydration tracking
+ * - Version 12: Create meal_foods table for multi-food meal builder
+ * - Version 13: Add food_name column to meal_foods (missing from Phase 37 schema)
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -356,6 +358,50 @@ const MIGRATIONS: Migration[] = [
           updated_at TEXT NOT NULL
         )
       `);
+    },
+  },
+  {
+    version: 12,
+    description: 'Ensure meal_foods table exists with food_name column',
+    up: (tx: Transaction) => {
+      // Fresh installs: table doesn't exist yet — create with all columns.
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS meal_foods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+          food_id INTEGER NOT NULL REFERENCES foods(id),
+          food_name TEXT NOT NULL DEFAULT '',
+          grams REAL NOT NULL,
+          protein REAL NOT NULL,
+          carbs REAL NOT NULL,
+          fat REAL NOT NULL
+        )
+      `);
+      // Existing installs: table exists from Phase 37 without food_name.
+      // ALTER adds it. Error callback returns false to swallow "duplicate column"
+      // on fresh installs where CREATE already added it.
+      tx.executeSql(
+        "ALTER TABLE meal_foods ADD COLUMN food_name TEXT NOT NULL DEFAULT ''",
+        [],
+        undefined,
+        () => false,
+      );
+    },
+  },
+  {
+    version: 13,
+    description: 'Add food_name column to meal_foods (missing from Phase 37 schema)',
+    up: (tx: Transaction) => {
+      // Phase 37 created meal_foods without food_name. Migration 12 tried
+      // CREATE TABLE IF NOT EXISTS but that was a no-op on existing installs.
+      // This ALTER adds the missing column. Error callback returns false to
+      // swallow "duplicate column" on fresh installs where v12 CREATE included it.
+      tx.executeSql(
+        "ALTER TABLE meal_foods ADD COLUMN food_name TEXT NOT NULL DEFAULT ''",
+        [],
+        undefined,
+        () => false,
+      );
     },
   },
 ];
