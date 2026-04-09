@@ -435,9 +435,11 @@ export interface Food {
   isCustom: boolean;
 }
 
-/** A food search result — Food plus usage frequency count. */
+/** A food search result — Food plus usage frequency count and optional last-used portion. */
 export interface FoodSearchResult extends Food {
   usageCount: number;
+  /** Last gram quantity used when logging this food — undefined for first-time foods (Phase 40 D-02). */
+  lastUsedGrams?: number;
 }
 
 // -- Meal Food domain types (Phase 39) --

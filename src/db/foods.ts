@@ -31,7 +31,7 @@ export function rowToFood(row: {
   };
 }
 
-/** Map a raw SQLite result row (with usage_count) to FoodSearchResult. */
+/** Map a raw SQLite result row (with usage_count and optional last_used_grams) to FoodSearchResult. */
 export function rowToFoodSearchResult(row: {
   id: number;
   fdc_id: number | null;
@@ -43,10 +43,12 @@ export function rowToFoodSearchResult(row: {
   search_text: string;
   is_custom: number;
   usage_count?: number;
+  last_used_grams?: number;
 }): FoodSearchResult {
   return {
     ...rowToFood(row),
     usageCount: row.usage_count ?? 0,
+    lastUsedGrams: row.last_used_grams ?? undefined,
   };
 }
 
@@ -116,7 +118,8 @@ export async function getFrequentFoods(): Promise<FoodSearchResult[]> {
 
   const result = await executeSql(
     database,
-    `SELECT f.*, COUNT(mf.id) as usage_count
+    `SELECT f.*, COUNT(mf.id) as usage_count,
+       (SELECT mf2.grams FROM meal_foods mf2 WHERE mf2.food_id = f.id ORDER BY mf2.id DESC LIMIT 1) as last_used_grams
      FROM foods f
      INNER JOIN meal_foods mf ON mf.food_id = f.id
      GROUP BY f.id
@@ -313,4 +316,32 @@ export async function getMealFoods(mealId: number): Promise<MealFood[]> {
     mealFoods.push(rowToMealFood(result.rows.item(i)));
   }
   return mealFoods;
+}
+
+// ── Remembered Portions ──────────────────────────────────────────────
+
+/**
+ * Get the last gram quantity used when logging a specific food.
+ *
+ * Query: SELECT grams FROM meal_foods WHERE food_id = ? ORDER BY id DESC LIMIT 1
+ * Parameterized query prevents SQL injection (T-40-01).
+ *
+ * Per D-02: Used to pre-fill the gram input with ghost text showing the user's
+ * previously used quantity for this food.
+ *
+ * @param foodId - The food's primary key
+ * @returns Last used grams as a number, or null if food has never been logged
+ */
+export async function getLastUsedPortion(foodId: number): Promise<number | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT grams FROM meal_foods WHERE food_id = ? ORDER BY id DESC LIMIT 1',
+    [foodId],
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows.item(0).grams as number;
 }
