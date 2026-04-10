@@ -49,10 +49,11 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260410-8ub | Database Health Check — Replace Outdated Repair Button | 2026-04-10 | a28f8d9 | [260410-8ub-database-health-check-replace-outdated-r](./quick/260410-8ub-database-health-check-replace-outdated-r/) |
+| 260410-9ob | Volume Toggle for Dashboard Charts | 2026-04-10 | ac21aa6 | [260410-9ob-volume-toggle-for-dashboard-charts](./quick/260410-9ob-volume-toggle-for-dashboard-charts/) |
 
 ## Session Continuity
 
 Last session: 2026-04-10
-Stopped at: Completed quick task 260410-8ub: Database Health Check — Replace Outdated Repair Button
+Stopped at: Completed quick task 260410-9ob: Volume Toggle for Dashboard Charts
 Resume file: —
 Next step: /gsd-new-milestone
