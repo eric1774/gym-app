@@ -265,7 +265,7 @@ export function TabNavigator() {
         name="ProteinTab"
         component={ProteinStackNavigator}
         options={{
-          tabBarLabel: 'Protein',
+          tabBarLabel: 'Health',
           tabBarIcon: ({ color }) => <CarrotIcon color={color} />,
         }}
       />
