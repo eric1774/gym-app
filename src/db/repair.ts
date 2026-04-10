@@ -1,143 +1,290 @@
 import { db, executeSql } from './database';
 
-/**
- * Data repair: advance program to week 5 and restore the March 30 Chest session.
- *
- * This is user-initiated only — called from Settings > Repair Data.
- * Never runs automatically on boot to prevent accidental data loss.
- *
- * Safe to run multiple times — checks for existing data before inserting.
- */
-export async function repairProgramData(): Promise<string> {
-  const database = await db;
-  const log: string[] = [];
-
-  // ── Step 1: Find the program ──────────────────────────────────────
-  const progResult = await executeSql(
-    database,
-    "SELECT id, current_week FROM programs WHERE name = '8 week program' LIMIT 1",
-  );
-  if (progResult.rows.length === 0) {
-    return 'Program "8 week program" not found.';
-  }
-  const programId = progResult.rows.item(0).id as number;
-  const currentWeek = progResult.rows.item(0).current_week as number;
-
-  // ── Step 2: Ensure current_week is at least 5 ────────────────────
-  if (currentWeek < 5) {
-    await executeSql(
-      database,
-      'UPDATE programs SET current_week = 5 WHERE id = ?',
-      [programId],
-    );
-    log.push(`Advanced current_week from ${currentWeek} to 5`);
-  } else {
-    log.push(`current_week already at ${currentWeek}`);
-  }
-
-  // ── Step 3: Get program day IDs ───────────────────────────────────
-  const daysResult = await executeSql(
-    database,
-    'SELECT id, name FROM program_days WHERE program_id = ? ORDER BY sort_order',
-    [programId],
-  );
-  const dayMap = new Map<string, number>();
-  for (let i = 0; i < daysResult.rows.length; i++) {
-    const row = daysResult.rows.item(i);
-    dayMap.set(row.name as string, row.id as number);
-  }
-
-  const chestDayId = dayMap.get('Chest triceps and conditioning');
-
-  if (!chestDayId) {
-    log.push('WARNING: Could not find "Chest triceps and conditioning" day');
-    return log.join('\n');
-  }
-
-  // ── Step 4: Restore March 30 Chest session (week 5) ──────────────
-  const march30Exists = await executeSql(
-    database,
-    `SELECT id FROM workout_sessions
-     WHERE program_day_id = ?
-       AND program_week = 5
-       AND completed_at LIKE '2026-03-30%'
-     LIMIT 1`,
-    [chestDayId],
-  );
-
-  if (march30Exists.rows.length === 0) {
-    const startedAt = '2026-03-30T10:00:00.000Z';
-    const completedAt = '2026-03-30T11:15:00.000Z';
-
-    const sessionResult = await executeSql(
-      database,
-      'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, 5)',
-      [startedAt, completedAt, chestDayId],
-    );
-    const sessionId = sessionResult.insertId;
-
-    // Using week 4 weights as baseline — user can verify in calendar detail
-    const chestExercises = [
-      { name: 'Bench Press', sets: [
-        { setNumber: 1, weight: 135, reps: 8 },
-        { setNumber: 2, weight: 135, reps: 12 },
-        { setNumber: 3, weight: 135, reps: 8 },
-      ]},
-      { name: 'Incline Bench Press', sets: [
-        { setNumber: 1, weight: 95, reps: 10 },
-        { setNumber: 2, weight: 105, reps: 10 },
-        { setNumber: 3, weight: 110, reps: 10 },
-      ]},
-      { name: 'Chest Dip', sets: [
-        { setNumber: 1, weight: 0, reps: 5 },
-        { setNumber: 2, weight: 0, reps: 5 },
-        { setNumber: 3, weight: 0, reps: 5 },
-      ]},
-      { name: 'Overhead Press', sets: [
-        { setNumber: 1, weight: 70, reps: 10 },
-        { setNumber: 2, weight: 70, reps: 10 },
-        { setNumber: 3, weight: 70, reps: 10 },
-      ]},
-      { name: 'Lateral Raise', sets: [
-        { setNumber: 1, weight: 15, reps: 15 },
-        { setNumber: 2, weight: 15, reps: 15 },
-        { setNumber: 3, weight: 15, reps: 15 },
-      ]},
-    ];
-
-    await insertExerciseSets(database, sessionId, chestExercises, completedAt);
-    log.push('Restored March 30 Chest session for week 5 (5 exercises, 15 sets)');
-  } else {
-    log.push('March 30 Chest session already exists — skipped');
-  }
-
-  return log.join('\n');
+export interface DiagnosticCategory {
+  label: string;
+  issueCount: number;
+  details: string[];
 }
 
-/** Helper: look up exercise by name and insert workout_sets for a session. */
-async function insertExerciseSets(
-  database: any,
-  sessionId: number,
-  exercises: { name: string; sets: { setNumber: number; weight: number; reps: number }[] }[],
-  loggedAt: string,
-): Promise<void> {
-  for (const ex of exercises) {
-    const exResult = await executeSql(
-      database,
-      'SELECT id FROM exercises WHERE name = ? LIMIT 1',
-      [ex.name],
-    );
-    if (exResult.rows.length === 0) {
-      continue; // Skip exercises not found in DB
-    }
-    const exerciseId = exResult.rows.item(0).id as number;
+export interface DiagnosticResult {
+  categories: {
+    orphanedRecords: DiagnosticCategory;
+    emptyData: DiagnosticCategory;
+    dataConsistency: DiagnosticCategory;
+  };
+  totalIssues: number;
+}
 
-    for (const set of ex.sets) {
-      await executeSql(
-        database,
-        'INSERT INTO workout_sets (session_id, exercise_id, set_number, weight_kg, reps, logged_at, is_warmup) VALUES (?, ?, ?, ?, ?, ?, 0)',
-        [sessionId, exerciseId, set.setNumber, set.weight, set.reps, loggedAt],
-      );
+export interface FixResult {
+  fixedCount: number;
+  details: string[];
+}
+
+export async function scanDatabase(): Promise<DiagnosticResult> {
+  const database = await db;
+
+  // ── Orphaned Records ──────────────────────────────────────────────────────
+  const orphanDetails: string[] = [];
+  let orphanCount = 0;
+
+  const orphanChecks: { sql: string; label: string }[] = [
+    {
+      sql: 'SELECT COUNT(*) as cnt FROM workout_sets WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+      label: 'orphaned workout_sets (missing session)',
+    },
+    {
+      sql: 'SELECT COUNT(*) as cnt FROM exercise_sessions WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+      label: 'orphaned exercise_sessions (missing session)',
+    },
+    {
+      sql: 'SELECT COUNT(*) as cnt FROM heart_rate_samples WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+      label: 'orphaned heart_rate_samples (missing session)',
+    },
+    {
+      sql: 'SELECT COUNT(*) as cnt FROM meal_foods WHERE meal_id NOT IN (SELECT id FROM meals)',
+      label: 'orphaned meal_foods (missing meal)',
+    },
+    {
+      sql: 'SELECT COUNT(*) as cnt FROM meal_foods WHERE food_id NOT IN (SELECT id FROM foods)',
+      label: 'orphaned meal_foods (missing food)',
+    },
+  ];
+
+  for (const check of orphanChecks) {
+    try {
+      const result = await executeSql(database, check.sql);
+      const count = result.rows.item(0).cnt as number;
+      if (count > 0) {
+        orphanCount += count;
+        orphanDetails.push(`${count} ${check.label}`);
+      }
+    } catch {
+      // Table may not exist on older installs — skip
     }
   }
+
+  // ── Empty / Abandoned Data ────────────────────────────────────────────────
+  const emptyDetails: string[] = [];
+  let emptyCount = 0;
+
+  try {
+    const abandonedResult = await executeSql(
+      database,
+      'SELECT COUNT(*) as cnt FROM workout_sessions WHERE completed_at IS NULL AND id NOT IN (SELECT session_id FROM workout_sets)',
+    );
+    const abandoned = abandonedResult.rows.item(0).cnt as number;
+    if (abandoned > 0) {
+      emptyCount += abandoned;
+      emptyDetails.push(`${abandoned} abandoned session${abandoned > 1 ? 's' : ''} with no sets`);
+    }
+  } catch {
+    // Skip if tables don't exist
+  }
+
+  // ── Data Consistency ──────────────────────────────────────────────────────
+  const consistencyDetails: string[] = [];
+  let consistencyCount = 0;
+
+  // Macro mismatches in meals
+  try {
+    const macroResult = await executeSql(
+      database,
+      `SELECT COUNT(*) as cnt FROM meals m
+       WHERE EXISTS (SELECT 1 FROM meal_foods mf WHERE mf.meal_id = m.id)
+       AND (
+         ABS(COALESCE((SELECT SUM(calories) FROM meal_foods WHERE meal_id = m.id), 0) - COALESCE(m.calories, 0)) > 0.5
+         OR ABS(COALESCE((SELECT SUM(protein) FROM meal_foods WHERE meal_id = m.id), 0) - COALESCE(m.protein, 0)) > 0.5
+         OR ABS(COALESCE((SELECT SUM(carbs) FROM meal_foods WHERE meal_id = m.id), 0) - COALESCE(m.carbs, 0)) > 0.5
+         OR ABS(COALESCE((SELECT SUM(fat) FROM meal_foods WHERE meal_id = m.id), 0) - COALESCE(m.fat, 0)) > 0.5
+       )`,
+    );
+    const macroMismatches = macroResult.rows.item(0).cnt as number;
+    if (macroMismatches > 0) {
+      consistencyCount += macroMismatches;
+      consistencyDetails.push(`${macroMismatches} meal${macroMismatches > 1 ? 's' : ''} with mismatched macro totals`);
+    }
+  } catch {
+    // Skip if tables don't exist
+  }
+
+  // Sessions with heart rate samples but NULL avg_hr or peak_hr
+  try {
+    const hrResult = await executeSql(
+      database,
+      `SELECT COUNT(*) as cnt FROM workout_sessions ws
+       WHERE EXISTS (SELECT 1 FROM heart_rate_samples hrs WHERE hrs.session_id = ws.id)
+       AND (ws.avg_hr IS NULL OR ws.peak_hr IS NULL)`,
+    );
+    const hrMismatches = hrResult.rows.item(0).cnt as number;
+    if (hrMismatches > 0) {
+      consistencyCount += hrMismatches;
+      consistencyDetails.push(`${hrMismatches} session${hrMismatches > 1 ? 's' : ''} with HR samples but NULL avg_hr/peak_hr`);
+    }
+  } catch {
+    // Skip if tables don't exist
+  }
+
+  // Programs where current_week > weeks
+  try {
+    const programResult = await executeSql(
+      database,
+      'SELECT COUNT(*) as cnt FROM programs WHERE current_week > weeks',
+    );
+    const overflowPrograms = programResult.rows.item(0).cnt as number;
+    if (overflowPrograms > 0) {
+      consistencyCount += overflowPrograms;
+      consistencyDetails.push(`${overflowPrograms} program${overflowPrograms > 1 ? 's' : ''} with current_week > weeks`);
+    }
+  } catch {
+    // Skip if tables don't exist
+  }
+
+  const totalIssues = orphanCount + emptyCount + consistencyCount;
+
+  return {
+    categories: {
+      orphanedRecords: {
+        label: 'Orphaned Records',
+        issueCount: orphanCount,
+        details: orphanDetails,
+      },
+      emptyData: {
+        label: 'Abandoned Data',
+        issueCount: emptyCount,
+        details: emptyDetails,
+      },
+      dataConsistency: {
+        label: 'Data Consistency',
+        issueCount: consistencyCount,
+        details: consistencyDetails,
+      },
+    },
+    totalIssues,
+  };
+}
+
+export async function fixDatabaseIssues(result: DiagnosticResult): Promise<FixResult> {
+  const database = await db;
+  const details: string[] = [];
+  let fixedCount = 0;
+
+  // ── Fix Orphaned Records ──────────────────────────────────────────────────
+  if (result.categories.orphanedRecords.issueCount > 0) {
+    const orphanFixes: { sql: string; label: string }[] = [
+      {
+        sql: 'DELETE FROM workout_sets WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+        label: 'orphaned workout_sets rows',
+      },
+      {
+        sql: 'DELETE FROM exercise_sessions WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+        label: 'orphaned exercise_sessions rows',
+      },
+      {
+        sql: 'DELETE FROM heart_rate_samples WHERE session_id NOT IN (SELECT id FROM workout_sessions)',
+        label: 'orphaned heart_rate_samples rows',
+      },
+      {
+        sql: 'DELETE FROM meal_foods WHERE meal_id NOT IN (SELECT id FROM meals)',
+        label: 'orphaned meal_foods rows (missing meal)',
+      },
+      {
+        sql: 'DELETE FROM meal_foods WHERE food_id NOT IN (SELECT id FROM foods)',
+        label: 'orphaned meal_foods rows (missing food)',
+      },
+    ];
+
+    for (const fix of orphanFixes) {
+      try {
+        const fixResult = await executeSql(database, fix.sql);
+        if (fixResult.rowsAffected > 0) {
+          fixedCount += fixResult.rowsAffected;
+          details.push(`Deleted ${fixResult.rowsAffected} ${fix.label}`);
+        }
+      } catch {
+        // Table may not exist — skip
+      }
+    }
+  }
+
+  // ── Fix Abandoned Sessions ────────────────────────────────────────────────
+  if (result.categories.emptyData.issueCount > 0) {
+    try {
+      const fixResult = await executeSql(
+        database,
+        'DELETE FROM workout_sessions WHERE completed_at IS NULL AND id NOT IN (SELECT session_id FROM workout_sets)',
+      );
+      if (fixResult.rowsAffected > 0) {
+        fixedCount += fixResult.rowsAffected;
+        details.push(`Deleted ${fixResult.rowsAffected} abandoned session${fixResult.rowsAffected > 1 ? 's' : ''}`);
+      }
+    } catch {
+      // Skip if tables don't exist
+    }
+  }
+
+  // ── Fix Data Consistency ──────────────────────────────────────────────────
+  if (result.categories.dataConsistency.issueCount > 0) {
+    // Fix macro mismatches
+    try {
+      const fixResult = await executeSql(
+        database,
+        `UPDATE meals SET
+           calories = (SELECT COALESCE(SUM(calories), 0) FROM meal_foods WHERE meal_id = meals.id),
+           protein = (SELECT COALESCE(SUM(protein), 0) FROM meal_foods WHERE meal_id = meals.id),
+           carbs = (SELECT COALESCE(SUM(carbs), 0) FROM meal_foods WHERE meal_id = meals.id),
+           fat = (SELECT COALESCE(SUM(fat), 0) FROM meal_foods WHERE meal_id = meals.id)
+         WHERE EXISTS (SELECT 1 FROM meal_foods mf WHERE mf.meal_id = meals.id)
+         AND (
+           ABS(COALESCE((SELECT SUM(calories) FROM meal_foods WHERE meal_id = meals.id), 0) - COALESCE(calories, 0)) > 0.5
+           OR ABS(COALESCE((SELECT SUM(protein) FROM meal_foods WHERE meal_id = meals.id), 0) - COALESCE(protein, 0)) > 0.5
+           OR ABS(COALESCE((SELECT SUM(carbs) FROM meal_foods WHERE meal_id = meals.id), 0) - COALESCE(carbs, 0)) > 0.5
+           OR ABS(COALESCE((SELECT SUM(fat) FROM meal_foods WHERE meal_id = meals.id), 0) - COALESCE(fat, 0)) > 0.5
+         )`,
+      );
+      if (fixResult.rowsAffected > 0) {
+        fixedCount += fixResult.rowsAffected;
+        details.push(`Updated ${fixResult.rowsAffected} meal${fixResult.rowsAffected > 1 ? 's' : ''} with corrected macro totals`);
+      }
+    } catch {
+      // Skip if tables don't exist
+    }
+
+    // Fix HR mismatches
+    try {
+      const fixResult = await executeSql(
+        database,
+        `UPDATE workout_sessions SET
+           avg_hr = (SELECT AVG(hr) FROM heart_rate_samples WHERE session_id = workout_sessions.id),
+           peak_hr = (SELECT MAX(hr) FROM heart_rate_samples WHERE session_id = workout_sessions.id)
+         WHERE EXISTS (SELECT 1 FROM heart_rate_samples hrs WHERE hrs.session_id = workout_sessions.id)
+         AND (avg_hr IS NULL OR peak_hr IS NULL)`,
+      );
+      if (fixResult.rowsAffected > 0) {
+        fixedCount += fixResult.rowsAffected;
+        details.push(`Updated ${fixResult.rowsAffected} session${fixResult.rowsAffected > 1 ? 's' : ''} with corrected HR averages`);
+      }
+    } catch {
+      // Skip if tables don't exist
+    }
+
+    // Fix program week overflow
+    try {
+      const fixResult = await executeSql(
+        database,
+        'UPDATE programs SET current_week = weeks WHERE current_week > weeks',
+      );
+      if (fixResult.rowsAffected > 0) {
+        fixedCount += fixResult.rowsAffected;
+        details.push(`Reset ${fixResult.rowsAffected} program${fixResult.rowsAffected > 1 ? 's' : ''} with current_week > weeks`);
+      }
+    } catch {
+      // Skip if tables don't exist
+    }
+  }
+
+  if (details.length === 0) {
+    details.push('No issues found to fix');
+  }
+
+  return { fixedCount, details };
 }
