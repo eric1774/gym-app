@@ -56,8 +56,9 @@ function formatDuration(totalSeconds: number): string {
 export function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
-  const { exerciseId, exerciseName, measurementType, category, viewMode } = route.params;
+  const { exerciseId, exerciseName, measurementType, category, viewMode: initialViewMode } = route.params;
   const isTimed = measurementType === 'timed';
+  const [viewMode, setViewMode] = useState<'strength' | 'volume'>(initialViewMode ?? 'strength');
   const isVolume = viewMode === 'volume';
   const accentColor = category ? getCategoryColor(category) : colors.accent;
 
@@ -86,7 +87,7 @@ export function ExerciseProgressScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, [exerciseId]),
+    }, [exerciseId, isVolume]),
   );
 
   const confirmDeleteHistory = useCallback(
@@ -167,14 +168,9 @@ export function ExerciseProgressScreen() {
           activeOpacity={0.7}>
           <Text style={styles.backArrow}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {exerciseName}
-          </Text>
-          {isVolume && (
-            <Text style={styles.volumeSubtitle}>Volume</Text>
-          )}
-        </View>
+        <Text style={[styles.headerTitle, { flex: 1 }]} numberOfLines={1}>
+          {exerciseName}
+        </Text>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -198,6 +194,21 @@ export function ExerciseProgressScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          <View style={{ flex: 1 }} />
+          <View style={styles.modePill}>
+            <TouchableOpacity
+              style={[styles.modePillButton, !isVolume && styles.modePillButtonActive]}
+              activeOpacity={0.7}
+              onPress={() => setViewMode('strength')}>
+              <Text style={[styles.modePillText, !isVolume && styles.modePillTextActive]}>S</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modePillButton, isVolume && styles.modePillButtonActive]}
+              activeOpacity={0.7}
+              onPress={() => setViewMode('volume')}>
+              <Text style={[styles.modePillText, isVolume && styles.modePillTextActive]}>V</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Chart section */}
@@ -305,11 +316,29 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: weightBold,
   },
-  volumeSubtitle: {
+  modePill: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 2,
+  },
+  modePillButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 6,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  modePillButtonActive: {
+    backgroundColor: colors.accent,
+  },
+  modePillText: {
     color: colors.secondary,
     fontSize: fontSize.xs,
-    fontWeight: weightMedium,
-    marginTop: 2,
+    fontWeight: weightSemiBold,
+  },
+  modePillTextActive: {
+    color: colors.background,
   },
   scrollView: {
     flex: 1,

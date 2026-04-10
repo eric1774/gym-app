@@ -139,7 +139,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, isVolu
 export function CategoryProgressScreen() {
   const navigation = useNavigation<ScreenNavProp>();
   const route = useRoute<ScreenRouteProp>();
-  const { category, viewMode } = route.params;
+  const { category, viewMode: initialViewMode } = route.params;
+  const [viewMode, setViewMode] = useState<'strength' | 'volume'>(initialViewMode ?? 'strength');
   const isVolume = viewMode === 'volume';
 
   const [exercises, setExercises] = useState<CategoryExerciseProgress[]>([]);
@@ -163,7 +164,7 @@ export function CategoryProgressScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, [category, timeRange]),
+    }, [category, timeRange, isVolume]),
   );
 
   const title = category.charAt(0).toUpperCase() + category.slice(1);
@@ -178,14 +179,9 @@ export function CategoryProgressScreen() {
           activeOpacity={0.7}>
           <Text style={styles.backArrow}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          {isVolume && (
-            <Text style={styles.volumeSubtitle}>Volume</Text>
-          )}
-        </View>
+        <Text style={[styles.headerTitle, { flex: 1 }]} numberOfLines={1}>
+          {title}
+        </Text>
         <Text style={styles.exerciseCountBadge}>
           {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'}
         </Text>
@@ -215,6 +211,21 @@ export function CategoryProgressScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          <View style={{ flex: 1 }} />
+          <View style={styles.modePill}>
+            <TouchableOpacity
+              style={[styles.modePillButton, !isVolume && styles.modePillButtonActive]}
+              activeOpacity={0.7}
+              onPress={() => setViewMode('strength')}>
+              <Text style={[styles.modePillText, !isVolume && styles.modePillTextActive]}>S</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modePillButton, isVolume && styles.modePillButtonActive]}
+              activeOpacity={0.7}
+              onPress={() => setViewMode('volume')}>
+              <Text style={[styles.modePillText, isVolume && styles.modePillTextActive]}>V</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Exercise list or empty state */}
@@ -274,12 +285,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: weightBold,
   },
-  volumeSubtitle: {
-    color: colors.secondary,
-    fontSize: fontSize.xs,
-    fontWeight: weightMedium,
-    marginTop: 2,
-  },
   exerciseCountBadge: {
     color: colors.secondary,
     fontSize: fontSize.sm,
@@ -314,6 +319,30 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: colors.background,
     fontWeight: weightSemiBold,
+  },
+  modePill: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    padding: 2,
+  },
+  modePillButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 6,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  modePillButtonActive: {
+    backgroundColor: colors.accent,
+  },
+  modePillText: {
+    color: colors.secondary,
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+  },
+  modePillTextActive: {
+    color: colors.background,
   },
   emptyContainer: {
     paddingVertical: spacing.xxxl,
