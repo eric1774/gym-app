@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { exportAllData } from '../db/dashboard';
 import { saveFileToDevice } from '../native/FileSaver';
-import { repairProgramData } from '../db/repair';
+import { scanDatabase, fixDatabaseIssues, type DiagnosticResult } from '../db/repair';
 import { getHRSettings, setAge, setMaxHrOverride } from '../services/HRSettingsService';
 import { DeviceScanSheet } from './DeviceScanSheet';
 import { useHeartRate } from '../context/HeartRateContext';
@@ -26,7 +26,9 @@ export function SettingsScreen() {
   const navigation = useNavigation();
   const { pairedDeviceName, disconnect } = useHeartRate();
   const [isExporting, setIsExporting] = useState(false);
-  const [isRepairing, setIsRepairing] = useState(false);
+  const [healthCheckResult, setHealthCheckResult] = useState<DiagnosticResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
 
   // HR Monitor card state
   const [ageValue, setAgeValue] = useState<string>('');
@@ -137,29 +139,44 @@ export function SettingsScreen() {
     loadSettings(); // Reload settings — user may have just paired
   }, [loadSettings]);
 
-  const handleRepair = useCallback(async () => {
+  const handleScan = useCallback(async () => {
+    setIsScanning(true);
+    try {
+      const result = await scanDatabase();
+      setHealthCheckResult(result);
+    } catch (e: any) {
+      Alert.alert('Scan Failed', e?.message ?? 'Unknown error');
+    } finally {
+      setIsScanning(false);
+    }
+  }, []);
+
+  const handleFix = useCallback(async () => {
+    if (!healthCheckResult || healthCheckResult.totalIssues === 0) return;
     Alert.alert(
-      'Repair Data',
-      'Reset week to 4, remove bogus week 5-8 sessions, and restore March 24/25 workouts?',
+      'Fix Issues',
+      `Apply fixes for ${healthCheckResult.totalIssues} issue(s)?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Repair',
+          text: 'Fix All',
+          style: 'destructive',
           onPress: async () => {
-            setIsRepairing(true);
+            setIsFixing(true);
             try {
-              const result = await repairProgramData();
-              Alert.alert('Repair Complete', result);
+              const fix = await fixDatabaseIssues(healthCheckResult);
+              Alert.alert('Fixed', fix.details.join('\n'));
+              setHealthCheckResult(null);
             } catch (e: any) {
-              Alert.alert('Repair Failed', e?.message ?? 'Unknown error');
+              Alert.alert('Fix Failed', e?.message ?? 'Unknown error');
             } finally {
-              setIsRepairing(false);
+              setIsFixing(false);
             }
           },
         },
       ],
     );
-  }, []);
+  }, [healthCheckResult]);
 
   const handleExport = useCallback(async () => {
     setIsExporting(true);
@@ -302,23 +319,69 @@ export function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Repair Data card */}
+        {/* Database Health Check card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Repair Data</Text>
+          <Text style={styles.cardTitle}>Database Health Check</Text>
           <Text style={styles.cardDescription}>
-            Fix week counter (reset to 4), remove bogus week 5-8 sessions, and restore March 24/25 workouts
+            Scan for orphaned records, abandoned sessions, and data inconsistencies
           </Text>
-          <TouchableOpacity
-            style={[styles.exportButton, styles.repairButton]}
-            onPress={handleRepair}
-            disabled={isRepairing}
-            activeOpacity={0.85}>
-            {isRepairing ? (
-              <ActivityIndicator color={colors.background} size="small" />
-            ) : (
-              <Text style={styles.exportButtonText}>Repair</Text>
-            )}
-          </TouchableOpacity>
+
+          {(isScanning || isFixing) && (
+            <View style={{ alignItems: 'center', paddingVertical: spacing.md }}>
+              <ActivityIndicator color={colors.accent} size="small" />
+              <Text style={[styles.cardDescription, { marginTop: spacing.xs, marginBottom: 0 }]}>
+                {isScanning ? 'Scanning...' : 'Fixing...'}
+              </Text>
+            </View>
+          )}
+
+          {healthCheckResult && !isScanning && !isFixing && (
+            <View style={{ marginBottom: spacing.md }}>
+              {Object.values(healthCheckResult.categories).map((cat) => (
+                <View key={cat.label} style={styles.healthCheckRow}>
+                  <Text style={styles.healthCheckLabel}>
+                    {cat.issueCount === 0 ? '\u2713' : '\u26A0'} {cat.label}
+                  </Text>
+                  <Text style={[
+                    styles.healthCheckStatus,
+                    { color: cat.issueCount === 0 ? colors.accent : colors.danger },
+                  ]}>
+                    {cat.issueCount === 0 ? 'OK' : `${cat.issueCount} issue${cat.issueCount > 1 ? 's' : ''}`}
+                  </Text>
+                </View>
+              ))}
+
+              {healthCheckResult.totalIssues === 0 ? (
+                <Text style={styles.healthCheckHealthy}>Database is Healthy!</Text>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.fixButton}
+                    onPress={handleFix}
+                    activeOpacity={0.85}>
+                    <Text style={styles.exportButtonText}>
+                      Fix {healthCheckResult.totalIssues} Issue{healthCheckResult.totalIssues > 1 ? 's' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.rescanButton}
+                    onPress={handleScan}
+                    activeOpacity={0.85}>
+                    <Text style={styles.rescanText}>Re-scan</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
+
+          {!healthCheckResult && !isScanning && !isFixing && (
+            <TouchableOpacity
+              style={styles.exportButton}
+              onPress={handleScan}
+              activeOpacity={0.85}>
+              <Text style={styles.exportButtonText}>Run Health Check</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.aboutCard}>
@@ -402,8 +465,48 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.background,
   },
-  repairButton: {
-    backgroundColor: '#E67E22',
+  healthCheckRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  healthCheckLabel: {
+    fontSize: fontSize.base,
+    color: colors.primary,
+    fontWeight: weightRegular,
+  },
+  healthCheckStatus: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+  },
+  healthCheckHealthy: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.accent,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  fixButton: {
+    backgroundColor: colors.danger,
+    borderRadius: 10,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
+  rescanButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  rescanText: {
+    fontSize: fontSize.sm,
+    color: colors.accent,
+    fontWeight: weightBold,
   },
   aboutCard: {
     backgroundColor: colors.surface,
