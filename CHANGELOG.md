@@ -4,14 +4,12 @@ All notable changes to GymTrack are documented here.
 
 ---
 
-## v1.9 — Food Database & Meal Builder
+## v1.9 — Custom Foods & Meal Builder
 *April 2026*
 
 ### New
 
-- **Food Database**: Search from nearly 8,000 USDA foods when logging meals. Results show macro breakdowns at a glance, and your most frequently logged foods appear at the top for quick access.
-
-- **Custom Foods**: Can't find what you're eating? Create your own food entries with custom macro values. Custom foods integrate seamlessly into search results and the meal builder.
+- **Custom Food Database**: Create your own foods by entering macros per 100g (protein, carbs, fat). The app calculates exact macro totals for any portion size you log — just enter the grams and it does the math. Your foods are saved and searchable for future use, with your most frequently logged foods surfacing at the top.
 
 - **Meal Builder**: Build complex meals from multiple foods instead of manually entering macro totals. Select foods, dial in portion sizes with a slide-up gram input, and see a live macro total update as you build. One tap logs everything.
 
@@ -32,7 +30,6 @@ All notable changes to GymTrack are documented here.
 ### Fixed
 
 - Fixed an issue where the superset round counter could display a number higher than the target total
-- Fixed a database seeding issue that could cause duplicate food entries if the migration was interrupted and retried
 - Fixed app startup showing an infinite spinner if the database failed to initialize — now shows a clear error message
 
 ---
