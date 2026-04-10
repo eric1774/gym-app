@@ -700,12 +700,14 @@ export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
   const result = await executeSql(
     database,
     `SELECT e.id AS exercise_id, e.category, e.measurement_type,
-            ws.session_id, wss.completed_at, ws.weight_kg, ws.reps
+            ws.session_id, wss.completed_at,
+            SUM(ws.weight_kg * ws.reps) AS session_volume
      FROM workout_sets ws
      INNER JOIN exercises e ON e.id = ws.exercise_id
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      WHERE wss.completed_at IS NOT NULL
        AND ws.is_warmup = 0
+     GROUP BY e.id, ws.session_id
      ORDER BY wss.completed_at ASC`,
   );
 
@@ -719,7 +721,6 @@ export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
     const row = result.rows.item(i);
     const category: string = row.category;
     const sessionId: number = row.session_id;
-    const volume = (row.weight_kg ?? 0) * (row.reps ?? 0);
 
     if (!categoryMap.has(category)) {
       categoryMap.set(category, {
@@ -733,11 +734,11 @@ export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
 
     const existing = cat.sessions.get(sessionId);
     if (existing) {
-      existing.volumeSum += volume;
+      existing.volumeSum += row.session_volume;  // sum across exercises in category
     } else {
       cat.sessions.set(sessionId, {
         completedAt: row.completed_at,
-        volumeSum: volume,
+        volumeSum: row.session_volume,
       });
     }
   }
@@ -788,7 +789,8 @@ export async function getCategoryExerciseVolumeProgress(
   const result = await executeSql(
     database,
     `SELECT e.id AS exercise_id, e.name AS exercise_name, e.measurement_type,
-            ws.session_id, wss.completed_at, ws.weight_kg, ws.reps
+            ws.session_id, wss.completed_at,
+            SUM(ws.weight_kg * ws.reps) AS session_volume
      FROM workout_sets ws
      INNER JOIN exercises e ON e.id = ws.exercise_id
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
@@ -796,6 +798,7 @@ export async function getCategoryExerciseVolumeProgress(
        AND wss.completed_at IS NOT NULL
        AND ws.is_warmup = 0
        ${dateFilter}
+     GROUP BY e.id, ws.session_id
      ORDER BY wss.completed_at ASC`,
     params,
   );
@@ -810,7 +813,6 @@ export async function getCategoryExerciseVolumeProgress(
     const row = result.rows.item(i);
     const exerciseId: number = row.exercise_id;
     const sessionId: number = row.session_id;
-    const volume = (row.weight_kg ?? 0) * (row.reps ?? 0);
 
     if (!exerciseMap.has(exerciseId)) {
       exerciseMap.set(exerciseId, {
@@ -822,11 +824,11 @@ export async function getCategoryExerciseVolumeProgress(
     const ex = exerciseMap.get(exerciseId)!;
     const existing = ex.sessions.get(sessionId);
     if (existing) {
-      existing.volumeSum += volume;
+      existing.volumeSum += row.session_volume;  // should not happen with proper GROUP BY, but safe
     } else {
       ex.sessions.set(sessionId, {
         completedAt: row.completed_at,
-        volumeSum: volume,
+        volumeSum: row.session_volume,
       });
     }
   }

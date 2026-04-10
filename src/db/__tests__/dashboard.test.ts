@@ -16,6 +16,8 @@ import {
   exportAllData,
   getCategorySummaries,
   getCategoryExerciseProgress,
+  getCategoryVolumeSummaries,
+  getCategoryExerciseVolumeProgress,
 } from '../dashboard';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -685,6 +687,123 @@ describe('getCategoryExerciseProgress', () => {
   it('calls executeSql exactly once (no N+1)', async () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
     await getCategoryExerciseProgress('back');
+    expect(mockExecuteSql).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getCategoryVolumeSummaries ───────────────────────────────────────
+
+describe('getCategoryVolumeSummaries', () => {
+  it('groups rows by category and returns correct volume summaries from SQL-aggregated rows', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // chest: 2 exercises across 2 sessions — rows already aggregated by SQL GROUP BY
+        { exercise_id: 1, category: 'chest', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', session_volume: 640 },
+        { exercise_id: 2, category: 'chest', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', session_volume: 720 },
+        { exercise_id: 1, category: 'chest', measurement_type: 'reps', session_id: 11, completed_at: '2026-01-17T10:00:00Z', session_volume: 510 },
+        // legs: 1 exercise, 1 session
+        { exercise_id: 3, category: 'legs', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', session_volume: 500 },
+      ]),
+    );
+
+    const result = await getCategoryVolumeSummaries();
+
+    expect(result).toHaveLength(2);
+
+    const chest = result.find(s => s.category === 'chest')!;
+    expect(chest.exerciseCount).toBe(2);
+    // Session 10 total: 640 + 720 = 1360; Session 11: 510
+    expect(chest.sparklinePoints).toEqual([1360, 510]);
+    expect(chest.lastTrainedAt).toBe('2026-01-17T10:00:00Z');
+    expect(chest.measurementType).toBe('reps');
+
+    const legs = result.find(s => s.category === 'legs')!;
+    expect(legs.exerciseCount).toBe(1);
+    expect(legs.sparklinePoints).toEqual([500]);
+    expect(legs.lastTrainedAt).toBe('2026-01-10T10:00:00Z');
+  });
+
+  it('returns empty array when no training data', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    const result = await getCategoryVolumeSummaries();
+    expect(result).toEqual([]);
+  });
+
+  it('SQL query uses GROUP BY for aggregation', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryVolumeSummaries();
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain('GROUP BY e.id, ws.session_id');
+    expect(sql).toContain('SUM(ws.weight_kg * ws.reps) AS session_volume');
+  });
+
+  it('calls executeSql exactly once (no N+1)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryVolumeSummaries();
+    expect(mockExecuteSql).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── getCategoryExerciseVolumeProgress ────────────────────────────────
+
+describe('getCategoryExerciseVolumeProgress', () => {
+  it('returns per-exercise volume progress from SQL-aggregated rows', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // Exercise 1: 3 sessions — each row is one (exercise, session) pair from GROUP BY
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', session_volume: 640 },
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 11, completed_at: '2026-01-17T10:00:00Z', session_volume: 700 },
+        { exercise_id: 1, exercise_name: 'Bench Press', measurement_type: 'reps', session_id: 12, completed_at: '2026-01-24T10:00:00Z', session_volume: 750 },
+        // Exercise 2: 1 session
+        { exercise_id: 2, exercise_name: 'Incline DB', measurement_type: 'reps', session_id: 10, completed_at: '2026-01-10T10:00:00Z', session_volume: 300 },
+      ]),
+    );
+
+    const result = await getCategoryExerciseVolumeProgress('chest');
+
+    expect(result).toHaveLength(2);
+
+    const bench = result.find(e => e.exerciseId === 1)!;
+    expect(bench.exerciseName).toBe('Bench Press');
+    expect(bench.sparklinePoints).toEqual([640, 700, 750]);
+    expect(bench.currentBest).toBe(750);
+    expect(bench.previousBest).toBe(700);
+    expect(bench.lastTrainedAt).toBe('2026-01-24T10:00:00Z');
+
+    const incline = result.find(e => e.exerciseId === 2)!;
+    expect(incline.sparklinePoints).toEqual([300]);
+    expect(incline.currentBest).toBe(300);
+    expect(incline.previousBest).toBeNull();
+  });
+
+  it('returns empty array when no data for category', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    const result = await getCategoryExerciseVolumeProgress('shoulders');
+    expect(result).toEqual([]);
+  });
+
+  it('SQL query uses GROUP BY for aggregation', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryExerciseVolumeProgress('chest');
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain('GROUP BY e.id, ws.session_id');
+    expect(sql).toContain('SUM(ws.weight_kg * ws.reps) AS session_volume');
+  });
+
+  it('adds date filter when timeRange is not All', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryExerciseVolumeProgress('chest', '3M');
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain('AND wss.completed_at >= ?');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toHaveLength(2);
+    expect(params[0]).toBe('chest');
+    expect(typeof params[1]).toBe('string');
+  });
+
+  it('calls executeSql exactly once (no N+1)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getCategoryExerciseVolumeProgress('back');
     expect(mockExecuteSql).toHaveBeenCalledTimes(1);
   });
 });
