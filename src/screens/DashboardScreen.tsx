@@ -10,12 +10,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getCategorySummaries, getNextWorkoutDay } from '../db/dashboard';
+import { getCategorySummaries, getCategoryVolumeSummaries, getNextWorkoutDay } from '../db/dashboard';
 import { getProgramDayExercises } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
 import { CategorySummary, NextWorkoutInfo, Exercise } from '../types';
 import { useSession } from '../context/SessionContext';
@@ -57,6 +57,7 @@ export function DashboardScreen() {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
   const [activeElapsed, setActiveElapsed] = useState(0);
+  const [viewMode, setViewMode] = useState<'strength' | 'volume'>('strength');
 
   // Elapsed timer for active session state
   useEffect(() => {
@@ -75,7 +76,7 @@ export function DashboardScreen() {
       (async () => {
         try {
           const [result, nextDay] = await Promise.all([
-            getCategorySummaries(),
+            viewMode === 'volume' ? getCategoryVolumeSummaries() : getCategorySummaries(),
             getNextWorkoutDay(),
           ]);
           if (!cancelled) {
@@ -87,7 +88,7 @@ export function DashboardScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, []),
+    }, [viewMode]),
   );
 
   const handleQuickStart = useCallback(async () => {
@@ -131,6 +132,21 @@ export function DashboardScreen() {
         >
           <GearIcon color={colors.secondary} />
         </TouchableOpacity>
+      </View>
+
+      {/* Strength / Volume toggle */}
+      <View style={styles.toggleRow}>
+        {(['strength', 'volume'] as const).map(mode => (
+          <TouchableOpacity
+            key={mode}
+            style={[styles.toggleButton, viewMode === mode && styles.toggleButtonActive]}
+            activeOpacity={0.7}
+            onPress={() => setViewMode(mode)}>
+            <Text style={[styles.toggleText, viewMode === mode && styles.toggleTextActive]}>
+              {mode === 'strength' ? 'Strength' : 'Volume'}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Next Workout Card — only shown when an activated program exists */}
@@ -184,7 +200,8 @@ export function DashboardScreen() {
                 <CategorySummaryCard
                   summary={summary}
                   isStale={isStale}
-                  onPress={() => navigation.navigate('CategoryProgress', { category: summary.category })}
+                  viewMode={viewMode}
+                  onPress={() => navigation.navigate('CategoryProgress', { category: summary.category, viewMode })}
                 />
               </View>
             );
@@ -228,6 +245,32 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     textAlign: 'center',
     lineHeight: 22,
+  },
+
+  /* ── Strength / Volume Toggle ───────────────────────────────────── */
+  toggleRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  toggleButton: {
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+  },
+  toggleButtonActive: {
+    backgroundColor: colors.accent,
+  },
+  toggleText: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+  },
+  toggleTextActive: {
+    color: colors.background,
+    fontWeight: weightSemiBold,
   },
 
   /* ── Next Workout Card ───────────────────────────────────────────── */

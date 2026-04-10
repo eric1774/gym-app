@@ -11,9 +11,10 @@ interface CategorySummaryCardProps {
   summary: CategorySummary;
   isStale: boolean;
   onPress: () => void;
+  viewMode?: 'strength' | 'volume';
 }
 
-function formatDelta(summary: CategorySummary): string | null {
+function formatDelta(summary: CategorySummary, isVolume: boolean): string | null {
   const { sparklinePoints, measurementType } = summary;
   if (sparklinePoints.length < 2) {
     return null;
@@ -21,6 +22,9 @@ function formatDelta(summary: CategorySummary): string | null {
   const delta = sparklinePoints[sparklinePoints.length - 1] - sparklinePoints[0];
   if (delta <= 0) {
     return null;
+  }
+  if (isVolume) {
+    return `+${Math.round(delta).toLocaleString()} lbs`;
   }
   if (measurementType === 'reps') {
     return `+${delta.toFixed(1)} lb`;
@@ -32,8 +36,9 @@ export const CategorySummaryCard: React.FC<CategorySummaryCardProps> = ({
   summary,
   isStale,
   onPress,
+  viewMode,
 }) => {
-  const delta = formatDelta(summary);
+  const delta = formatDelta(summary, viewMode === 'volume');
   const accentColor = getCategoryColor(summary.category);
   const categoryLabel = summary.category.charAt(0).toUpperCase() + summary.category.slice(1);
   const [sparkWidth, setSparkWidth] = useState(0);
