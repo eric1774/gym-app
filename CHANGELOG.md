@@ -43,7 +43,7 @@ All notable changes to GymTrack are documented here.
 
 - **Hydration Goal Setup**: First-time users are guided through a simple setup card to set their daily water target. Edit your goal inline anytime without leaving the screen.
 
-- **Hydration Stats Dashboard**: View your hydration stats at a glance — daily progress, streaks, and trends displayed in easy-to-read stat cards right on the Hydration tab.
+- **Hydration Stats Dashboard**: View your hydration stats at a glance — daily progress and streaks displayed in easy-to-read stat cards right on the Hydration tab.
 
 ### Improved
 
