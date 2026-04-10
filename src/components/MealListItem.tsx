@@ -24,10 +24,6 @@ interface MealListItemProps {
 
 const DELETE_THRESHOLD = -80;
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export const MealListItem = React.memo(function MealListItem({
   meal,
   onEdit,
@@ -83,9 +79,6 @@ export const MealListItem = React.memo(function MealListItem({
             <Text style={styles.checkMark}>{'\u2713'}</Text>
           </View>
           <View style={styles.leftContent}>
-            <Text style={styles.mealTypeLabel}>
-              {capitalize(meal.mealType)}:
-            </Text>
             {meal.description ? (
               <Text style={styles.description} numberOfLines={1}>
                 {meal.description}
@@ -173,10 +166,6 @@ const styles = StyleSheet.create({
   repeatIcon: {
     fontSize: 20,
     color: colors.accent,
-  },
-  mealTypeLabel: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
   },
   description: {
     fontSize: fontSize.base,

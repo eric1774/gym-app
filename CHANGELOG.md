@@ -4,6 +4,39 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v1.9 — Food Database & Meal Builder
+*April 2026*
+
+### New
+
+- **Food Database**: Search from nearly 8,000 USDA foods when logging meals. Results show macro breakdowns at a glance, and your most frequently logged foods appear at the top for quick access.
+
+- **Custom Foods**: Can't find what you're eating? Create your own food entries with custom macro values. Custom foods integrate seamlessly into search results and the meal builder.
+
+- **Meal Builder**: Build complex meals from multiple foods instead of manually entering macro totals. Select foods, dial in portion sizes with a slide-up gram input, and see a live macro total update as you build. One tap logs everything.
+
+- **Smart Portion Suggestions**: When adding a food to a meal, the builder remembers the last portion size you used for that food and pre-fills it as ghost text — no need to type the same amount twice.
+
+- **Repeat Meals**: See a repeat icon on any builder-created meal in your log. Tap it to instantly load all that meal's foods into a new builder session — perfect for meals you eat regularly.
+
+- **Save to Meal Library**: Toggle "Save to Library" when logging a builder meal to save it for one-tap reuse later. You can also start building directly from the Meal Library screen.
+
+### Improved
+
+- **Categorized Daily Log**: Today's Logs now groups your meals by category — Breakfast, Lunch, Dinner, and Snacks — each in its own card with an item count badge. Only categories with entries are shown, keeping the view clean and organized.
+
+- **Edit Builder Meals**: Tap any builder-created meal in your log to reopen it in the builder with all foods pre-loaded. Change portions, add or remove foods, and save your changes.
+
+- **Tab Renamed**: The "Protein" tab is now "Macros" to better reflect the full macro tracking it provides.
+
+### Fixed
+
+- Fixed an issue where the superset round counter could display a number higher than the target total
+- Fixed a database seeding issue that could cause duplicate food entries if the migration was interrupted and retried
+- Fixed app startup showing an infinite spinner if the database failed to initialize — now shows a clear error message
+
+---
+
 ## v1.8 — Hydration Tracker
 *April 5, 2026*
 

@@ -15,16 +15,22 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { macrosDb, foodsDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { MacroMeal, MacroSettings, MacroValues } from '../types';
+import { MacroMeal, MacroSettings, MacroValues, MealType, MEAL_TYPES } from '../types';
 import { MacroProgressCard } from './MacroProgressCard';
 import { MacroGoalSetupForm } from './MacroGoalSetupForm';
 import { MacroChart } from './MacroChart';
 import { MealListItem } from './MealListItem';
-import { StreakAverageRow } from './StreakAverageRow';
 import { AddMealModal } from '../screens/AddMealModal';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+
+const MEAL_TYPE_LABELS: Record<MealType, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snacks',
+};
 
 interface MacrosViewProps {
   navigation: NativeStackNavigationProp<ProteinStackParamList>;
@@ -37,8 +43,7 @@ export function MacrosView({ navigation }: MacrosViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingMeal, setEditingMeal] = useState<MacroMeal | null>(null);
-  const [average, setAverage] = useState<number | null>(null);
-  const [streak, setStreak] = useState(0);
+  const [streaks, setStreaks] = useState<MacroValues>({ protein: 0, carbs: 0, fat: 0 });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [mealFoodsCounts, setMealFoodsCounts] = useState<Record<number, number>>({});
@@ -46,6 +51,24 @@ export function MacrosView({ navigation }: MacrosViewProps) {
   const [selectedDate, setSelectedDate] = useState(getLocalDateString());
 
   const isToday = selectedDate === getLocalDateString();
+
+  const groupedMeals = useMemo(() => {
+    const groups: Record<MealType, MacroMeal[]> = {
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snack: [],
+    };
+    for (const meal of meals) {
+      groups[meal.mealType].push(meal);
+    }
+    return groups;
+  }, [meals]);
+
+  const activeMealTypes = useMemo(
+    () => MEAL_TYPES.filter(type => groupedMeals[type].length > 0),
+    [groupedMeals],
+  );
 
   const dateLabel = useMemo(() => {
     if (isToday) return 'Today';
@@ -56,18 +79,16 @@ export function MacrosView({ navigation }: MacrosViewProps) {
   }, [selectedDate, isToday]);
 
   const refreshData = useCallback(async () => {
-    const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak] = await Promise.all([
+    const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedStreaks] = await Promise.all([
       macrosDb.getMacroGoals(),
       macrosDb.getTodayMacroTotals(),
       macrosDb.getMealsByDate(selectedDate),
-      macrosDb.get7DayAverage(),
-      macrosDb.getStreakDays(),
+      macrosDb.getMacroStreaks(),
     ]);
     setGoals(fetchedGoals);
     setTodayTotals(fetchedTotals);
     setMeals(fetchedMeals);
-    setAverage(fetchedAverage?.protein ?? null);
-    setStreak(fetchedStreak);
+    setStreaks(fetchedStreaks);
     setChartRefreshKey(k => k + 1);
     // Fetch which meals have food data for repeat icon / edit routing
     const mealIds = fetchedMeals.map(m => m.id);
@@ -87,19 +108,17 @@ export function MacrosView({ navigation }: MacrosViewProps) {
       setSelectedDate(getLocalDateString());
       async function load() {
         const today = getLocalDateString();
-        const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedAverage, fetchedStreak] = await Promise.all([
+        const [fetchedGoals, fetchedTotals, fetchedMeals, fetchedStreaks] = await Promise.all([
           macrosDb.getMacroGoals(),
           macrosDb.getTodayMacroTotals(),
           macrosDb.getMealsByDate(today),
-          macrosDb.get7DayAverage(),
-          macrosDb.getStreakDays(),
+          macrosDb.getMacroStreaks(),
         ]);
         if (!cancelled) {
           setGoals(fetchedGoals);
           setTodayTotals(fetchedTotals);
           setMeals(fetchedMeals);
-          setAverage(fetchedAverage?.protein ?? null);
-          setStreak(fetchedStreak);
+          setStreaks(fetchedStreaks);
           setIsLoading(false);
           // Fetch which meals have food data for repeat icon / edit routing
           const mealIds = fetchedMeals.map(m => m.id);
@@ -237,9 +256,8 @@ export function MacrosView({ navigation }: MacrosViewProps) {
           goals={goals}
           todayTotals={todayTotals}
           onGoalChanged={() => refreshData()}
+          streaks={streaks}
         />
-
-        <StreakAverageRow streak={streak} average={average} />
 
         <TouchableOpacity style={styles.addMealButton} onPress={() => navigation.navigate('MealLibrary')}>
           <Text style={styles.addMealButtonText}>Meal Library</Text>
@@ -257,25 +275,38 @@ export function MacrosView({ navigation }: MacrosViewProps) {
               <Text style={[styles.dateNavArrowText, isToday && styles.dateNavArrowDisabled]}>{'\u203A'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.logsContainer}>
-            {meals.length === 0 ? (
+          {meals.length === 0 ? (
+            <View style={styles.logsContainer}>
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>{isToday ? 'No meals logged today' : 'No meals logged'}</Text>
               </View>
-            ) : (
-              meals.map((meal, index) => (
-                <MealListItem
-                  key={meal.id}
-                  meal={meal}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onRepeat={handleRepeat}
-                  hasMealFoods={(mealFoodsCounts[meal.id] ?? 0) > 0}
-                  isLast={index === meals.length - 1}
-                />
-              ))
-            )}
-          </View>
+            </View>
+          ) : (
+            activeMealTypes.map(type => {
+              const items = groupedMeals[type];
+              return (
+                <View key={type} style={styles.mealTypeSection}>
+                  <View style={styles.mealTypeHeader}>
+                    <Text style={styles.mealTypeLabel}>{MEAL_TYPE_LABELS[type]}</Text>
+                    <Text style={styles.mealTypeCount}>{items.length}</Text>
+                  </View>
+                  <View style={styles.logsContainer}>
+                    {items.map((meal, index) => (
+                      <MealListItem
+                        key={meal.id}
+                        meal={meal}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onRepeat={handleRepeat}
+                        hasMealFoods={(mealFoodsCounts[meal.id] ?? 0) > 0}
+                        isLast={index === items.length - 1}
+                      />
+                    ))}
+                  </View>
+                </View>
+              );
+            })
+          )}
         </View>
 
         <MacroChart goals={goals} refreshKey={chartRefreshKey} />
@@ -376,6 +407,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
     textAlign: 'center',
+  },
+  mealTypeSection: {
+    marginTop: spacing.md,
+  },
+  mealTypeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  mealTypeLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
+    letterSpacing: 0.5,
+  },
+  mealTypeCount: {
+    fontSize: fontSize.xs,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    marginLeft: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   logsContainer: {
     backgroundColor: colors.surface,
