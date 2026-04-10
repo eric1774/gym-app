@@ -48,9 +48,9 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
   Settings: undefined;
-  CategoryProgress: { category: string };
+  CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
 };
 
 export type ProteinStackParamList = {

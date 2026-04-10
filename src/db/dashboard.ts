@@ -652,6 +652,209 @@ export async function getCategoryExerciseProgress(
   return progressList;
 }
 
+// ── Volume Query Functions ──────────────────────────────────────────
+
+/**
+ * For each completed session containing this exercise, return the total volume
+ * (SUM of weight_kg * reps for non-warmup sets). Ordered oldest-first for charting.
+ * Volume is stored in bestWeightKg field; bestReps is always 0.
+ */
+export async function getExerciseVolumeData(
+  exerciseId: number,
+): Promise<ExerciseProgressPoint[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT ws.exercise_id, ws.session_id, wss.completed_at AS date,
+            SUM(ws.weight_kg * ws.reps) AS volume
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND wss.completed_at IS NOT NULL
+       AND ws.is_warmup = 0
+     GROUP BY ws.session_id
+     ORDER BY wss.completed_at ASC`,
+    [exerciseId],
+  );
+
+  const points: ExerciseProgressPoint[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    points.push({
+      sessionId: row.session_id,
+      date: row.date,
+      bestWeightKg: row.volume ?? 0,
+      bestReps: 0,
+    });
+  }
+  return points;
+}
+
+/**
+ * For each category that has training data, return a volume summary with
+ * exercise count, sparkline of per-session total volume (SUM weight_kg * reps),
+ * last trained date. measurementType is always 'reps' for volume mode.
+ */
+export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT e.id AS exercise_id, e.category, e.measurement_type,
+            ws.session_id, wss.completed_at, ws.weight_kg, ws.reps
+     FROM workout_sets ws
+     INNER JOIN exercises e ON e.id = ws.exercise_id
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE wss.completed_at IS NOT NULL
+       AND ws.is_warmup = 0
+     ORDER BY wss.completed_at ASC`,
+  );
+
+  // Group by category, then by session_id
+  const categoryMap = new Map<string, {
+    exerciseIds: Set<number>;
+    sessions: Map<number, { completedAt: string; volumeSum: number }>;
+  }>();
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const category: string = row.category;
+    const sessionId: number = row.session_id;
+    const volume = (row.weight_kg ?? 0) * (row.reps ?? 0);
+
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, {
+        exerciseIds: new Set(),
+        sessions: new Map(),
+      });
+    }
+
+    const cat = categoryMap.get(category)!;
+    cat.exerciseIds.add(row.exercise_id);
+
+    const existing = cat.sessions.get(sessionId);
+    if (existing) {
+      existing.volumeSum += volume;
+    } else {
+      cat.sessions.set(sessionId, {
+        completedAt: row.completed_at,
+        volumeSum: volume,
+      });
+    }
+  }
+
+  const summaries: CategorySummary[] = [];
+  for (const [category, data] of categoryMap) {
+    const sparklinePoints: number[] = [];
+    let lastTrainedAt = '';
+    for (const session of data.sessions.values()) {
+      sparklinePoints.push(session.volumeSum);
+      lastTrainedAt = session.completedAt;
+    }
+
+    summaries.push({
+      category: category as ExerciseCategory,
+      exerciseCount: data.exerciseIds.size,
+      sparklinePoints,
+      lastTrainedAt,
+      measurementType: 'reps',
+    });
+  }
+
+  return summaries;
+}
+
+/**
+ * For a single category, return per-exercise volume progress with sparkline,
+ * current/previous bests (volume per session), and last trained date.
+ * Supports optional time range filtering.
+ */
+export async function getCategoryExerciseVolumeProgress(
+  category: ExerciseCategory,
+  timeRange?: '1M' | '3M' | '6M' | 'All',
+): Promise<CategoryExerciseProgress[]> {
+  const database = await db;
+
+  let dateFilter = '';
+  const params: (string | number)[] = [category];
+
+  if (timeRange && timeRange !== 'All') {
+    const now = new Date();
+    const months = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : 6;
+    now.setMonth(now.getMonth() - months);
+    dateFilter = 'AND wss.completed_at >= ?';
+    params.push(now.toISOString());
+  }
+
+  const result = await executeSql(
+    database,
+    `SELECT e.id AS exercise_id, e.name AS exercise_name, e.measurement_type,
+            ws.session_id, wss.completed_at, ws.weight_kg, ws.reps
+     FROM workout_sets ws
+     INNER JOIN exercises e ON e.id = ws.exercise_id
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE e.category = ?
+       AND wss.completed_at IS NOT NULL
+       AND ws.is_warmup = 0
+       ${dateFilter}
+     ORDER BY wss.completed_at ASC`,
+    params,
+  );
+
+  // Group by exercise_id, then by session_id
+  const exerciseMap = new Map<number, {
+    exerciseName: string;
+    sessions: Map<number, { completedAt: string; volumeSum: number }>;
+  }>();
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const exerciseId: number = row.exercise_id;
+    const sessionId: number = row.session_id;
+    const volume = (row.weight_kg ?? 0) * (row.reps ?? 0);
+
+    if (!exerciseMap.has(exerciseId)) {
+      exerciseMap.set(exerciseId, {
+        exerciseName: row.exercise_name,
+        sessions: new Map(),
+      });
+    }
+
+    const ex = exerciseMap.get(exerciseId)!;
+    const existing = ex.sessions.get(sessionId);
+    if (existing) {
+      existing.volumeSum += volume;
+    } else {
+      ex.sessions.set(sessionId, {
+        completedAt: row.completed_at,
+        volumeSum: volume,
+      });
+    }
+  }
+
+  const progressList: CategoryExerciseProgress[] = [];
+  for (const [exerciseId, data] of exerciseMap) {
+    const points = Array.from(data.sessions.values());
+    const sparklinePoints = points.map(p => p.volumeSum);
+    const currentBest = sparklinePoints[sparklinePoints.length - 1];
+    const previousBest = sparklinePoints.length >= 2
+      ? sparklinePoints[sparklinePoints.length - 2]
+      : null;
+    const lastTrainedAt = points[points.length - 1].completedAt;
+
+    progressList.push({
+      exerciseId,
+      exerciseName: data.exerciseName,
+      measurementType: 'reps',
+      sparklinePoints,
+      currentBest,
+      previousBest,
+      lastTrainedAt,
+    });
+  }
+
+  return progressList;
+}
+
 // ── Full Data Export ────────────────────────────────────────────────
 
 /**
