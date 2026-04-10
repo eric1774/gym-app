@@ -11,12 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
-import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseVolumeData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
+import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
 import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession } from '../types';
-type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
 type RouteParams = RouteProp<{ ExerciseProgress: ExerciseProgressParams }, 'ExerciseProgress'>;
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
@@ -56,9 +56,8 @@ function formatDuration(totalSeconds: number): string {
 export function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
-  const { exerciseId, exerciseName, measurementType, category, viewMode } = route.params;
+  const { exerciseId, exerciseName, measurementType, category } = route.params;
   const isTimed = measurementType === 'timed';
-  const isVolume = viewMode === 'volume';
   const accentColor = category ? getCategoryColor(category) : colors.accent;
 
   const [progressData, setProgressData] = useState<ExerciseProgressPoint[]>([]);
@@ -70,9 +69,7 @@ export function ExerciseProgressScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const progressFn = isVolume
-            ? getExerciseVolumeData
-            : isTimed ? getTimedExerciseProgressData : getExerciseProgressData;
+          const progressFn = isTimed ? getTimedExerciseProgressData : getExerciseProgressData;
           const [progress, history] = await Promise.all([
             progressFn(exerciseId),
             getExerciseHistory(exerciseId),
@@ -86,7 +83,7 @@ export function ExerciseProgressScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, [exerciseId, isVolume, isTimed]),
+    }, [exerciseId]),
   );
 
   const confirmDeleteHistory = useCallback(
@@ -126,6 +123,12 @@ export function ExerciseProgressScreen() {
     return progressData.filter(p => new Date(p.date) >= threshold);
   }, [progressData, timeRange]);
 
+  const filteredHistory = useMemo(() => {
+    const threshold = getDateThreshold(timeRange);
+    if (!threshold) { return historyData; }
+    return historyData.filter(s => new Date(s.date) >= threshold);
+  }, [historyData, timeRange]);
+
   const chartData = useMemo(() => {
     if (filteredProgress.length === 0) { return null; }
 
@@ -149,7 +152,7 @@ export function ExerciseProgressScreen() {
         },
       ],
     };
-  }, [filteredProgress, isTimed, isVolume]);
+  }, [filteredProgress, isTimed]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -200,7 +203,7 @@ export function ExerciseProgressScreen() {
               data={chartData}
               width={CHART_WIDTH}
               height={220}
-              yAxisSuffix={isVolume ? ' lbs' : isTimed ? 's' : ' lb'}
+              yAxisSuffix={isTimed ? 's' : ' lb'}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
               withOuterLines={false}
@@ -208,7 +211,7 @@ export function ExerciseProgressScreen() {
                 backgroundColor: colors.surface,
                 backgroundGradientFrom: colors.surface,
                 backgroundGradientTo: colors.surface,
-                decimalPlaces: (isTimed || isVolume) ? 0 : 1,
+                decimalPlaces: isTimed ? 0 : 1,
                 color: () => accentColor,
                 labelColor: () => colors.secondary,
                 propsForDots: {
@@ -226,10 +229,10 @@ export function ExerciseProgressScreen() {
         {/* History section */}
         <Text style={styles.sectionTitle}>History</Text>
 
-        {historyData.length === 0 ? (
+        {filteredHistory.length === 0 ? (
           <Text style={styles.noDataText}>No sessions recorded yet.</Text>
         ) : (
-          historyData.map(session => (
+          filteredHistory.map(session => (
             <View key={session.sessionId} style={[styles.historyCard, { borderLeftColor: accentColor, borderLeftWidth: 3 }]}>
               <View style={styles.historyCardHeader}>
                 <Text style={styles.historyDate}>
@@ -242,15 +245,7 @@ export function ExerciseProgressScreen() {
                   <Text style={styles.deleteButton}>{'✕'}</Text>
                 </TouchableOpacity>
               </View>
-              {isVolume ? (
-                <Text style={styles.setText}>
-                  {'Volume: ' + Math.round(
-                    session.sets
-                      .filter(s => !s.isWarmup)
-                      .reduce((sum, s) => sum + (s.weightKg ?? 0) * (s.reps ?? 0), 0),
-                  ).toLocaleString() + ' lbs'}
-                </Text>
-              ) : session.sets.map(set => (
+              {session.sets.map(set => (
                 <Text
                   key={set.setNumber}
                   style={[

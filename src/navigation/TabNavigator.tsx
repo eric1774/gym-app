@@ -37,7 +37,7 @@ export type CalendarStackParamList = {
 
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
 };
 
 export type ProgramsStackParamList = {
@@ -265,7 +265,7 @@ export function TabNavigator() {
         name="ProteinTab"
         component={ProteinStackNavigator}
         options={{
-          tabBarLabel: 'Health',
+          tabBarLabel: 'Protein',
           tabBarIcon: ({ color }) => <CarrotIcon color={color} />,
         }}
       />

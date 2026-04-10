@@ -10,8 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getCategoryExerciseProgress, getCategoryExerciseVolumeProgress } from '../db/dashboard';
-import { CategoryExerciseProgress } from '../types';
+import { getCategoryExerciseProgress } from '../db/dashboard';
+import { CategoryExerciseProgress, ExerciseCategory } from '../types';
 import { DashboardStackParamList } from '../navigation/TabNavigator';
 import { MiniSparkline } from '../components/MiniSparkline';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
@@ -25,26 +25,20 @@ type ScreenNavProp = NativeStackNavigationProp<DashboardStackParamList, 'Categor
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
 
-function formatBestValue(exercise: CategoryExerciseProgress, viewMode?: 'strength' | 'volume'): string {
-  if (viewMode === 'volume') {
-    return `${Math.round(exercise.currentBest).toLocaleString()} lbs`;
-  }
+function formatBestValue(exercise: CategoryExerciseProgress): string {
   if (exercise.measurementType === 'timed') {
     return `${Math.round(exercise.currentBest)}s`;
   }
   return `${exercise.currentBest % 1 === 0 ? exercise.currentBest : exercise.currentBest.toFixed(1)} lb`;
 }
 
-function formatDelta(exercise: CategoryExerciseProgress, viewMode?: 'strength' | 'volume'): string | null {
+function formatDelta(exercise: CategoryExerciseProgress): string | null {
   if (exercise.previousBest === null || exercise.sparklinePoints.length < 2) {
     return null;
   }
   const delta = exercise.currentBest - exercise.previousBest;
   if (delta <= 0) {
     return '\u2013'; // en-dash
-  }
-  if (viewMode === 'volume') {
-    return `+${Math.round(delta).toLocaleString()} lbs`;
   }
   if (exercise.measurementType === 'timed') {
     return `+${Math.round(delta)}s`;
@@ -56,13 +50,12 @@ interface ExerciseRowProps {
   exercise: CategoryExerciseProgress;
   accentColor: string;
   onPress: () => void;
-  viewMode?: 'strength' | 'volume';
 }
 
-const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPress, viewMode }) => {
-  const delta = formatDelta(exercise, viewMode);
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPress }) => {
+  const delta = formatDelta(exercise);
   const isPositiveDelta = delta !== null && delta !== '\u2013';
-  const bestValue = formatBestValue(exercise, viewMode);
+  const bestValue = formatBestValue(exercise);
   const sessionCount = exercise.sparklinePoints.length;
   const [sparkWidth, setSparkWidth] = useState(0);
 
@@ -139,8 +132,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPres
 export function CategoryProgressScreen() {
   const navigation = useNavigation<ScreenNavProp>();
   const route = useRoute<ScreenRouteProp>();
-  const { category, viewMode: navViewMode } = route.params;
-  const viewMode = navViewMode ?? 'strength';
+  const { category } = route.params;
 
   const [exercises, setExercises] = useState<CategoryExerciseProgress[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('All');
@@ -152,9 +144,7 @@ export function CategoryProgressScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const data = viewMode === 'volume'
-            ? await getCategoryExerciseVolumeProgress(category as any, timeRange)
-            : await getCategoryExerciseProgress(category as any, timeRange);
+          const data = await getCategoryExerciseProgress(category as ExerciseCategory, timeRange);
           if (!cancelled) {
             setExercises(data);
           }
@@ -163,7 +153,7 @@ export function CategoryProgressScreen() {
         }
       })();
       return () => { cancelled = true; };
-    }, [category, timeRange, viewMode]),
+    }, [category, timeRange]),
   );
 
   const title = category.charAt(0).toUpperCase() + category.slice(1);
@@ -223,14 +213,12 @@ export function CategoryProgressScreen() {
               key={exercise.exerciseId}
               exercise={exercise}
               accentColor={accentColor}
-              viewMode={viewMode}
               onPress={() =>
                 navigation.navigate('ExerciseProgress', {
                   exerciseId: exercise.exerciseId,
                   exerciseName: exercise.exerciseName,
                   measurementType: exercise.measurementType,
                   category,
-                  viewMode,
                 })
               }
             />

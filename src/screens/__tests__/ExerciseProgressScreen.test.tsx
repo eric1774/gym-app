@@ -1,6 +1,7 @@
 jest.mock('../../db/dashboard', () => ({
   getExerciseProgressData: jest.fn().mockResolvedValue([]),
   getTimedExerciseProgressData: jest.fn().mockResolvedValue([]),
+  getExerciseVolumeData: jest.fn().mockResolvedValue([]),
   getExerciseHistory: jest.fn().mockResolvedValue([]),
   deleteExerciseHistorySession: jest.fn().mockResolvedValue(undefined),
 }));
@@ -150,6 +151,33 @@ describe('ExerciseProgressScreen', () => {
     await waitFor(() => {
       // When data exists, "No data yet" should not appear
       expect(queryByText('No data yet')).toBeNull();
+    });
+  });
+
+  it('filters history items by timeRange when a range is selected', async () => {
+    const oldDate = '2020-01-01';
+    const recentDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    (getExerciseHistory as jest.Mock).mockResolvedValue([
+      {
+        sessionId: 1,
+        date: oldDate,
+        sets: [{ setNumber: 1, weightKg: 100, reps: 5, isWarmup: false }],
+      },
+      {
+        sessionId: 2,
+        date: recentDate,
+        sets: [{ setNumber: 1, weightKg: 110, reps: 5, isWarmup: false }],
+      },
+    ]);
+
+    const { getByText, queryByText } = renderWithParams({ exerciseId: 1, exerciseName: 'Bench Press' });
+    await waitFor(() => getByText('1M'));
+
+    // Switch to 1M filter — old session from 2020 should disappear
+    fireEvent.press(getByText('1M'));
+
+    await waitFor(() => {
+      expect(queryByText('Set 1: 100lb x 5 reps')).toBeNull();
     });
   });
 });
