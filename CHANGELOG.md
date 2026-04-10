@@ -25,7 +25,7 @@ All notable changes to GymTrack are documented here.
 
 - **Edit Builder Meals**: Tap any builder-created meal in your log to reopen it in the builder with all foods pre-loaded. Change portions, add or remove foods, and save your changes.
 
-- **Tab Renamed**: The "Protein" tab is now "Macros" to better reflect the full macro tracking it provides.
+- **Tab Renamed**: The "Protein" tab is now "Health" to better reflect the full macro and hydration tracking it provides.
 
 ### Fixed
 
