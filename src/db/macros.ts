@@ -258,6 +258,29 @@ export async function getTodayMacroTotals(): Promise<MacroValues> {
 }
 
 /**
+ * Get total macro intake for a specific local date.
+ *
+ * @param localDate - YYYY-MM-DD string in local timezone
+ * @returns MacroValues with protein, carbs, fat sums; returns {0,0,0} if no meals logged
+ */
+export async function getMacroTotalsByDate(localDate: string): Promise<MacroValues> {
+  const database = await db;
+
+  const result = await executeSql(
+    database,
+    'SELECT COALESCE(SUM(protein_grams), 0) as protein, COALESCE(SUM(carb_grams), 0) as carbs, COALESCE(SUM(fat_grams), 0) as fat FROM meals WHERE local_date = ?',
+    [localDate],
+  );
+
+  const row = result.rows.item(0);
+  return {
+    protein: row.protein as number,
+    carbs: row.carbs as number,
+    fat: row.fat as number,
+  };
+}
+
+/**
  * Get aggregated daily macro totals within a date range.
  *
  * @param startDate - Start date (YYYY-MM-DD), inclusive
@@ -426,6 +449,102 @@ export async function getStreakDays(): Promise<number> {
   }
 
   return streak;
+}
+
+/**
+ * Calculate consecutive-day streaks for all three macros (protein, carbs, fat).
+ * A day counts toward a macro's streak if the total for that macro meets or exceeds its goal.
+ * Each macro streak is independent — hitting protein but missing carbs only breaks the carbs streak.
+ *
+ * @returns Object with streak counts for each macro: { protein, carbs, fat }
+ */
+export async function getMacroStreaks(): Promise<MacroValues> {
+  const database = await db;
+
+  const goalResult = await executeSql(
+    database,
+    'SELECT protein_goal, carb_goal, fat_goal FROM macro_settings LIMIT 1',
+  );
+
+  if (goalResult.rows.length === 0) {
+    return { protein: 0, carbs: 0, fat: 0 };
+  }
+
+  const goals = {
+    protein: goalResult.rows.item(0).protein_goal as number | null,
+    carbs: goalResult.rows.item(0).carb_goal as number | null,
+    fat: goalResult.rows.item(0).fat_goal as number | null,
+  };
+
+  const today = getLocalDateString();
+
+  const result = await executeSql(
+    database,
+    `SELECT local_date,
+            SUM(protein_grams) as total_protein,
+            SUM(carb_grams) as total_carbs,
+            SUM(fat_grams) as total_fat
+     FROM meals WHERE local_date <= ?
+     GROUP BY local_date ORDER BY local_date DESC`,
+    [today],
+  );
+
+  if (result.rows.length === 0) {
+    return { protein: 0, carbs: 0, fat: 0 };
+  }
+
+  const streaks = { protein: 0, carbs: 0, fat: 0 };
+  // Track which macros are still streaking (have a goal and haven't broken yet)
+  const active = {
+    protein: goals.protein !== null && goals.protein !== undefined,
+    carbs: goals.carbs !== null && goals.carbs !== undefined,
+    fat: goals.fat !== null && goals.fat !== undefined,
+  };
+
+  const firstRow = result.rows.item(0);
+  let startIndex = 0;
+  let expectedDate: Date;
+
+  if (firstRow.local_date === today) {
+    // Check today for each macro
+    if (active.protein && (firstRow.total_protein as number) >= goals.protein!) { streaks.protein = 1; }
+    if (active.carbs && (firstRow.total_carbs as number) >= goals.carbs!) { streaks.carbs = 1; }
+    if (active.fat && (firstRow.total_fat as number) >= goals.fat!) { streaks.fat = 1; }
+    startIndex = 1;
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    expectedDate = d;
+  } else {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    expectedDate = d;
+  }
+
+  for (let i = startIndex; i < result.rows.length; i++) {
+    // Stop if no macros are still streaking
+    if (!active.protein && !active.carbs && !active.fat) { break; }
+
+    const row = result.rows.item(i);
+    const expectedDateStr = getLocalDateString(expectedDate);
+
+    if (row.local_date !== expectedDateStr) {
+      break; // Gap — all remaining streaks are broken
+    }
+
+    if (active.protein) {
+      if ((row.total_protein as number) >= goals.protein!) { streaks.protein++; } else { active.protein = false; }
+    }
+    if (active.carbs) {
+      if ((row.total_carbs as number) >= goals.carbs!) { streaks.carbs++; } else { active.carbs = false; }
+    }
+    if (active.fat) {
+      if ((row.total_fat as number) >= goals.fat!) { streaks.fat++; } else { active.fat = false; }
+    }
+
+    expectedDate.setDate(expectedDate.getDate() - 1);
+  }
+
+  return streaks;
 }
 
 // ── Quick-add and library functions ─────────────────────────────────

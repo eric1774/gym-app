@@ -33,7 +33,7 @@ function FoodResultItemComponent({ food, onPress, showUsageBadge, lastUsedGrams 
         <Text style={styles.category}>{food.category}</Text>
       )}
       <Text style={styles.macroSummary}>
-        {`P:${food.proteinPer100g}g  C:${food.carbsPer100g}g  F:${food.fatPer100g}g  |  ${Math.round(food.caloriesPer100g)}kcal  per 100g`}
+        {`P:${parseFloat(food.proteinPer100g.toFixed(2))}g  C:${parseFloat(food.carbsPer100g.toFixed(2))}g  F:${parseFloat(food.fatPer100g.toFixed(2))}g  |  ${Math.round(food.caloriesPer100g)}kcal  per 100g`}
       </Text>
       {lastUsedGrams != null && (
         <Text style={styles.lastUsedBadge}>{`last: ${lastUsedGrams}g`}</Text>

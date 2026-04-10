@@ -24,23 +24,20 @@ export function HydrationView() {
   const [currentTotal, setCurrentTotal] = useState(0);
   const [goalOz, setGoalOz] = useState<number | null>(null);
   const [streakDays, setStreakDays] = useState<number>(0);
-  const [weeklyAvgOz, setWeeklyAvgOz] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [editGoalValue, setEditGoalValue] = useState('');
   const [editGoalError, setEditGoalError] = useState<string | null>(null);
 
   const refreshData = useCallback(async () => {
-    const [total, settings, streak, avgOz] = await Promise.all([
+    const [total, settings, streak] = await Promise.all([
       hydrationDb.getTodayWaterTotal(),
       hydrationDb.getWaterGoal(),
       hydrationDb.getStreakDays(),
-      hydrationDb.get7DayAverage(),
     ]);
     setCurrentTotal(total);
     setGoalOz(settings?.goalOz ?? null);
     setStreakDays(streak);
-    setWeeklyAvgOz(avgOz);
   }, []);
 
   useFocusEffect(
@@ -97,93 +94,84 @@ export function HydrationView() {
     await refreshData();
   }, [refreshData]);
 
+  /** Dynamic subtitle based on progress */
+  const getSubtitle = (): string => {
+    if (goalOz === null) return '';
+    const pct = Math.round((currentTotal / goalOz) * 100);
+    if (pct === 0) return "Let's get started on your daily goal.";
+    if (pct < 50) return "You're making progress. Keep it up!";
+    if (pct < 100) return "You're halfway to your daily goal.";
+    return "You've reached your daily goal!";
+  };
+
   return (
     <View style={styles.container}>
       {isLoading ? (
-        <ActivityIndicator size="large" color={colors.accent} />
+        <ActivityIndicator size="large" color={colors.water} />
       ) : goalOz === null ? (
         <View style={styles.setupContainer}>
           <GoalSetupCard onGoalSet={refreshData} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Title and subtitle */}
+          <View style={styles.headerSection}>
+            <Text style={styles.title}>Hydration Tracker</Text>
+            <Text style={styles.subtitle}>{getSubtitle()}</Text>
+          </View>
+
           {/* Cup visualization — centered hero */}
           <View style={styles.cupSection}>
-            <WaterCup currentOz={currentTotal} goalOz={goalOz} />
+            {isEditingGoal ? (
+              <>
+                <WaterCup currentOz={currentTotal} goalOz={goalOz} />
+                {/* Inline goal editor overlaying the goal label area */}
+                <View style={styles.goalEditContainer}>
+                  <View style={styles.goalEditInputRow}>
+                    <TextInput
+                      style={styles.goalEditInput}
+                      value={editGoalValue}
+                      onChangeText={setEditGoalValue}
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={handleSaveGoal}
+                    />
+                    <Text style={styles.goalEditSuffix}>fl oz</Text>
+                  </View>
+                  {editGoalError ? (
+                    <Text style={styles.goalEditError}>{editGoalError}</Text>
+                  ) : null}
+                  <View style={styles.goalEditButtonRow}>
+                    <TouchableOpacity
+                      style={styles.goalSaveButton}
+                      onPress={handleSaveGoal}
+                    >
+                      <Text style={styles.goalSaveButtonText}>Save</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.goalCancelButton}
+                      onPress={handleCancelGoalEdit}
+                    >
+                      <Text style={styles.goalCancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <TouchableOpacity
+                onPress={handleStartGoalEdit}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Edit water goal"
+              >
+                <WaterCup currentOz={currentTotal} goalOz={goalOz} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Goal label (display) or inline edit */}
-          {isEditingGoal ? (
-            <View style={styles.goalEditContainer}>
-              <View style={styles.goalEditInputRow}>
-                <TextInput
-                  style={styles.goalEditInput}
-                  value={editGoalValue}
-                  onChangeText={setEditGoalValue}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  autoFocus
-                  returnKeyType="done"
-                  onSubmitEditing={handleSaveGoal}
-                />
-                <Text style={styles.goalEditSuffix}>fl oz</Text>
-              </View>
-              {editGoalError ? (
-                <Text style={styles.goalEditError}>{editGoalError}</Text>
-              ) : null}
-              <View style={styles.goalEditButtonRow}>
-                <TouchableOpacity
-                  style={styles.goalSaveButton}
-                  onPress={handleSaveGoal}
-                >
-                  <Text style={styles.goalSaveButtonText}>Save Goal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.goalCancelButton}
-                  onPress={handleCancelGoalEdit}
-                >
-                  <Text style={styles.goalCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={handleStartGoalEdit}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Edit water goal"
-              style={styles.goalLabelTouchable}
-            >
-              <Text style={styles.goalLabel}>GOAL: {goalOz} fl oz</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Stat cards row */}
-          <HydrationStatCards
-            streakDays={streakDays}
-            weeklyAvgOz={weeklyAvgOz}
-            goalOz={goalOz}
-          />
-
-          {/* Quick-add section */}
-          <View style={styles.quickAddSection}>
-            <Text style={styles.sectionHeader}>QUICK ADD</Text>
-            <View style={styles.quickAddRow}>
-              {([8, 16, 24] as const).map(oz => (
-                <TouchableOpacity
-                  key={oz}
-                  style={styles.quickAddButton}
-                  onPress={() => handleQuickAdd(oz)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`+${oz} fl oz`}
-                >
-                  <Text style={styles.quickAddText}>+{oz} oz</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Log Water CTA */}
+          {/* Log Water CTA — primary action */}
           <TouchableOpacity
             style={styles.logWaterButton}
             onPress={handleOpenModal}
@@ -192,6 +180,24 @@ export function HydrationView() {
           >
             <Text style={styles.logWaterButtonText}>+ Log Water</Text>
           </TouchableOpacity>
+
+          {/* Quick-add buttons */}
+          <View style={styles.quickAddRow}>
+            {([8, 16, 24] as const).map(oz => (
+              <TouchableOpacity
+                key={oz}
+                style={styles.quickAddButton}
+                onPress={() => handleQuickAdd(oz)}
+                activeOpacity={0.7}
+                accessibilityLabel={`Add ${oz} ounces`}
+              >
+                <Text style={styles.quickAddText}>+{oz} oz</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Stat cards */}
+          <HydrationStatCards streakDays={streakDays} />
         </ScrollView>
       )}
 
@@ -208,37 +214,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   setupContainer: { flex: 1, justifyContent: 'center' },
   scrollContent: { paddingBottom: 100 },
+  headerSection: {
+    paddingHorizontal: spacing.base,
+    marginTop: spacing.lg,
+  },
+  title: {
+    fontSize: fontSize.xl,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  subtitle: {
+    fontSize: fontSize.sm,
+    fontWeight: weightRegular,
+    color: colors.secondary,
+    marginTop: spacing.xs,
+  },
   cupSection: {
     marginTop: spacing.xl,
     alignItems: 'center',
-    paddingHorizontal: spacing.base,
-  },
-  quickAddSection: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.base,
-  },
-  sectionHeader: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.2,
-    marginBottom: spacing.sm,
-  },
-  quickAddRow: { flexDirection: 'row', gap: spacing.sm },
-  quickAddButton: {
-    flex: 1,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickAddText: {
-    color: colors.accent,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
   },
   logWaterButton: {
     backgroundColor: colors.accent,
@@ -255,21 +248,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: weightBold,
   },
-  goalLabelTouchable: {
-    alignSelf: 'center',
-    paddingVertical: spacing.sm,
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
     marginTop: spacing.md,
   },
-  goalLabel: {
+  quickAddButton: {
+    flex: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickAddText: {
+    color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.2,
-    textAlign: 'center',
   },
   goalEditContainer: {
     paddingHorizontal: spacing.base,
     marginTop: spacing.md,
+    width: '100%',
   },
   goalEditInputRow: {
     flexDirection: 'row',
@@ -280,7 +283,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: colors.water,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.base,
     fontSize: fontSize.base,

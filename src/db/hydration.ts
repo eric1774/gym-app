@@ -127,6 +127,24 @@ export async function getTodayWaterTotal(): Promise<number> {
   return result.rows.item(0).total as number;
 }
 
+/**
+ * Get total water intake in fluid ounces for a specific local date.
+ *
+ * @param localDate - YYYY-MM-DD string in local timezone
+ * @returns Total fluid ounces logged that day, or 0 if nothing logged
+ */
+export async function getWaterTotalByDate(localDate: string): Promise<number> {
+  const database = await db;
+
+  const result = await executeSql(
+    database,
+    'SELECT COALESCE(SUM(amount_oz), 0) as total FROM water_logs WHERE local_date = ?',
+    [localDate],
+  );
+
+  return result.rows.item(0).total as number;
+}
+
 // ── Streak and Averages ──────────────────────────────────────────────
 
 /**

@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Switch,
@@ -490,6 +493,9 @@ export function MealBuilderScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.keyboardAvoid}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -574,6 +580,8 @@ export function MealBuilderScreen({ navigation, route }: Props) {
         ctaLabel={ctaLabel}
       />
 
+    </KeyboardAvoidingView>
+
       {/* Gram input overlay (slide-up) */}
       <FoodGramInput
         food={gramInputFoodProp}
@@ -599,6 +607,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   // ── Header ──────────────────────────────────────────────────────────
   header: {

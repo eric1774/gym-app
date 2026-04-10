@@ -55,6 +55,7 @@ export {
   getDailyProteinTotals,
   getTodayProteinTotal,
   getStreakDays,
+  getMacroStreaks,
   get7DayAverage,
   getRecentDistinctMeals,
   addLibraryMeal,

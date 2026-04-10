@@ -27,7 +27,7 @@ export function MacroPills({ protein, carbs, fat }: MacroPillsProps) {
           key={type}
           style={[styles.pill, { backgroundColor: MACRO_COLORS[type] + '33' }]}>
           <Text style={[styles.pillText, { color: MACRO_COLORS[type] }]}>
-            {value}g {letter}
+            {parseFloat(value.toFixed(2))}g {letter}
           </Text>
         </View>
       ))}

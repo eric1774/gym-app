@@ -103,7 +103,7 @@ export function ProteinProgressBar({ goal, current, average, onGoalChanged }: Pr
         <View style={styles.divider} />
         <View style={styles.infoRow}>
           <Text style={styles.infoText}>
-            {current}g consumed / {goal}g goal
+            {parseFloat(current.toFixed(2))}g consumed / {goal}g goal
           </Text>
         </View>
 
@@ -112,7 +112,7 @@ export function ProteinProgressBar({ goal, current, average, onGoalChanged }: Pr
             <View style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoText}>
-                7-day avg: {average}g
+                7-day avg: {parseFloat(average.toFixed(2))}g
               </Text>
             </View>
           </>

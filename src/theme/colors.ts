@@ -15,6 +15,8 @@ export const colors = {
   tabIconInactive: '#555555', // Medium grey for inactive tabs
   prGold: '#FFB800',          // Warm amber-gold for PR toasts and highlights
   prGoldDim: '#3D2E00',       // Subtle background behind PR toast text
+  water: '#4A8DB7',           // Ocean blue for hydration cup fill
+  waterDark: '#1A2F3D',       // Dark blue tint for empty cup background
 } as const;
 
 export type ColorKey = keyof typeof colors;

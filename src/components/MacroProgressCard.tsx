@@ -17,6 +17,7 @@ interface MacroProgressCardProps {
   goals: MacroSettings;
   todayTotals: MacroValues;
   onGoalChanged: () => void;
+  streaks?: MacroValues;
 }
 
 const MACRO_ORDER: MacroType[] = ['protein', 'carbs', 'fat'];
@@ -38,7 +39,7 @@ function formatCalories(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
-export function MacroProgressCard({ goals, todayTotals, onGoalChanged }: MacroProgressCardProps) {
+export function MacroProgressCard({ goals, todayTotals, onGoalChanged, streaks = { protein: 0, carbs: 0, fat: 0 } }: MacroProgressCardProps) {
   const [editingMacro, setEditingMacro] = useState<MacroType | null>(null);
   const [editValue, setEditValue] = useState('');
   const [editError, setEditError] = useState<string | null>(null);
@@ -148,7 +149,12 @@ export function MacroProgressCard({ goals, todayTotals, onGoalChanged }: MacroPr
                       {Math.round((current / goal) * 100)}%
                     </Text>
                   </View>
-                  <Text style={styles.gramText}>{current}g / {goal}g</Text>
+                  <Text style={styles.gramText}>{parseFloat(current.toFixed(2))}g / {goal}g</Text>
+                  {streaks[macroType] > 0 && (
+                    <Text style={[styles.streakText, { color: macroColor + '99' }]}>
+                      {'\uD83D\uDD25'} {streaks[macroType]} day streak
+                    </Text>
+                  )}
                 </TouchableOpacity>
               ) : (
                 /* Unset placeholder row */
@@ -245,6 +251,12 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     paddingTop: spacing.xs,
     marginLeft: 16 + spacing.sm, // align with track (label width + marginHorizontal)
+  },
+  streakText: {
+    fontSize: fontSize.xs,
+    fontWeight: weightRegular,
+    paddingTop: 2,
+    marginLeft: 16 + spacing.sm,
   },
   placeholderLine: {
     flex: 1,

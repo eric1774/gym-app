@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -45,12 +46,33 @@ export function FoodGramInput({
   const [gramsText, setGramsText] = useState(initialGrams ?? '');
   const [shouldRender, setShouldRender] = useState(visible);
   const translateY = useRef(new Animated.Value(400)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
 
   // Sync gramsText when initialGrams prop changes (edit mode)
   useEffect(() => {
     setGramsText(initialGrams ?? '');
   }, [initialGrams]);
+
+  // Shift card up when Android keyboard opens
+  useEffect(() => {
+    if (Platform.OS !== 'android') { return; }
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      Animated.timing(keyboardOffset, {
+        toValue: e.endCoordinates.height,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }).start();
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, [keyboardOffset]);
 
   // Animate in/out when visible changes
   useEffect(() => {
@@ -105,10 +127,11 @@ export function FoodGramInput({
       {/* Semi-transparent backdrop */}
       <Pressable style={styles.backdrop} onPress={onDismiss} />
 
-      {/* Slide-up card */}
+      {/* Keyboard-offset wrapper (JS driver) + slide-up card (native driver).
+           Separate Animated.Views avoid mixing native/non-native drivers. */}
+      <Animated.View style={[styles.cardWrapper, { bottom: keyboardOffset }]}>
       <Animated.View
         style={[styles.card, { transform: [{ translateY }] }]}>
-        <KeyboardAvoidingView behavior="padding">
           {/* Row 1: Food name */}
           <Text style={styles.foodName} numberOfLines={1} ellipsizeMode="tail">
             {food.name}
@@ -163,7 +186,7 @@ export function FoodGramInput({
               {buttonLabel ?? 'Add to Meal'}
             </Text>
           </TouchableOpacity>
-        </KeyboardAvoidingView>
+      </Animated.View>
       </Animated.View>
     </>
   );
@@ -174,11 +197,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  card: {
+  cardWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  card: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

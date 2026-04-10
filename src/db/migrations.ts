@@ -26,6 +26,7 @@ interface Migration {
  * - Version 11: Create water_logs and water_settings tables for hydration tracking
  * - Version 12: Create meal_foods table for multi-food meal builder
  * - Version 13: Add food_name column to meal_foods (missing from Phase 37 schema)
+ * - Version 14: Remove all USDA food entries (is_custom = 0) from foods table
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -365,6 +366,8 @@ const MIGRATIONS: Migration[] = [
     description: 'Ensure meal_foods table exists with food_name column',
     up: (tx: Transaction) => {
       // Fresh installs: table doesn't exist yet — create with all columns.
+      // Existing installs (original v12 from phase 37): table already exists
+      // with food_name — CREATE TABLE IF NOT EXISTS is a safe no-op.
       tx.executeSql(`
         CREATE TABLE IF NOT EXISTS meal_foods (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -377,31 +380,54 @@ const MIGRATIONS: Migration[] = [
           fat REAL NOT NULL
         )
       `);
-      // Existing installs: table exists from Phase 37 without food_name.
-      // ALTER adds it. Error callback returns false to swallow "duplicate column"
-      // on fresh installs where CREATE already added it.
-      tx.executeSql(
-        "ALTER TABLE meal_foods ADD COLUMN food_name TEXT NOT NULL DEFAULT ''",
-        [],
-        undefined,
-        () => false,
-      );
     },
   },
   {
     version: 13,
-    description: 'Add food_name column to meal_foods (missing from Phase 37 schema)',
+    description: 'Add food_name column to meal_foods if missing',
     up: (tx: Transaction) => {
-      // Phase 37 created meal_foods without food_name. Migration 12 tried
-      // CREATE TABLE IF NOT EXISTS but that was a no-op on existing installs.
-      // This ALTER adds the missing column. Error callback returns false to
-      // swallow "duplicate column" on fresh installs where v12 CREATE included it.
+      // Only ALTER if the column doesn't already exist. The original phase 37
+      // migration created meal_foods WITH food_name, so devices that ran that
+      // already have it. Checking PRAGMA avoids a "duplicate column" error that
+      // crashes the transaction on some Android versions.
       tx.executeSql(
-        "ALTER TABLE meal_foods ADD COLUMN food_name TEXT NOT NULL DEFAULT ''",
+        'SELECT COUNT(*) as cnt FROM pragma_table_info(\'meal_foods\') WHERE name = \'food_name\'',
         [],
-        undefined,
-        () => false,
+        (_tx, result) => {
+          if (result.rows.item(0).cnt === 0) {
+            _tx.executeSql(
+              "ALTER TABLE meal_foods ADD COLUMN food_name TEXT NOT NULL DEFAULT ''",
+            );
+          }
+        },
       );
+    },
+  },
+  {
+    version: 14,
+    description: 'Ensure foods table exists and remove USDA entries',
+    up: (tx: Transaction) => {
+      // Create foods table if it doesn't exist (phone may not have had
+      // the original phase 37 migration that created it).
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS foods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          fdc_id INTEGER,
+          name TEXT NOT NULL,
+          category TEXT,
+          protein_per_100g REAL NOT NULL,
+          carbs_per_100g REAL NOT NULL,
+          fat_per_100g REAL NOT NULL,
+          search_text TEXT NOT NULL,
+          is_custom INTEGER NOT NULL DEFAULT 0
+        )
+      `);
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_foods_search_text ON foods(search_text)',
+      );
+      // Delete all USDA-seeded foods, preserving any user-created custom foods.
+      // Historical meal_foods rows are unaffected (macros are snapshotted at log time).
+      tx.executeSql('DELETE FROM foods WHERE is_custom = 0');
     },
   },
 ];

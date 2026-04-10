@@ -21,7 +21,10 @@ import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typ
 import { spacing } from '../theme/spacing';
 import { getDaySessionDetails } from '../db/calendar';
 import { deleteSession } from '../db/sessions';
-import { CalendarSessionDetail } from '../types';
+import { getWaterTotalByDate } from '../db/hydration';
+import { getMacroTotalsByDate } from '../db/macros';
+import { computeCalories } from '../utils/macros';
+import { CalendarSessionDetail, MacroValues } from '../types';
 import { CalendarStackParamList } from '../navigation/TabNavigator';
 
 type Nav = NativeStackNavigationProp<CalendarStackParamList, 'CalendarDayDetail'>;
@@ -321,6 +324,116 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
   );
 }
 
+// ---------- Day Nutrition Summary Card ----------
+
+interface NutritionData {
+  waterOz: number;
+  macros: MacroValues;
+  calories: number;
+}
+
+function DayNutritionCard({ data }: { data: NutritionData | null }) {
+  if (!data) { return null; }
+  const { waterOz, macros, calories } = data;
+  // Don't show card if nothing was logged
+  if (waterOz === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0) {
+    return null;
+  }
+
+  return (
+    <View style={nutritionStyles.card}>
+      {/* Water row */}
+      {waterOz > 0 && (
+        <View style={nutritionStyles.waterRow}>
+          <Text style={nutritionStyles.waterEmoji}>{'\uD83D\uDCA7'}</Text>
+          <Text style={nutritionStyles.waterValue}>{waterOz}</Text>
+          <Text style={nutritionStyles.waterUnit}>oz</Text>
+        </View>
+      )}
+
+      {/* Macro stats row */}
+      {(macros.protein > 0 || macros.carbs > 0 || macros.fat > 0) && (
+        <View style={nutritionStyles.macroRow}>
+          <View style={nutritionStyles.macroItem}>
+            <Text style={nutritionStyles.macroValue}>{calories}</Text>
+            <Text style={nutritionStyles.macroLabel}>cal</Text>
+          </View>
+          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroItem}>
+            <Text style={nutritionStyles.macroValue}>{macros.protein}g</Text>
+            <Text style={nutritionStyles.macroLabel}>protein</Text>
+          </View>
+          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroItem}>
+            <Text style={nutritionStyles.macroValue}>{macros.carbs}g</Text>
+            <Text style={nutritionStyles.macroLabel}>carbs</Text>
+          </View>
+          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroItem}>
+            <Text style={nutritionStyles.macroValue}>{macros.fat}g</Text>
+            <Text style={nutritionStyles.macroLabel}>fat</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const nutritionStyles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.base,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  waterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  waterEmoji: {
+    fontSize: fontSize.base,
+  },
+  waterValue: {
+    fontSize: fontSize.md,
+    fontWeight: weightBold,
+    color: colors.water,
+  },
+  waterUnit: {
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    color: colors.secondary,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  macroItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  macroValue: {
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  macroLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: weightMedium,
+    color: colors.secondary,
+    marginTop: 2,
+  },
+  divider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.border,
+  },
+});
+
 // ---------- Main screen ----------
 
 export function CalendarDayDetailScreen() {
@@ -329,13 +442,23 @@ export function CalendarDayDetailScreen() {
   const { date } = route.params;
 
   const [sessions, setSessions] = useState<CalendarSessionDetail[]>([]);
+  const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getDaySessionDetails(date);
+      const [data, waterOz, macros] = await Promise.all([
+        getDaySessionDetails(date),
+        getWaterTotalByDate(date),
+        getMacroTotalsByDate(date),
+      ]);
       setSessions(data);
+      setNutritionData({
+        waterOz,
+        macros,
+        calories: computeCalories(macros.protein, macros.carbs, macros.fat),
+      });
     } catch {
       // silently fail
     } finally {
@@ -405,6 +528,7 @@ export function CalendarDayDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <DayNutritionCard data={nutritionData} />
           {sessions.map((session, idx) => (
             <SwipeableSessionCard
               key={session.sessionId}

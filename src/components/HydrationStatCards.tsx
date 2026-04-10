@@ -2,82 +2,92 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightRegular } from '../theme/typography';
+import { fontSize, weightBold, weightMedium } from '../theme/typography';
 
 interface HydrationStatCardsProps {
   streakDays: number;
-  weeklyAvgOz: number | null;
-  goalOz: number; // guaranteed non-null when rendered
 }
 
 export const HydrationStatCards = React.memo(function HydrationStatCards({
   streakDays,
-  weeklyAvgOz,
-  goalOz,
 }: HydrationStatCardsProps) {
-  const weeklyAvgPct =
-    weeklyAvgOz !== null ? Math.round((weeklyAvgOz / goalOz) * 100) : null;
-
   return (
-    <View style={styles.row}>
-      {/* Left card — Streak */}
-      <View
-        style={styles.card}
-        accessibilityLabel={`Streak: ${streakDays} days`}
-      >
-        <Text style={styles.cardEmoji}>{'\uD83D\uDD25'}</Text>
-        <Text style={styles.cardValue}>{String(streakDays)}</Text>
-        <Text style={styles.cardLabel}>day streak</Text>
-      </View>
-
-      {/* Right card — Weekly Average */}
-      <View
-        style={styles.card}
-        accessibilityLabel={
-          weeklyAvgPct !== null
-            ? `Weekly average: ${weeklyAvgPct}%`
-            : 'Weekly average: no data'
-        }
-      >
-        <Text style={styles.cardEmoji}>{'\uD83D\uDCA7'}</Text>
-        <Text style={styles.cardValue}>
-          {weeklyAvgPct !== null ? `${weeklyAvgPct}%` : '\u2014'}
-        </Text>
-        <Text style={styles.cardLabel}>7-day avg</Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionHeader}>TODAY&apos;S STATS</Text>
+      <View style={styles.container}>
+        {/* Streak card */}
+        <View style={styles.card}>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>{'\u26A1'}</Text>
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={styles.cardLabel}>Current Streak</Text>
+            <Text style={styles.cardValue}>
+              {streakDays} {streakDays === 1 ? 'Day' : 'Days'}
+            </Text>
+          </View>
+          <Text style={styles.chevron}>{'\u203A'}</Text>
+        </View>
       </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  section: {
     paddingHorizontal: spacing.base,
-    marginTop: spacing.md,
+    marginTop: spacing.xl,
   },
-  card: {
-    flex: 1,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 10,
+  sectionHeader: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+    marginBottom: spacing.sm,
+  },
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    minHeight: 80,
+    overflow: 'hidden',
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.base,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.accentDim,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
+    marginRight: spacing.md,
   },
-  cardEmoji: {
+  iconText: {
     fontSize: fontSize.base,
+    color: colors.accent,
   },
-  cardValue: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
+  cardContent: {
+    flex: 1,
   },
   cardLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: weightRegular,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
     color: colors.secondary,
+  },
+  cardValue: {
+    fontSize: fontSize.md,
+    fontWeight: weightBold,
+    color: colors.primary,
+    marginTop: 2,
+  },
+  chevron: {
+    fontSize: fontSize.xl,
+    color: colors.secondary,
+    marginLeft: spacing.sm,
   },
 });
