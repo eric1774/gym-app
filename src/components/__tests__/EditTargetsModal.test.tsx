@@ -9,7 +9,7 @@ const dayExercise: ProgramDayExercise = {
   exerciseId: 1,
   targetSets: 3,
   targetReps: 10,
-  targetWeightKg: 135,
+  targetWeightLbs: 135,
   sortOrder: 0,
   supersetGroupId: null,
 };

@@ -17,7 +17,7 @@ export function rowToSet(row: {
     sessionId: row.session_id,
     exerciseId: row.exercise_id,
     setNumber: row.set_number,
-    weightKg: row.weight_kg,
+    weightLbs: row.weight_kg,
     reps: row.reps,
     loggedAt: row.logged_at,
     isWarmup: row.is_warmup === 1,
@@ -32,7 +32,7 @@ export function rowToSet(row: {
 export async function logSet(
   sessionId: number,
   exerciseId: number,
-  weightKg: number,
+  weightLbs: number,
   reps: number,
   isWarmup: boolean = false,
 ): Promise<WorkoutSet> {
@@ -50,7 +50,7 @@ export async function logSet(
   const result = await executeSql(
     database,
     'INSERT INTO workout_sets (session_id, exercise_id, set_number, weight_kg, reps, logged_at, is_warmup) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [sessionId, exerciseId, setNumber, weightKg, reps, loggedAt, isWarmup ? 1 : 0],
+    [sessionId, exerciseId, setNumber, weightLbs, reps, loggedAt, isWarmup ? 1 : 0],
   );
 
   const row = await executeSql(database, 'SELECT * FROM workout_sets WHERE id = ?', [
@@ -126,7 +126,7 @@ export async function deleteSet(id: number): Promise<void> {
 /**
  * Check whether a completed set is a personal record at this exact rep count.
  *
- * A set is a PR if `weightKg` strictly exceeds the highest weight ever logged
+ * A set is a PR if `weightLbs` strictly exceeds the highest weight ever logged
  * for the same `exerciseId` and same `reps` value across all previously
  * COMPLETED sessions (excluding the current session and warmup sets).
  *
@@ -135,7 +135,7 @@ export async function deleteSet(id: number): Promise<void> {
  */
 export async function checkForPR(
   exerciseId: number,
-  weightKg: number,
+  weightLbs: number,
   reps: number,
   currentSessionId: number,
 ): Promise<boolean> {
@@ -161,5 +161,5 @@ export async function checkForPR(
     return false;
   }
 
-  return weightKg > maxWeight;
+  return weightLbs > maxWeight;
 }

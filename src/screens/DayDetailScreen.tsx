@@ -177,7 +177,7 @@ export function DayDetailScreen() {
       setDayExercises(prev =>
         prev.map(pde =>
           pde.id === id
-            ? { ...pde, targetSets: sets, targetReps: reps, targetWeightKg: weight }
+            ? { ...pde, targetSets: sets, targetReps: reps, targetWeightLbs: weight }
             : pde,
         ),
       );

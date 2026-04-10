@@ -45,7 +45,7 @@ export const SetListItem = React.memo(function SetListItem({ set, onDelete, isTi
       <Text style={styles.setText}>
         {isTimed
           ? `Set ${set.setNumber}: ${formatDuration(set.reps)}`
-          : `Set ${set.setNumber}: ${set.weightKg}lb × ${set.reps} reps${set.isWarmup ? ' (warmup)' : ''}`}
+          : `Set ${set.setNumber}: ${set.weightLbs}lb × ${set.reps} reps${set.isWarmup ? ' (warmup)' : ''}`}
       </Text>
       <Animated.View style={[styles.deleteWrapper, { opacity: animatedOpacity }]}>
         <TouchableOpacity

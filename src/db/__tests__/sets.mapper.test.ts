@@ -18,7 +18,7 @@ describe('rowToSet', () => {
       sessionId: 1,
       exerciseId: 2,
       setNumber: 3,
-      weightKg: 100,
+      weightLbs: 100,
       reps: 8,
       loggedAt: '2026-01-01T10:05:00',
       isWarmup: false,

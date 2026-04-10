@@ -64,7 +64,7 @@ describe('ExerciseProgressScreen', () => {
       {
         sessionId: 1,
         date: '2025-06-10',
-        sets: [{ setNumber: 1, weightKg: 135, reps: 10, isWarmup: false }],
+        sets: [{ setNumber: 1, weightLbs: 135, reps: 10, isWarmup: false }],
       },
     ]);
     const { getByText } = renderWithParams({ exerciseId: 1, exerciseName: 'Bench Press' });
@@ -78,7 +78,7 @@ describe('ExerciseProgressScreen', () => {
       {
         sessionId: 1,
         date: '2025-06-10',
-        sets: [{ setNumber: 1, weightKg: 0, reps: 90, isWarmup: false }],
+        sets: [{ setNumber: 1, weightLbs: 0, reps: 90, isWarmup: false }],
       },
     ]);
     const { getByText } = renderWithParams({ exerciseId: 2, exerciseName: 'Plank', measurementType: 'timed' });
@@ -97,7 +97,7 @@ describe('ExerciseProgressScreen', () => {
   it('filters data when time range pill is changed', async () => {
     const { getExerciseProgressData: mockFn } = require('../../db/dashboard');
     (getExerciseProgressData as jest.Mock).mockResolvedValue([
-      { sessionId: 1, date: '2025-01-01', bestWeightKg: 100, bestReps: 10 },
+      { sessionId: 1, date: '2025-01-01', bestWeightLbs: 100, bestReps: 10 },
     ]);
 
     const { getByText } = renderWithParams({ exerciseId: 1, exerciseName: 'Bench Press' });
@@ -113,7 +113,7 @@ describe('ExerciseProgressScreen', () => {
       {
         sessionId: 1,
         date: '2025-06-10',
-        sets: [{ setNumber: 1, weightKg: 135, reps: 10, isWarmup: false }],
+        sets: [{ setNumber: 1, weightLbs: 135, reps: 10, isWarmup: false }],
       },
     ]);
 
@@ -143,8 +143,8 @@ describe('ExerciseProgressScreen', () => {
 
   it('renders progress chart when data exists', async () => {
     (getExerciseProgressData as jest.Mock).mockResolvedValue([
-      { sessionId: 1, date: '2025-01-01', bestWeightKg: 100, bestReps: 10 },
-      { sessionId: 2, date: '2025-02-01', bestWeightKg: 110, bestReps: 10 },
+      { sessionId: 1, date: '2025-01-01', bestWeightLbs: 100, bestReps: 10 },
+      { sessionId: 2, date: '2025-02-01', bestWeightLbs: 110, bestReps: 10 },
     ]);
 
     const { queryByText } = renderWithParams({ exerciseId: 1, exerciseName: 'Bench Press' });
@@ -161,12 +161,12 @@ describe('ExerciseProgressScreen', () => {
       {
         sessionId: 1,
         date: oldDate,
-        sets: [{ setNumber: 1, weightKg: 100, reps: 5, isWarmup: false }],
+        sets: [{ setNumber: 1, weightLbs: 100, reps: 5, isWarmup: false }],
       },
       {
         sessionId: 2,
         date: recentDate,
-        sets: [{ setNumber: 1, weightKg: 110, reps: 5, isWarmup: false }],
+        sets: [{ setNumber: 1, weightLbs: 110, reps: 5, isWarmup: false }],
       },
     ]);
 

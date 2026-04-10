@@ -291,7 +291,7 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
                   <View key={`${exercise.exerciseId}-${set.setNumber}`} style={styles.prHighlightRow}>
                     <Text style={styles.prExerciseName}>{exercise.exerciseName}</Text>
                     <Text style={styles.prDetails}>
-                      {set.weightKg} lbs × {set.reps} reps
+                      {set.weightLbs} lbs × {set.reps} reps
                     </Text>
                   </View>
                 )),
@@ -307,7 +307,7 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
             {exercise.sets.map(set => {
               const warmupSuffix = set.isWarmup ? ' (warm-up)' : '';
               const prPrefix = set.isPR ? '\uD83C\uDFC6 ' : '';
-              const label = `${prPrefix}Set ${set.setNumber}: ${set.weightKg} x ${set.reps}${warmupSuffix}`;
+              const label = `${prPrefix}Set ${set.setNumber}: ${set.weightLbs} x ${set.reps}${warmupSuffix}`;
               return (
                 <Text
                   key={set.setNumber}

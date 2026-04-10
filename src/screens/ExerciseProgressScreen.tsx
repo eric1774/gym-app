@@ -11,12 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
-import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
+import { getExerciseProgressData, getTimedExerciseProgressData, getExerciseVolumeData, getExerciseHistory, deleteExerciseHistorySession } from '../db/dashboard';
 import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession } from '../types';
-type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
+type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
 type RouteParams = RouteProp<{ ExerciseProgress: ExerciseProgressParams }, 'ExerciseProgress'>;
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
@@ -56,8 +56,9 @@ function formatDuration(totalSeconds: number): string {
 export function ExerciseProgressScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
-  const { exerciseId, exerciseName, measurementType, category } = route.params;
+  const { exerciseId, exerciseName, measurementType, category, viewMode } = route.params;
   const isTimed = measurementType === 'timed';
+  const isVolume = viewMode === 'volume';
   const accentColor = category ? getCategoryColor(category) : colors.accent;
 
   const [progressData, setProgressData] = useState<ExerciseProgressPoint[]>([]);
@@ -69,7 +70,9 @@ export function ExerciseProgressScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const progressFn = isTimed ? getTimedExerciseProgressData : getExerciseProgressData;
+          const progressFn = isVolume
+            ? getExerciseVolumeData
+            : isTimed ? getTimedExerciseProgressData : getExerciseProgressData;
           const [progress, history] = await Promise.all([
             progressFn(exerciseId),
             getExerciseHistory(exerciseId),
@@ -146,7 +149,7 @@ export function ExerciseProgressScreen() {
         {
           data: isTimed
             ? filteredProgress.map(p => p.bestReps)
-            : filteredProgress.map(p => p.bestWeightKg),
+            : filteredProgress.map(p => p.bestWeightLbs),
           color: () => accentColor,
           strokeWidth: 2,
         },
@@ -164,9 +167,14 @@ export function ExerciseProgressScreen() {
           activeOpacity={0.7}>
           <Text style={styles.backArrow}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {exerciseName}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {exerciseName}
+          </Text>
+          {isVolume && (
+            <Text style={styles.volumeSubtitle}>Volume</Text>
+          )}
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -204,6 +212,7 @@ export function ExerciseProgressScreen() {
               width={CHART_WIDTH}
               height={220}
               yAxisSuffix={isTimed ? 's' : ' lb'}
+              formatYLabel={isVolume ? (val: string) => Math.round(Number(val)).toLocaleString() : undefined}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
               withOuterLines={false}
@@ -211,7 +220,7 @@ export function ExerciseProgressScreen() {
                 backgroundColor: colors.surface,
                 backgroundGradientFrom: colors.surface,
                 backgroundGradientTo: colors.surface,
-                decimalPlaces: isTimed ? 0 : 1,
+                decimalPlaces: (isTimed || isVolume) ? 0 : 1,
                 color: () => accentColor,
                 labelColor: () => colors.secondary,
                 propsForDots: {
@@ -245,18 +254,24 @@ export function ExerciseProgressScreen() {
                   <Text style={styles.deleteButton}>{'✕'}</Text>
                 </TouchableOpacity>
               </View>
-              {session.sets.map(set => (
-                <Text
-                  key={set.setNumber}
-                  style={[
-                    styles.setText,
-                    set.isWarmup && styles.setTextWarmup,
-                  ]}>
-                  {isTimed
-                    ? 'Set ' + set.setNumber + ': ' + formatDuration(set.reps)
-                    : 'Set ' + set.setNumber + ': ' + set.weightKg + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
+              {isVolume ? (
+                <Text style={styles.setText}>
+                  {'Total volume: ' + session.sets.reduce((sum, s) => sum + (s.weightLbs || 0) * (s.reps || 0), 0).toLocaleString() + ' lb'}
                 </Text>
-              ))}
+              ) : (
+                session.sets.map(set => (
+                  <Text
+                    key={set.setNumber}
+                    style={[
+                      styles.setText,
+                      set.isWarmup && styles.setTextWarmup,
+                    ]}>
+                    {isTimed
+                      ? 'Set ' + set.setNumber + ': ' + formatDuration(set.reps)
+                      : 'Set ' + set.setNumber + ': ' + set.weightLbs + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
+                  </Text>
+                ))
+              )}
             </View>
           ))
         )}
@@ -289,7 +304,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.lg,
     fontWeight: weightBold,
-    flex: 1,
+  },
+  volumeSubtitle: {
+    color: colors.secondary,
+    fontSize: fontSize.xs,
+    fontWeight: weightMedium,
+    marginTop: 2,
   },
   scrollView: {
     flex: 1,

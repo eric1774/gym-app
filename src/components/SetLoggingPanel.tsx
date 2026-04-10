@@ -25,7 +25,7 @@ import { SetListItem } from './SetListItem';
 export interface ProgramTarget {
   targetSets: number;
   targetReps: number;
-  targetWeightKg: number;
+  targetWeightLbs: number;
 }
 
 interface Props {
@@ -69,12 +69,12 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
     setLastSessionSets(last);
     // Pre-fill from last session first set if no sets logged yet (reps mode only)
     if (!isTimed && current.length === 0 && last.length > 0) {
-      setWeightInput(String(last[0].weightKg));
+      setWeightInput(String(last[0].weightLbs));
       setRepsInput(String(last[0].reps));
     } else if (!isTimed && current.length > 0) {
       // Re-expanded panel: pre-fill from most recent intra-session set
       const lastSet = current[current.length - 1];
-      setWeightInput(String(lastSet.weightKg));
+      setWeightInput(String(lastSet.weightLbs));
       setRepsInput(String(lastSet.reps));
     }
   }, [sessionId, exerciseId, isTimed]);
@@ -157,7 +157,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
         onSetLogged(newSet);
         HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
         // Pre-fill with the just-logged values for the next set
-        setWeightInput(String(newSet.weightKg));
+        setWeightInput(String(newSet.weightLbs));
         setRepsInput(String(newSet.reps));
       } finally {
         setIsSubmitting(false);
@@ -184,7 +184,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
         <ProgramTargetReference
           targetSets={programTarget.targetSets}
           targetReps={programTarget.targetReps}
-          targetWeightKg={programTarget.targetWeightKg}
+          targetWeightLbs={programTarget.targetWeightLbs}
         />
       )}
 

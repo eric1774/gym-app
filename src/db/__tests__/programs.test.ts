@@ -394,10 +394,10 @@ describe('addExerciseToProgramDay', () => {
     expect(result.id).toBe(7);
     expect(result.targetSets).toBe(4);
     expect(result.targetReps).toBe(12);
-    expect(result.targetWeightKg).toBe(60);
+    expect(result.targetWeightLbs).toBe(60);
   });
 
-  it('uses default targetSets=3, targetReps=10, targetWeightKg=0 when not provided', async () => {
+  it('uses default targetSets=3, targetReps=10, targetWeightLbs=0 when not provided', async () => {
     const defaultExRow = { ...exerciseRow, id: 8, target_sets: 3, target_reps: 10, target_weight_kg: 0 };
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }]));
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([], 8));
@@ -407,7 +407,7 @@ describe('addExerciseToProgramDay', () => {
 
     expect(result.targetSets).toBe(3);
     expect(result.targetReps).toBe(10);
-    expect(result.targetWeightKg).toBe(0);
+    expect(result.targetWeightLbs).toBe(0);
     expect(mockExecuteSql).toHaveBeenNthCalledWith(
       2,
       mockDb,

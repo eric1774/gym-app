@@ -38,7 +38,7 @@ export function EditTargetsModal({
     if (dayExercise && visible) {
       setSets(String(dayExercise.targetSets));
       setReps(String(dayExercise.targetReps));
-      setWeight(String(dayExercise.targetWeightKg));
+      setWeight(String(dayExercise.targetWeightLbs));
       setError(null);
     }
   }, [dayExercise, visible]);

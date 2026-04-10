@@ -53,7 +53,7 @@ export function rowToProgramDayExercise(row: {
     exerciseId: row.exercise_id,
     targetSets: row.target_sets,
     targetReps: row.target_reps,
-    targetWeightKg: row.target_weight_kg,
+    targetWeightLbs: row.target_weight_kg,
     sortOrder: row.sort_order,
     supersetGroupId: row.superset_group_id ?? null,
   };
@@ -274,7 +274,7 @@ export async function addExerciseToProgramDay(
   exerciseId: number,
   targetSets: number = 3,
   targetReps: number = 10,
-  targetWeightKg: number = 0,
+  targetWeightLbs: number = 0,
 ): Promise<ProgramDayExercise> {
   const database = await db;
   const countResult = await executeSql(
@@ -286,7 +286,7 @@ export async function addExerciseToProgramDay(
   const result = await executeSql(
     database,
     'INSERT INTO program_day_exercises (program_day_id, exercise_id, target_sets, target_reps, target_weight_kg, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-    [dayId, exerciseId, targetSets, targetReps, targetWeightKg, sortOrder],
+    [dayId, exerciseId, targetSets, targetReps, targetWeightLbs, sortOrder],
   );
   const row = await executeSql(database, 'SELECT * FROM program_day_exercises WHERE id = ?', [
     result.insertId,
@@ -305,13 +305,13 @@ export async function updateExerciseTargets(
   id: number,
   targetSets: number,
   targetReps: number,
-  targetWeightKg: number,
+  targetWeightLbs: number,
 ): Promise<void> {
   const database = await db;
   await executeSql(
     database,
     'UPDATE program_day_exercises SET target_sets = ?, target_reps = ?, target_weight_kg = ? WHERE id = ?',
-    [targetSets, targetReps, targetWeightKg, id],
+    [targetSets, targetReps, targetWeightLbs, id],
   );
 }
 

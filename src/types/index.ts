@@ -46,7 +46,7 @@ export interface WorkoutSet {
   sessionId: number;
   exerciseId: number;
   setNumber: number;
-  weightKg: number;
+  weightLbs: number;
   reps: number;
   loggedAt: string;
   isWarmup: boolean;
@@ -84,7 +84,7 @@ export interface ProgramDayExercise {
   exerciseId: number;
   targetSets: number;
   targetReps: number;
-  targetWeightKg: number;
+  targetWeightLbs: number;
   sortOrder: number;
   supersetGroupId: number | null;
 }
@@ -94,7 +94,7 @@ export interface ProgramDayExercise {
 export interface ExerciseProgressPoint {
   sessionId: number;
   date: string;
-  bestWeightKg: number;
+  bestWeightLbs: number;
   bestReps: number;
 }
 
@@ -124,7 +124,7 @@ export interface ExerciseHistorySession {
 
 export interface ExerciseHistorySet {
   setNumber: number;
-  weightKg: number;
+  weightLbs: number;
   reps: number;
   isWarmup: boolean;
 }
@@ -309,7 +309,7 @@ export interface CalendarExerciseDetail {
 /** Individual set within an exercise. */
 export interface CalendarSetDetail {
   setNumber: number;
-  weightKg: number;
+  weightLbs: number;
   reps: number;
   isWarmup: boolean;
   isPR: boolean;

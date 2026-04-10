@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,12 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getCategorySummaries, getNextWorkoutDay } from '../db/dashboard';
+import { getCategorySummaries, getCategoryVolumeSummaries, getNextWorkoutDay } from '../db/dashboard';
 import { getProgramDayExercises } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
 import { CategorySummary, NextWorkoutInfo, Exercise } from '../types';
 import { useSession } from '../context/SessionContext';
@@ -57,6 +59,10 @@ export function DashboardScreen() {
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
   const [activeElapsed, setActiveElapsed] = useState(0);
+  const [viewMode, setViewMode] = useState<'strength' | 'volume'>('strength');
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const cardOpacity = useRef(new Animated.Value(1)).current;
+  const [toggleWidth, setToggleWidth] = useState(0);
 
   // Elapsed timer for active session state
   useEffect(() => {
@@ -72,22 +78,38 @@ export function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      (async () => {
-        try {
-          const [result, nextDay] = await Promise.all([
-            getCategorySummaries(),
-            getNextWorkoutDay(),
-          ]);
-          if (!cancelled) {
-            setCategories(result);
-            setNextWorkout(nextDay);
+      // Fade out current cards before fetching new data
+      Animated.timing(cardOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
+        (async () => {
+          try {
+            const [result, nextDay] = await Promise.all([
+              viewMode === 'volume' ? getCategoryVolumeSummaries() : getCategorySummaries(),
+              getNextWorkoutDay(),
+            ]);
+            if (!cancelled) {
+              setCategories(result);
+              setNextWorkout(nextDay);
+              // Fade in new cards
+              Animated.timing(cardOpacity, {
+                toValue: 1,
+                duration: 200,
+                useNativeDriver: true,
+              }).start();
+            }
+          } catch (err) {
+            console.warn('Dashboard data fetch failed:', err);
+            if (!cancelled) {
+              cardOpacity.setValue(1);
+            }
           }
-        } catch (err) {
-          console.warn('Dashboard data fetch failed:', err);
-        }
-      })();
+        })();
+      });
       return () => { cancelled = true; };
-    }, []),
+    }, [viewMode]),
   );
 
   const handleQuickStart = useCallback(async () => {
@@ -133,6 +155,49 @@ export function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Strength / Volume toggle */}
+      <View style={styles.toggleRowOuter}>
+        <View
+          style={styles.togglePill}
+          onLayout={(e: LayoutChangeEvent) => setToggleWidth(e.nativeEvent.layout.width)}
+        >
+          {toggleWidth > 0 && (
+            <Animated.View
+              style={[
+                styles.toggleIndicator,
+                {
+                  width: (toggleWidth - 6) / 2,
+                  transform: [{ translateX: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, (toggleWidth - 6) / 2],
+                  }) }],
+                },
+              ]}
+            />
+          )}
+          {(['strength', 'volume'] as const).map(mode => (
+            <TouchableOpacity
+              key={mode}
+              style={styles.toggleButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (mode === viewMode) return;
+                Animated.spring(slideAnim, {
+                  toValue: mode === 'volume' ? 1 : 0,
+                  tension: 300,
+                  friction: 20,
+                  useNativeDriver: true,
+                }).start();
+                setViewMode(mode);
+              }}>
+              <Text style={[styles.toggleText, viewMode === mode && styles.toggleTextActive]}>
+                {mode === 'strength' ? 'Strength' : 'Volume'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {/* Next Workout Card — only shown when an activated program exists */}
       {nextWorkout !== null && (
         <View style={styles.nextWorkoutCard}>
@@ -169,28 +234,31 @@ export function DashboardScreen() {
         </View>
       )}
 
-      {categories.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            No exercises trained yet. Start a workout to see your progress here.
-          </Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.list}>
-          {categories.map(summary => {
-            const isStale = Date.now() - new Date(summary.lastTrainedAt).getTime() > 30 * 24 * 60 * 60 * 1000;
-            return (
-              <View key={summary.category} style={{ marginBottom: spacing.sm }}>
-                <CategorySummaryCard
-                  summary={summary}
-                  isStale={isStale}
-                  onPress={() => navigation.navigate('CategoryProgress', { category: summary.category })}
-                />
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
+      <Animated.View style={{ flex: 1, opacity: cardOpacity }}>
+        {categories.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No exercises trained yet. Start a workout to see your progress here.
+            </Text>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={styles.list}>
+            {categories.map(summary => {
+              const isStale = Date.now() - new Date(summary.lastTrainedAt).getTime() > 30 * 24 * 60 * 60 * 1000;
+              return (
+                <View key={summary.category} style={{ marginBottom: spacing.sm }}>
+                  <CategorySummaryCard
+                    summary={summary}
+                    isStale={isStale}
+                    viewMode={viewMode}
+                    onPress={() => navigation.navigate('CategoryProgress', { category: summary.category, viewMode })}
+                  />
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -228,6 +296,43 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     textAlign: 'center',
     lineHeight: 22,
+  },
+
+  /* ── Strength / Volume Toggle ───────────────────────────────────── */
+  toggleRowOuter: {
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.md,
+  },
+  togglePill: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 3,
+    position: 'relative',
+  },
+  toggleIndicator: {
+    position: 'absolute',
+    top: 3,
+    left: 3,
+    bottom: 3,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  toggleText: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+  },
+  toggleTextActive: {
+    color: colors.background,
+    fontWeight: weightSemiBold,
   },
 
   /* ── Next Workout Card ───────────────────────────────────────────── */

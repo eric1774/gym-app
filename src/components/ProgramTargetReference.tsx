@@ -7,11 +7,11 @@ import { spacing } from '../theme/spacing';
 interface Props {
   targetSets: number;
   targetReps: number;
-  targetWeightKg: number;
+  targetWeightLbs: number;
 }
 
-export function ProgramTargetReference({ targetSets, targetReps, targetWeightKg }: Props) {
-  const weightPart = targetWeightKg > 0 ? ` @ ${targetWeightKg}lb` : '';
+export function ProgramTargetReference({ targetSets, targetReps, targetWeightLbs }: Props) {
+  const weightPart = targetWeightLbs > 0 ? ` @ ${targetWeightLbs}lb` : '';
 
   return (
     <View style={styles.container}>

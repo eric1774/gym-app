@@ -60,7 +60,7 @@ describe('logSet', () => {
       sessionId: 10,
       exerciseId: 5,
       setNumber: 1,
-      weightKg: 80,
+      weightLbs: 80,
       reps: 8,
       loggedAt: '2026-01-01T10:00:00',
       isWarmup: false,
@@ -205,7 +205,7 @@ describe('checkForPR', () => {
     expect(result).toBe(false);
   });
 
-  it('returns true when weightKg strictly exceeds max_weight', async () => {
+  it('returns true when weightLbs strictly exceeds max_weight', async () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ max_weight: 90 }]));
 
     const result = await checkForPR(5, 100, 8, 10);
@@ -213,7 +213,7 @@ describe('checkForPR', () => {
     expect(result).toBe(true);
   });
 
-  it('returns false when weightKg equals max_weight (not strictly greater)', async () => {
+  it('returns false when weightLbs equals max_weight (not strictly greater)', async () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ max_weight: 100 }]));
 
     const result = await checkForPR(5, 100, 8, 10);
@@ -221,7 +221,7 @@ describe('checkForPR', () => {
     expect(result).toBe(false);
   });
 
-  it('returns false when weightKg is less than max_weight', async () => {
+  it('returns false when weightLbs is less than max_weight', async () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ max_weight: 110 }]));
 
     const result = await checkForPR(5, 100, 8, 10);

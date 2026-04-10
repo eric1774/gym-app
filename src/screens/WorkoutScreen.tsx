@@ -644,7 +644,7 @@ export function WorkoutScreen() {
           map.set(pde.exerciseId, {
             targetSets: pde.targetSets,
             targetReps: pde.targetReps,
-            targetWeightKg: pde.targetWeightKg,
+            targetWeightLbs: pde.targetWeightLbs,
           });
         }
         setProgramTargetsMap(map);
@@ -772,13 +772,13 @@ export function WorkoutScreen() {
 
     const exercise = exercises.find(ex => ex.id === exerciseId);
     if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
-      setVolumeTotal(prev => prev + set.weightKg * set.reps);
+      setVolumeTotal(prev => prev + set.weightLbs * set.reps);
 
-      checkForPR(exerciseId, set.weightKg, set.reps, session!.id).then(isPR => {
+      checkForPR(exerciseId, set.weightLbs, set.reps, session!.id).then(isPR => {
         if (isPR) {
           setPrCount(prev => prev + 1);
           const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
-          prToastRef.current?.showPR(name, set.reps, set.weightKg);
+          prToastRef.current?.showPR(name, set.reps, set.weightLbs);
           HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
           setTimeout(() => {
             HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });

@@ -8,7 +8,7 @@ const makeSet = (overrides: Partial<WorkoutSet> = {}): WorkoutSet => ({
   sessionId: 1,
   exerciseId: 1,
   setNumber: 1,
-  weightKg: 135,
+  weightLbs: 135,
   reps: 10,
   loggedAt: '',
   isWarmup: false,

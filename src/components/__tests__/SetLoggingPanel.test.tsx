@@ -24,7 +24,7 @@ describe('SetLoggingPanel', () => {
     (getLastSessionSets as jest.Mock).mockResolvedValue([]);
     (logSet as jest.Mock).mockResolvedValue({
       id: 1, sessionId: 1, exerciseId: 10, setNumber: 1,
-      weightKg: 135, reps: 10, loggedAt: '2026-01-01T10:00:00Z', isWarmup: false,
+      weightLbs: 135, reps: 10, loggedAt: '2026-01-01T10:00:00Z', isWarmup: false,
     });
   });
 
@@ -113,7 +113,7 @@ describe('SetLoggingPanel', () => {
 
   it('pre-fills weight and reps from last session sets', async () => {
     (getLastSessionSets as jest.Mock).mockResolvedValue([
-      { id: 5, sessionId: 99, exerciseId: 10, setNumber: 1, weightKg: 185, reps: 8, loggedAt: '', isWarmup: false },
+      { id: 5, sessionId: 99, exerciseId: 10, setNumber: 1, weightLbs: 185, reps: 8, loggedAt: '', isWarmup: false },
     ]);
     (getSetsForExerciseInSession as jest.Mock).mockResolvedValue([]);
 

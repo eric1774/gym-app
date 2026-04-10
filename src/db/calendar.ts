@@ -143,7 +143,7 @@ export async function getDaySessionDetails(
     );
 
     // Group sets by exercise
-    const exerciseMap = new Map<number, { name: string; sets: { setNumber: number; weightKg: number; reps: number; isWarmup: boolean }[] }>();
+    const exerciseMap = new Map<number, { name: string; sets: { setNumber: number; weightLbs: number; reps: number; isWarmup: boolean }[] }>();
     const exerciseOrder: number[] = [];
     let totalSets = 0;
     let totalVolume = 0;
@@ -160,7 +160,7 @@ export async function getDaySessionDetails(
       const isWarmup = row.is_warmup === 1;
       exerciseMap.get(exId)!.sets.push({
         setNumber: row.set_number,
-        weightKg: row.weight_kg,
+        weightLbs: row.weight_kg,
         reps: row.reps,
         isWarmup,
       });
@@ -171,7 +171,7 @@ export async function getDaySessionDetails(
       }
     }
 
-    // PR detection: for each non-warmup set, check if volume (weight_kg * reps)
+    // PR detection: for each non-warmup set, check if volume (weight_lbs * reps)
     // exceeds the max volume for that exercise across working sets in prior sessions.
     // Consistent with Phase 10 decision: first-ever performance returns false (no baseline).
     const exercises: CalendarExerciseDetail[] = [];
@@ -198,12 +198,12 @@ export async function getDaySessionDetails(
       const setDetails: CalendarSetDetail[] = exData.sets.map(s => {
         let isPR = false;
         if (!s.isWarmup && priorMax !== null) {
-          isPR = (s.weightKg * s.reps) > priorMax;
+          isPR = (s.weightLbs * s.reps) > priorMax;
           if (isPR) { prCount++; }
         }
         return {
           setNumber: s.setNumber,
-          weightKg: s.weightKg,
+          weightLbs: s.weightLbs,
           reps: s.reps,
           isWarmup: s.isWarmup,
           isPR,

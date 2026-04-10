@@ -241,8 +241,8 @@ describe('WorkoutScreen', () => {
     ];
 
     (getProgramDayExercises as jest.Mock).mockResolvedValue([
-      { id: 100, programDayId: 5, exerciseId: 20, targetSets: 3, targetReps: 10, targetWeightKg: 0, sortOrder: 0, supersetGroupId: 7 },
-      { id: 101, programDayId: 5, exerciseId: 21, targetSets: 3, targetReps: 10, targetWeightKg: 0, sortOrder: 1, supersetGroupId: 7 },
+      { id: 100, programDayId: 5, exerciseId: 20, targetSets: 3, targetReps: 10, targetWeightLbs: 0, sortOrder: 0, supersetGroupId: 7 },
+      { id: 101, programDayId: 5, exerciseId: 21, targetSets: 3, targetReps: 10, targetWeightLbs: 0, sortOrder: 1, supersetGroupId: 7 },
     ]);
 
     const { getByText } = renderScreen();

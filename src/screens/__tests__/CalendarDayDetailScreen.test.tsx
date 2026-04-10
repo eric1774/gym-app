@@ -78,7 +78,7 @@ describe('CalendarDayDetailScreen', () => {
             sets: [
               {
                 setNumber: 1,
-                weightKg: 135,
+                weightLbs: 135,
                 reps: 10,
                 isWarmup: false,
                 isPR: false,
@@ -120,7 +120,7 @@ describe('CalendarDayDetailScreen', () => {
             sets: [
               {
                 setNumber: 1,
-                weightKg: 200,
+                weightLbs: 200,
                 reps: 5,
                 isWarmup: false,
                 isPR: true,

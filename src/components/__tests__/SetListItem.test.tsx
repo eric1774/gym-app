@@ -8,7 +8,7 @@ const makeSet = (overrides: Partial<WorkoutSet> = {}): WorkoutSet => ({
   sessionId: 1,
   exerciseId: 1,
   setNumber: 1,
-  weightKg: 135,
+  weightLbs: 135,
   reps: 10,
   loggedAt: '',
   isWarmup: false,
@@ -17,7 +17,7 @@ const makeSet = (overrides: Partial<WorkoutSet> = {}): WorkoutSet => ({
 
 describe('SetListItem', () => {
   it('renders reps format', () => {
-    const set = makeSet({ setNumber: 2, weightKg: 135, reps: 10 });
+    const set = makeSet({ setNumber: 2, weightLbs: 135, reps: 10 });
     const { getByText } = render(<SetListItem set={set} onDelete={jest.fn()} />);
     expect(getByText(/Set 2: 135lb/)).toBeTruthy();
     expect(getByText(/10 reps/)).toBeTruthy();

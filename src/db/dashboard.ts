@@ -32,7 +32,7 @@ export async function getExerciseProgressData(
   const result = await executeSql(
     database,
     `SELECT ws.session_id, wss.completed_at AS date,
-            ws.weight_kg AS best_weight_kg, ws.reps AS best_reps
+            ws.weight_kg AS best_weight_lbs, ws.reps AS best_reps
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      WHERE ws.exercise_id = ?
@@ -55,7 +55,7 @@ export async function getExerciseProgressData(
     points.push({
       sessionId: row.session_id,
       date: row.date,
-      bestWeightKg: row.best_weight_kg,
+      bestWeightLbs: row.best_weight_lbs,
       bestReps: row.best_reps,
     });
   }
@@ -73,7 +73,7 @@ export async function getTimedExerciseProgressData(
   const result = await executeSql(
     database,
     `SELECT ws.session_id, wss.completed_at AS date,
-            ws.weight_kg AS best_weight_kg, ws.reps AS best_reps
+            ws.weight_kg AS best_weight_lbs, ws.reps AS best_reps
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      WHERE ws.exercise_id = ?
@@ -96,7 +96,7 @@ export async function getTimedExerciseProgressData(
     points.push({
       sessionId: row.session_id,
       date: row.date,
-      bestWeightKg: row.best_weight_kg,
+      bestWeightLbs: row.best_weight_lbs,
       bestReps: row.best_reps,
     });
   }
@@ -143,7 +143,7 @@ export async function getExerciseHistory(
 
     const set: ExerciseHistorySet = {
       setNumber: row.set_number,
-      weightKg: row.weight_kg,
+      weightLbs: row.weight_kg,
       reps: row.reps,
       isWarmup: row.is_warmup === 1,
     };
@@ -656,8 +656,8 @@ export async function getCategoryExerciseProgress(
 
 /**
  * For each completed session containing this exercise, return the total volume
- * (SUM of weight_kg * reps for non-warmup sets). Ordered oldest-first for charting.
- * Volume is stored in bestWeightKg field; bestReps is always 0.
+ * (SUM of weight_lbs * reps for non-warmup sets). Ordered oldest-first for charting.
+ * Volume is stored in bestWeightLbs field; bestReps is always 0.
  */
 export async function getExerciseVolumeData(
   exerciseId: number,
@@ -683,7 +683,7 @@ export async function getExerciseVolumeData(
     points.push({
       sessionId: row.session_id,
       date: row.date,
-      bestWeightKg: row.volume ?? 0,
+      bestWeightLbs: row.volume ?? 0,
       bestReps: 0,
     });
   }
@@ -692,7 +692,7 @@ export async function getExerciseVolumeData(
 
 /**
  * For each category that has training data, return a volume summary with
- * exercise count, sparkline of per-session total volume (SUM weight_kg * reps),
+ * exercise count, sparkline of per-session total volume (SUM weight_lbs * reps),
  * last trained date. measurementType is always 'reps' for volume mode.
  */
 export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
@@ -897,7 +897,7 @@ export async function exportAllData(): Promise<FullDataExport> {
         sessionId: s.session_id,
         exerciseId: s.exercise_id,
         setNumber: s.set_number,
-        weightKg: s.weight_kg,
+        weightLbs: s.weight_kg,
         reps: s.reps,
         loggedAt: s.logged_at,
         isWarmup: s.is_warmup === 1,
@@ -940,7 +940,7 @@ export async function exportAllData(): Promise<FullDataExport> {
           exerciseId: e.exercise_id,
           targetSets: e.target_sets,
           targetReps: e.target_reps,
-          targetWeightKg: e.target_weight_kg,
+          targetWeightLbs: e.target_weight_kg,
           sortOrder: e.sort_order,
           supersetGroupId: e.superset_group_id ?? null,
         });

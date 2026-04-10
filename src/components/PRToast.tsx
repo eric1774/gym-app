@@ -23,11 +23,11 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 interface PRItem {
   exerciseName: string;
   reps: number;
-  weightKg: number;
+  weightLbs: number;
 }
 
 export interface PRToastHandle {
-  showPR: (exerciseName: string, reps: number, weightKg: number) => void;
+  showPR: (exerciseName: string, reps: number, weightLbs: number) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -106,8 +106,8 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
   }, [currentToast, translateY, slideOut]);
 
   useImperativeHandle(ref, () => ({
-    showPR(exerciseName: string, reps: number, weightKg: number) {
-      queueRef.current.push({ exerciseName, reps, weightKg });
+    showPR(exerciseName: string, reps: number, weightLbs: number) {
+      queueRef.current.push({ exerciseName, reps, weightLbs });
 
       if (!isActiveRef.current) {
         dequeueAndShow();
@@ -138,7 +138,7 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
           {currentToast.exerciseName}
         </Text>
         <Text style={styles.prDetail}>
-          {'New ' + currentToast.reps + '-rep PR! ' + currentToast.weightKg + ' lbs'}
+          {'New ' + currentToast.reps + '-rep PR! ' + currentToast.weightLbs + ' lbs'}
         </Text>
       </Animated.View>
     </View>

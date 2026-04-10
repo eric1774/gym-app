@@ -33,7 +33,7 @@ export function GhostReference({ sets, isTimed = false }: Props) {
             <Text key={s.id} style={styles.setText}>
               {isTimed
                 ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
-                : `Set ${s.setNumber}: ${s.weightKg}lb × ${s.reps} reps`}
+                : `Set ${s.setNumber}: ${s.weightLbs}lb × ${s.reps} reps`}
             </Text>
           ))}
         </View>
@@ -43,7 +43,7 @@ export function GhostReference({ sets, isTimed = false }: Props) {
             <Text key={s.id} style={styles.setText}>
               {isTimed
                 ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
-                : `Set ${s.setNumber}: ${s.weightKg}lb × ${s.reps}`}
+                : `Set ${s.setNumber}: ${s.weightLbs}lb × ${s.reps}`}
               {idx < sets.length - 1 ? '   ' : ''}
             </Text>
           ))}

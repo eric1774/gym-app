@@ -40,14 +40,14 @@ describe('getExerciseProgressData', () => {
   it('returns array of ExerciseProgressPoint objects from query rows', async () => {
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([
-        { session_id: 1, date: '2026-01-10T10:00:00Z', best_weight_kg: 80, best_reps: 8 },
-        { session_id: 2, date: '2026-02-15T11:00:00Z', best_weight_kg: 85, best_reps: 6 },
+        { session_id: 1, date: '2026-01-10T10:00:00Z', best_weight_lbs: 80, best_reps: 8 },
+        { session_id: 2, date: '2026-02-15T11:00:00Z', best_weight_lbs: 85, best_reps: 6 },
       ]),
     );
     const result = await getExerciseProgressData(1);
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ sessionId: 1, date: '2026-01-10T10:00:00Z', bestWeightKg: 80, bestReps: 8 });
-    expect(result[1]).toEqual({ sessionId: 2, date: '2026-02-15T11:00:00Z', bestWeightKg: 85, bestReps: 6 });
+    expect(result[0]).toEqual({ sessionId: 1, date: '2026-01-10T10:00:00Z', bestWeightLbs: 80, bestReps: 8 });
+    expect(result[1]).toEqual({ sessionId: 2, date: '2026-02-15T11:00:00Z', bestWeightLbs: 85, bestReps: 6 });
   });
 
   it('returns empty array when no rows', async () => {
@@ -63,12 +63,12 @@ describe('getTimedExerciseProgressData', () => {
   it('returns one ExerciseProgressPoint for a single matching row', async () => {
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([
-        { session_id: 5, date: '2026-03-01T09:00:00Z', best_weight_kg: 0, best_reps: 120 },
+        { session_id: 5, date: '2026-03-01T09:00:00Z', best_weight_lbs: 0, best_reps: 120 },
       ]),
     );
     const result = await getTimedExerciseProgressData(5);
     expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({ sessionId: 5, date: '2026-03-01T09:00:00Z', bestWeightKg: 0, bestReps: 120 });
+    expect(result[0]).toEqual({ sessionId: 5, date: '2026-03-01T09:00:00Z', bestWeightLbs: 0, bestReps: 120 });
   });
 
   it('returns empty array when no rows', async () => {

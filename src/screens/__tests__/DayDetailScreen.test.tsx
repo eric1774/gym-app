@@ -50,8 +50,8 @@ const mockExercises = [
 ];
 
 const mockDayExercises = [
-  { id: 100, programDayId: 5, exerciseId: 1, targetSets: 4, targetReps: 5, targetWeightKg: 225, sortOrder: 0, supersetGroupId: null },
-  { id: 101, programDayId: 5, exerciseId: 2, targetSets: 3, targetReps: 12, targetWeightKg: 0, sortOrder: 1, supersetGroupId: null },
+  { id: 100, programDayId: 5, exerciseId: 1, targetSets: 4, targetReps: 5, targetWeightLbs: 225, sortOrder: 0, supersetGroupId: null },
+  { id: 101, programDayId: 5, exerciseId: 2, targetSets: 3, targetReps: 12, targetWeightLbs: 0, sortOrder: 1, supersetGroupId: null },
 ];
 
 function renderScreen() {
@@ -170,7 +170,7 @@ describe('DayDetailScreen', () => {
     // After add, return updated list
     addExerciseToProgramDay.mockResolvedValue(undefined);
     getProgramDayExercises.mockResolvedValue([...mockDayExercises, {
-      id: 102, programDayId: 5, exerciseId: 3, targetSets: 3, targetReps: 10, targetWeightKg: 0, sortOrder: 2, supersetGroupId: null,
+      id: 102, programDayId: 5, exerciseId: 3, targetSets: 3, targetReps: 10, targetWeightLbs: 0, sortOrder: 2, supersetGroupId: null,
     }]);
     getExercises.mockResolvedValue(mockExercises);
 
@@ -184,8 +184,8 @@ describe('DayDetailScreen', () => {
 
   it('renders superset groups correctly', async () => {
     const supersetExercises = [
-      { id: 100, programDayId: 5, exerciseId: 1, targetSets: 4, targetReps: 5, targetWeightKg: 225, sortOrder: 0, supersetGroupId: 1 },
-      { id: 101, programDayId: 5, exerciseId: 2, targetSets: 3, targetReps: 12, targetWeightKg: 0, sortOrder: 1, supersetGroupId: 1 },
+      { id: 100, programDayId: 5, exerciseId: 1, targetSets: 4, targetReps: 5, targetWeightLbs: 225, sortOrder: 0, supersetGroupId: 1 },
+      { id: 101, programDayId: 5, exerciseId: 2, targetSets: 3, targetReps: 12, targetWeightLbs: 0, sortOrder: 1, supersetGroupId: 1 },
     ];
     getProgramDayExercises.mockResolvedValue(supersetExercises);
     getExercises.mockResolvedValue(mockExercises);

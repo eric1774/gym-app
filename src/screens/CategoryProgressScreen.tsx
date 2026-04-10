@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getCategoryExerciseProgress } from '../db/dashboard';
+import { getCategoryExerciseProgress, getCategoryExerciseVolumeProgress } from '../db/dashboard';
 import { CategoryExerciseProgress, ExerciseCategory } from '../types';
 import { DashboardStackParamList } from '../navigation/TabNavigator';
 import { MiniSparkline } from '../components/MiniSparkline';
@@ -25,14 +25,17 @@ type ScreenNavProp = NativeStackNavigationProp<DashboardStackParamList, 'Categor
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
 
-function formatBestValue(exercise: CategoryExerciseProgress): string {
+function formatBestValue(exercise: CategoryExerciseProgress, isVolume: boolean): string {
   if (exercise.measurementType === 'timed') {
     return `${Math.round(exercise.currentBest)}s`;
+  }
+  if (isVolume) {
+    return `${Math.round(exercise.currentBest).toLocaleString()} lb`;
   }
   return `${exercise.currentBest % 1 === 0 ? exercise.currentBest : exercise.currentBest.toFixed(1)} lb`;
 }
 
-function formatDelta(exercise: CategoryExerciseProgress): string | null {
+function formatDelta(exercise: CategoryExerciseProgress, isVolume: boolean): string | null {
   if (exercise.previousBest === null || exercise.sparklinePoints.length < 2) {
     return null;
   }
@@ -43,19 +46,23 @@ function formatDelta(exercise: CategoryExerciseProgress): string | null {
   if (exercise.measurementType === 'timed') {
     return `+${Math.round(delta)}s`;
   }
+  if (isVolume) {
+    return `+${Math.round(delta).toLocaleString()} lb`;
+  }
   return `+${delta.toFixed(1)} lb`;
 }
 
 interface ExerciseRowProps {
   exercise: CategoryExerciseProgress;
   accentColor: string;
+  isVolume: boolean;
   onPress: () => void;
 }
 
-const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPress }) => {
-  const delta = formatDelta(exercise);
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, isVolume, onPress }) => {
+  const delta = formatDelta(exercise, isVolume);
   const isPositiveDelta = delta !== null && delta !== '\u2013';
-  const bestValue = formatBestValue(exercise);
+  const bestValue = formatBestValue(exercise, isVolume);
   const sessionCount = exercise.sparklinePoints.length;
   const [sparkWidth, setSparkWidth] = useState(0);
 
@@ -100,7 +107,7 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPres
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: accentColor }]}>{bestValue}</Text>
-          <Text style={styles.statLabel}>best</Text>
+          <Text style={styles.statLabel}>{isVolume ? 'volume' : 'best'}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
@@ -132,7 +139,8 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, onPres
 export function CategoryProgressScreen() {
   const navigation = useNavigation<ScreenNavProp>();
   const route = useRoute<ScreenRouteProp>();
-  const { category } = route.params;
+  const { category, viewMode } = route.params;
+  const isVolume = viewMode === 'volume';
 
   const [exercises, setExercises] = useState<CategoryExerciseProgress[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>('All');
@@ -144,7 +152,9 @@ export function CategoryProgressScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const data = await getCategoryExerciseProgress(category as ExerciseCategory, timeRange);
+          const data = isVolume
+            ? await getCategoryExerciseVolumeProgress(category as ExerciseCategory, timeRange)
+            : await getCategoryExerciseProgress(category as ExerciseCategory, timeRange);
           if (!cancelled) {
             setExercises(data);
           }
@@ -168,9 +178,14 @@ export function CategoryProgressScreen() {
           activeOpacity={0.7}>
           <Text style={styles.backArrow}>{'\u2190'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {isVolume && (
+            <Text style={styles.volumeSubtitle}>Volume</Text>
+          )}
+        </View>
         <Text style={styles.exerciseCountBadge}>
           {exercises.length} {exercises.length === 1 ? 'exercise' : 'exercises'}
         </Text>
@@ -213,12 +228,14 @@ export function CategoryProgressScreen() {
               key={exercise.exerciseId}
               exercise={exercise}
               accentColor={accentColor}
+              isVolume={isVolume}
               onPress={() =>
                 navigation.navigate('ExerciseProgress', {
                   exerciseId: exercise.exerciseId,
                   exerciseName: exercise.exerciseName,
                   measurementType: exercise.measurementType,
                   category,
+                  viewMode,
                 })
               }
             />
@@ -256,7 +273,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.lg,
     fontWeight: weightBold,
-    flex: 1,
+  },
+  volumeSubtitle: {
+    color: colors.secondary,
+    fontSize: fontSize.xs,
+    fontWeight: weightMedium,
+    marginTop: 2,
   },
   exerciseCountBadge: {
     color: colors.secondary,
