@@ -466,3 +466,5 @@ export interface MealFoodInput {
   carbsPer100g: number;
   fatPer100g: number;
 }
+
+export * from './gamification';
