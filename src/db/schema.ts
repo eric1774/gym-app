@@ -106,3 +106,52 @@ export const CREATE_MACRO_SETTINGS_TABLE = `
     updated_at TEXT NOT NULL
   )
 `;
+
+// ── Gamification tables ────────────────────────────────────────────────
+
+export const CREATE_BADGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS badges (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    icon_name TEXT NOT NULL,
+    tier_thresholds TEXT,
+    evaluation_type TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_USER_BADGES_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_badges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    badge_id TEXT NOT NULL REFERENCES badges(id),
+    tier INTEGER NOT NULL,
+    current_value REAL NOT NULL DEFAULT 0,
+    earned_at TEXT NOT NULL,
+    notified INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_STREAK_SHIELDS_TABLE = `
+  CREATE TABLE IF NOT EXISTS streak_shields (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shield_type TEXT NOT NULL,
+    earned_at TEXT NOT NULL,
+    used_at TEXT,
+    used_for_date TEXT
+  )
+`;
+
+export const CREATE_USER_LEVEL_TABLE = `
+  CREATE TABLE IF NOT EXISTS user_level (
+    id INTEGER PRIMARY KEY NOT NULL DEFAULT 1,
+    current_level INTEGER NOT NULL DEFAULT 1,
+    title TEXT NOT NULL DEFAULT 'Beginner',
+    consistency_score REAL NOT NULL DEFAULT 0,
+    volume_score REAL NOT NULL DEFAULT 0,
+    nutrition_score REAL NOT NULL DEFAULT 0,
+    variety_score REAL NOT NULL DEFAULT 0,
+    last_calculated TEXT NOT NULL
+  )
+`;

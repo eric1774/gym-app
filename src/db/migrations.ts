@@ -1,5 +1,11 @@
 import { SQLiteDatabase, Transaction } from 'react-native-sqlite-storage';
 import { executeSql } from './database';
+import {
+  CREATE_BADGES_TABLE,
+  CREATE_USER_BADGES_TABLE,
+  CREATE_STREAK_SHIELDS_TABLE,
+  CREATE_USER_LEVEL_TABLE,
+} from './schema';
 
 /**
  * A single schema migration with a version number and DDL statements.
@@ -428,6 +434,22 @@ const MIGRATIONS: Migration[] = [
       // Delete all USDA-seeded foods, preserving any user-created custom foods.
       // Historical meal_foods rows are unaffected (macros are snapshotted at log time).
       tx.executeSql('DELETE FROM foods WHERE is_custom = 0');
+    },
+  },
+  {
+    version: 15,
+    description: 'Gamification: badges, user_badges, streak_shields, user_level tables',
+    up: (tx: Transaction) => {
+      tx.executeSql(CREATE_BADGES_TABLE);
+      tx.executeSql(CREATE_USER_BADGES_TABLE);
+      tx.executeSql(CREATE_STREAK_SHIELDS_TABLE);
+      tx.executeSql(CREATE_USER_LEVEL_TABLE);
+      tx.executeSql(
+        `INSERT OR IGNORE INTO user_level (id, current_level, title, consistency_score, volume_score, nutrition_score, variety_score, last_calculated)
+         VALUES (1, 1, 'Beginner', 0, 0, 0, 0, datetime('now'))`,
+      );
+      tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_user_badges_badge_id ON user_badges(badge_id)`);
+      tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_streak_shields_type ON streak_shields(shield_type)`);
     },
   },
 ];
