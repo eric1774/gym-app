@@ -1,5 +1,6 @@
 import { db, executeSql } from './database';
 import { WorkoutSet } from '../types';
+import { emitAppEvent } from '../context/GamificationContext';
 
 /** Map a raw SQLite result row to the WorkoutSet domain type. */
 export function rowToSet(row: {
@@ -56,7 +57,9 @@ export async function logSet(
   const row = await executeSql(database, 'SELECT * FROM workout_sets WHERE id = ?', [
     result.insertId,
   ]);
-  return rowToSet(row.rows.item(0));
+  const insertedSet = rowToSet(row.rows.item(0));
+  emitAppEvent({ type: 'SET_LOGGED', timestamp: new Date().toISOString() });
+  return insertedSet;
 }
 
 /**
@@ -161,5 +164,9 @@ export async function checkForPR(
     return false;
   }
 
-  return weightLbs > maxWeight;
+  const isPR = weightLbs > maxWeight;
+  if (isPR) {
+    emitAppEvent({ type: 'PR_ACHIEVED', timestamp: new Date().toISOString() });
+  }
+  return isPR;
 }

@@ -152,6 +152,10 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
       try {
         await seedBadges();
         await loadAllState();
+        // Fire APP_OPENED after state is loaded to check tenure/comeback badges
+        setTimeout(() => {
+          emitAppEvent({ type: 'APP_OPENED', timestamp: new Date().toISOString() });
+        }, 100);
       } catch (error) {
         console.error('Gamification init failed:', error);
       } finally {

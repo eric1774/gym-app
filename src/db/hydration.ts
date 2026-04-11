@@ -1,6 +1,7 @@
 import { db, executeSql } from './database';
 import { WaterLog, WaterSettings } from '../types';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
+import { emitAppEvent } from '../context/GamificationContext';
 
 // ── Row mappers ──────────────────────────────────────────────────────
 
@@ -104,7 +105,9 @@ export async function logWater(amountOz: number, loggedAt?: Date): Promise<Water
   );
 
   const row = await executeSql(database, 'SELECT * FROM water_logs WHERE id = ?', [result.insertId]);
-  return rowToWaterLog(row.rows.item(0));
+  const waterLog = rowToWaterLog(row.rows.item(0));
+  emitAppEvent({ type: 'WATER_LOGGED', timestamp: new Date().toISOString() });
+  return waterLog;
 }
 
 // ── Water Totals ─────────────────────────────────────────────────────

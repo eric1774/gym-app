@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
 import { computeCalories } from '../utils/macros';
+import { emitAppEvent } from '../context/GamificationContext';
 
 // ── Row mappers ──────────────────────────────────────────────────────
 
@@ -116,7 +117,9 @@ export async function addMeal(
   );
 
   const row = await executeSql(database, 'SELECT * FROM meals WHERE id = ?', [result.insertId]);
-  return rowToMacroMeal(row.rows.item(0));
+  const meal = rowToMacroMeal(row.rows.item(0));
+  emitAppEvent({ type: 'MEAL_LOGGED', timestamp: new Date().toISOString() });
+  return meal;
 }
 
 /**
@@ -141,7 +144,9 @@ export async function updateMeal(
   );
 
   const row = await executeSql(database, 'SELECT * FROM meals WHERE id = ?', [id]);
-  return rowToMacroMeal(row.rows.item(0));
+  const meal = rowToMacroMeal(row.rows.item(0));
+  emitAppEvent({ type: 'MEAL_LOGGED', timestamp: new Date().toISOString() });
+  return meal;
 }
 
 /**
