@@ -4,6 +4,7 @@ import { SessionProvider } from './src/context/SessionContext';
 import { TimerProvider } from './src/context/TimerContext';
 import { StopwatchProvider } from './src/context/StopwatchContext';
 import { HeartRateProvider } from './src/context/HeartRateContext';
+import { GamificationProvider } from './src/context/GamificationContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initDatabase } from './src/db';
 
@@ -24,13 +25,15 @@ export default function App() {
 
   return (
     <SessionProvider>
-      <HeartRateProvider>
-        <TimerProvider>
-          <StopwatchProvider>
-            <RootNavigator />
-          </StopwatchProvider>
-        </TimerProvider>
-      </HeartRateProvider>
+      <GamificationProvider>
+        <HeartRateProvider>
+          <TimerProvider>
+            <StopwatchProvider>
+              <RootNavigator />
+            </StopwatchProvider>
+          </TimerProvider>
+        </HeartRateProvider>
+      </GamificationProvider>
     </SessionProvider>
   );
 }
