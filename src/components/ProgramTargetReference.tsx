@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { fontSize, weightMedium } from '../theme/typography';
 import { spacing } from '../theme/spacing';
@@ -8,18 +8,24 @@ interface Props {
   targetSets: number;
   targetReps: number;
   targetWeightLbs: number;
+  onEdit?: () => void;
 }
 
-export function ProgramTargetReference({ targetSets, targetReps, targetWeightLbs }: Props) {
+export function ProgramTargetReference({ targetSets, targetReps, targetWeightLbs, onEdit }: Props) {
   const weightPart = targetWeightLbs > 0 ? ` @ ${targetWeightLbs}lb` : '';
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onEdit}
+      disabled={!onEdit}
+      activeOpacity={0.7}>
       <Text style={styles.label}>Target:</Text>
       <Text style={styles.targetText}>
         {targetSets}x{targetReps}{weightPart}
       </Text>
-    </View>
+      {onEdit && <Text style={styles.editIcon}>{'\u270E'}</Text>}
+    </TouchableOpacity>
   );
 }
 
@@ -41,5 +47,11 @@ const styles = StyleSheet.create({
   targetText: {
     fontSize: fontSize.sm,
     color: colors.accent,
+    flex: 1,
+  },
+  editIcon: {
+    fontSize: fontSize.sm,
+    color: colors.secondary,
+    marginLeft: spacing.xs,
   },
 });

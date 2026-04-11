@@ -14,22 +14,25 @@ interface CategorySummaryCardProps {
   viewMode?: 'strength' | 'volume';
 }
 
-function formatDelta(summary: CategorySummary, isVolume: boolean): string | null {
+function formatDelta(summary: CategorySummary, isVolume: boolean): { text: string; isPositive: boolean } | null {
   const { sparklinePoints, measurementType } = summary;
   if (sparklinePoints.length < 2) {
     return null;
   }
-  const delta = sparklinePoints[sparklinePoints.length - 1] - sparklinePoints[0];
-  if (delta <= 0) {
-    return null;
-  }
+  const last = sparklinePoints[sparklinePoints.length - 1];
+  const prev = sparklinePoints[sparklinePoints.length - 2];
+  const delta = last - prev;
+  const sign = delta >= 0 ? '+' : '\u2212';
+  const abs = Math.abs(delta);
+  let text: string;
   if (isVolume) {
-    return `+${Math.round(delta).toLocaleString()} lbs`;
+    text = `${sign}${Math.round(abs).toLocaleString()} lb`;
+  } else if (measurementType === 'timed') {
+    text = `${sign}${Math.round(abs)}s`;
+  } else {
+    text = `${sign}${abs % 1 === 0 ? abs : abs.toFixed(1)} lb`;
   }
-  if (measurementType === 'reps') {
-    return `+${delta.toFixed(1)} lb`;
-  }
-  return `+${Math.round(delta)}s`;
+  return { text, isPositive: delta >= 0 };
 }
 
 export const CategorySummaryCard: React.FC<CategorySummaryCardProps> = ({
@@ -63,11 +66,11 @@ export const CategorySummaryCard: React.FC<CategorySummaryCardProps> = ({
             {categoryLabel}
           </Text>
           {delta !== null && (
-            <View style={[styles.deltaBadge, { backgroundColor: accentColor + '1A' }]}>
+            <View style={[styles.deltaBadge, { backgroundColor: delta.isPositive ? accentColor + '1A' : colors.danger + '1A' }]}>
               <Text
                 testID="delta-text"
-                style={[styles.deltaText, { color: accentColor }]}>
-                {delta}
+                style={[styles.deltaText, { color: delta.isPositive ? accentColor : colors.danger }]}>
+                {delta.text}
               </Text>
             </View>
           )}

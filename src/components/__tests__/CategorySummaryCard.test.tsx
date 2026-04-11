@@ -87,7 +87,7 @@ describe('CategorySummaryCard', () => {
         onPress={noop}
       />,
     );
-    expect(getByTestId('delta-text').props.children).toBe('+10.0 lb');
+    expect(getByTestId('delta-text').props.children).toBe('+10 lb');
   });
 
   it('shows positive delta for timed type as duration', () => {
@@ -112,15 +112,15 @@ describe('CategorySummaryCard', () => {
     expect(queryByTestId('delta-text')).toBeNull();
   });
 
-  it('shows no delta badge when progress is not positive', () => {
-    const { queryByTestId } = render(
+  it('shows negative delta with minus sign and value when trending down', () => {
+    const { getByTestId } = render(
       <CategorySummaryCard
         summary={makeSummary({ sparklinePoints: [60, 50] })}
         isStale={false}
         onPress={noop}
       />,
     );
-    expect(queryByTestId('delta-text')).toBeNull();
+    expect(getByTestId('delta-text').props.children).toBe('\u221210 lb');
   });
 
   it('renders relative time from lastTrainedAt', () => {

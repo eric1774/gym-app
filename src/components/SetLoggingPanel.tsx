@@ -21,8 +21,10 @@ import { ExerciseMeasurementType, WorkoutSet } from '../types';
 import { GhostReference } from './GhostReference';
 import { ProgramTargetReference } from './ProgramTargetReference';
 import { SetListItem } from './SetListItem';
+import { useStopwatch } from '../context/StopwatchContext';
 
 export interface ProgramTarget {
+  pdeId: number;
   targetSets: number;
   targetReps: number;
   targetWeightLbs: number;
@@ -32,6 +34,8 @@ interface Props {
   sessionId: number;
   exerciseId: number;
   onSetLogged: (set: WorkoutSet) => void;
+  onSetDeleted?: (set: WorkoutSet) => void;
+  onEditTarget?: () => void;
   programTarget?: ProgramTarget | null;
   measurementType?: ExerciseMeasurementType;
 }
@@ -43,17 +47,16 @@ function formatStopwatch(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTarget, measurementType = 'reps' }: Props) {
+export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, onSetDeleted, onEditTarget, programTarget, measurementType = 'reps' }: Props) {
   const [weightInput, setWeightInput] = useState('');
   const [repsInput, setRepsInput] = useState('');
   const [completedSets, setCompletedSets] = useState<WorkoutSet[]>([]);
   const [lastSessionSets, setLastSessionSets] = useState<WorkoutSet[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Stopwatch state for timed exercises
-  const [stopwatchSeconds, setStopwatchSeconds] = useState(0);
-  const [stopwatchRunning, setStopwatchRunning] = useState(false);
-  const stopwatchRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Stopwatch state lives in context so it survives collapse/expand and app backgrounding
+  const { getStopwatch, startStopwatch, stopStopwatch, resetStopwatch } = useStopwatch();
+  const { seconds: stopwatchSeconds, running: stopwatchRunning } = getStopwatch(exerciseId);
 
   const weightRef = useRef<TextInput>(null);
   const repsRef = useRef<TextInput>(null);
@@ -84,38 +87,17 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, exerciseId]);
 
-  // Cleanup stopwatch on unmount
-  useEffect(() => {
-    return () => {
-      if (stopwatchRef.current) {
-        clearInterval(stopwatchRef.current);
-      }
-    };
-  }, []);
-
   const handleStartStopwatch = useCallback(() => {
-    setStopwatchRunning(true);
-    stopwatchRef.current = setInterval(() => {
-      setStopwatchSeconds(prev => prev + 1);
-    }, 1000);
-  }, []);
+    startStopwatch(exerciseId);
+  }, [exerciseId, startStopwatch]);
 
   const handleStopStopwatch = useCallback(() => {
-    setStopwatchRunning(false);
-    if (stopwatchRef.current) {
-      clearInterval(stopwatchRef.current);
-      stopwatchRef.current = null;
-    }
-  }, []);
+    stopStopwatch(exerciseId);
+  }, [exerciseId, stopStopwatch]);
 
   const handleResetStopwatch = useCallback(() => {
-    setStopwatchRunning(false);
-    if (stopwatchRef.current) {
-      clearInterval(stopwatchRef.current);
-      stopwatchRef.current = null;
-    }
-    setStopwatchSeconds(0);
-  }, []);
+    resetStopwatch(exerciseId);
+  }, [exerciseId, resetStopwatch]);
 
   const handleStepWeight = useCallback((delta: number) => {
     const current = parseFloat(weightInput) || 0;
@@ -166,9 +148,11 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
   }, [weightInput, repsInput, sessionId, exerciseId, isSubmitting, onSetLogged, isTimed, stopwatchSeconds, handleResetStopwatch]);
 
   const handleDelete = useCallback(async (id: number) => {
+    const deleted = completedSets.find(s => s.id === id);
     await deleteSet(id);
     setCompletedSets(prev => prev.filter(s => s.id !== id));
-  }, []);
+    if (deleted && onSetDeleted) { onSetDeleted(deleted); }
+  }, [completedSets, onSetDeleted]);
 
   const isConfirmDisabled = isTimed
     ? stopwatchSeconds === 0 || stopwatchRunning || isSubmitting
@@ -185,6 +169,7 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, programTar
           targetSets={programTarget.targetSets}
           targetReps={programTarget.targetReps}
           targetWeightLbs={programTarget.targetWeightLbs}
+          onEdit={onEditTarget}
         />
       )}
 

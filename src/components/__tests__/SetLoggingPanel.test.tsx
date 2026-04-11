@@ -1,6 +1,15 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
+jest.mock('../../context/StopwatchContext', () => ({
+  useStopwatch: () => ({
+    getStopwatch: () => ({ seconds: 0, running: false }),
+    startStopwatch: jest.fn(),
+    stopStopwatch: jest.fn(),
+    resetStopwatch: jest.fn(),
+  }),
+}));
+
 jest.mock('../../db/sets', () => ({
   logSet: jest.fn(),
   getSetsForExerciseInSession: jest.fn().mockResolvedValue([]),

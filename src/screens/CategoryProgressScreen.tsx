@@ -35,21 +35,22 @@ function formatBestValue(exercise: CategoryExerciseProgress, isVolume: boolean):
   return `${exercise.currentBest % 1 === 0 ? exercise.currentBest : exercise.currentBest.toFixed(1)} lb`;
 }
 
-function formatDelta(exercise: CategoryExerciseProgress, isVolume: boolean): string | null {
+function formatDelta(exercise: CategoryExerciseProgress, isVolume: boolean): { text: string; isPositive: boolean } | null {
   if (exercise.previousBest === null || exercise.sparklinePoints.length < 2) {
     return null;
   }
   const delta = exercise.currentBest - exercise.previousBest;
-  if (delta <= 0) {
-    return '\u2013'; // en-dash
-  }
+  const sign = delta >= 0 ? '+' : '\u2212';
+  const abs = Math.abs(delta);
+  let text: string;
   if (exercise.measurementType === 'timed') {
-    return `+${Math.round(delta)}s`;
+    text = `${sign}${Math.round(abs)}s`;
+  } else if (isVolume) {
+    text = `${sign}${Math.round(abs).toLocaleString()} lb`;
+  } else {
+    text = `${sign}${abs % 1 === 0 ? abs : abs.toFixed(1)} lb`;
   }
-  if (isVolume) {
-    return `+${Math.round(delta).toLocaleString()} lb`;
-  }
-  return `+${delta.toFixed(1)} lb`;
+  return { text, isPositive: delta >= 0 };
 }
 
 interface ExerciseRowProps {
@@ -61,7 +62,6 @@ interface ExerciseRowProps {
 
 const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, isVolume, onPress }) => {
   const delta = formatDelta(exercise, isVolume);
-  const isPositiveDelta = delta !== null && delta !== '\u2013';
   const bestValue = formatBestValue(exercise, isVolume);
   const sessionCount = exercise.sparklinePoints.length;
   const [sparkWidth, setSparkWidth] = useState(0);
@@ -86,18 +86,18 @@ const ExerciseRow: React.FC<ExerciseRowProps> = ({ exercise, accentColor, isVolu
             style={[
               styles.deltaBadge,
               {
-                backgroundColor: isPositiveDelta
+                backgroundColor: delta.isPositive
                   ? accentColor + '1A'
-                  : colors.surface,
+                  : colors.danger + '1A',
               },
             ]}>
             <Text
               testID="delta-text"
               style={[
                 styles.deltaText,
-                { color: isPositiveDelta ? accentColor : colors.secondary },
+                { color: delta.isPositive ? accentColor : colors.danger },
               ]}>
-              {delta}
+              {delta.text}
             </Text>
           </View>
         )}

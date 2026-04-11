@@ -84,7 +84,7 @@ describe('CategoryProgressScreen', () => {
 
     const { getByText } = renderWithParams({ category: 'chest' });
     await flushAsync();
-    expect(getByText('+15.0 lb')).toBeTruthy();
+    expect(getByText('+15 lb')).toBeTruthy();
   });
 
   it('shows delta formatted as duration for timed type', async () => {
@@ -97,14 +97,14 @@ describe('CategoryProgressScreen', () => {
     expect(getByText('+30s')).toBeTruthy();
   });
 
-  it('shows dash for non-positive delta', async () => {
+  it('shows negative delta with minus sign and value', async () => {
     (getCategoryExerciseProgress as jest.Mock).mockResolvedValue([
       makeExercise({ currentBest: 60, previousBest: 75 }),
     ]);
 
     const { getByText } = renderWithParams({ category: 'chest' });
     await flushAsync();
-    expect(getByText('\u2013')).toBeTruthy();
+    expect(getByText('\u221215 lb')).toBeTruthy();
   });
 
   it('hides delta when previousBest is null', async () => {

@@ -346,7 +346,7 @@ function DayNutritionCard({ data }: { data: NutritionData | null }) {
       {waterOz > 0 && (
         <View style={nutritionStyles.waterRow}>
           <Text style={nutritionStyles.waterEmoji}>{'\uD83D\uDCA7'}</Text>
-          <Text style={nutritionStyles.waterValue}>{waterOz}</Text>
+          <Text style={nutritionStyles.waterValue}>{parseFloat(waterOz.toFixed(2))}</Text>
           <Text style={nutritionStyles.waterUnit}>oz</Text>
         </View>
       )}
@@ -355,22 +355,22 @@ function DayNutritionCard({ data }: { data: NutritionData | null }) {
       {(macros.protein > 0 || macros.carbs > 0 || macros.fat > 0) && (
         <View style={nutritionStyles.macroRow}>
           <View style={nutritionStyles.macroItem}>
-            <Text style={nutritionStyles.macroValue}>{calories}</Text>
+            <Text style={nutritionStyles.macroValue}>{parseFloat(calories.toFixed(2))}</Text>
             <Text style={nutritionStyles.macroLabel}>cal</Text>
           </View>
           <View style={nutritionStyles.divider} />
           <View style={nutritionStyles.macroItem}>
-            <Text style={nutritionStyles.macroValue}>{macros.protein}g</Text>
+            <Text style={nutritionStyles.macroValue}>{parseFloat(macros.protein.toFixed(2))}g</Text>
             <Text style={nutritionStyles.macroLabel}>protein</Text>
           </View>
           <View style={nutritionStyles.divider} />
           <View style={nutritionStyles.macroItem}>
-            <Text style={nutritionStyles.macroValue}>{macros.carbs}g</Text>
+            <Text style={nutritionStyles.macroValue}>{parseFloat(macros.carbs.toFixed(2))}g</Text>
             <Text style={nutritionStyles.macroLabel}>carbs</Text>
           </View>
           <View style={nutritionStyles.divider} />
           <View style={nutritionStyles.macroItem}>
-            <Text style={nutritionStyles.macroValue}>{macros.fat}g</Text>
+            <Text style={nutritionStyles.macroValue}>{parseFloat(macros.fat.toFixed(2))}g</Text>
             <Text style={nutritionStyles.macroLabel}>fat</Text>
           </View>
         </View>

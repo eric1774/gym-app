@@ -19,6 +19,10 @@ All notable changes to GymTrack are documented here.
 
 - **Save to Meal Library**: Toggle "Save to Library" when logging a builder meal to save it for one-tap reuse later. You can also start building directly from the Meal Library screen.
 
+- **Strength/Volume Toggle**: Switch between Strength and Volume views on the dashboard, category progress, and exercise progress screens. An inline pill toggle sits next to the time range filters — tap it to see total volume (weight × reps) trends instead of max weight, all the way through your drill-downs.
+
+- **Edit Targets Mid-Workout**: Tap the target reference on any exercise during a workout to adjust sets, reps, and weight on the fly. Changes are saved immediately to your program — no need to leave the session.
+
 ### Improved
 
 - **Categorized Daily Log**: Today's Logs now groups your meals by category — Breakfast, Lunch, Dinner, and Snacks — each in its own card with an item count badge. Only categories with entries are shown, keeping the view clean and organized.
@@ -27,10 +31,20 @@ All notable changes to GymTrack are documented here.
 
 - **Tab Renamed**: The "Protein" tab is now "Health" to better reflect the full macro and hydration tracking it provides.
 
+- **Progress Delta Badges**: Progress indicators on the dashboard and category screens now show both gains (green) and declines (red) with proper +/− formatting, instead of hiding negative changes.
+
+- **Persistent Stopwatch**: The stopwatch for timed exercises now survives collapsing and re-expanding exercise cards during your workout — no more losing your timer mid-set.
+
+- **Database Health Check**: A new diagnostic tool in Settings replaces the old Repair Data button. Scan your database for issues across multiple categories, see results at a glance, and fix problems with a single tap.
+
+- **Nutrition Precision**: Calendar day detail now displays accurate decimal values for macros and water intake instead of rounding.
+
 ### Fixed
 
 - Fixed an issue where the superset round counter could display a number higher than the target total
 - Fixed app startup showing an infinite spinner if the database failed to initialize — now shows a clear error message
+- Fixed set deletion not updating the live workout volume counter
+- Fixed timed exercise deltas showing wrong format in progress badges
 
 ---
 

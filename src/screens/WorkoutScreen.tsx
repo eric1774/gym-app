@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -26,7 +26,8 @@ import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
-import { getProgramDayExercises } from '../db/programs';
+import { getProgramDayExercises, updateExerciseTargets } from '../db/programs';
+import { EditTargetsModal } from '../components/EditTargetsModal';
 import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { checkForPR } from '../db/sets';
@@ -179,6 +180,8 @@ interface ExerciseCardProps {
   onPress: () => void;
   onToggleComplete: () => void;
   onSetLogged: (set: WorkoutSet) => void;
+  onSetDeleted: (set: WorkoutSet) => void;
+  onEditTarget?: () => void;
   onStartRest: () => void;
   onViewHistory: () => void;
   onRestChange: (newRestSeconds: number) => void;
@@ -198,6 +201,8 @@ function ExerciseCard({
   onPress,
   onToggleComplete,
   onSetLogged,
+  onSetDeleted,
+  onEditTarget,
   onStartRest,
   onViewHistory,
   onRestChange,
@@ -289,6 +294,8 @@ function ExerciseCard({
             sessionId={sessionId}
             exerciseId={exerciseSession.exerciseId}
             onSetLogged={onSetLogged}
+            onSetDeleted={onSetDeleted}
+            onEditTarget={onEditTarget}
             programTarget={programTarget}
             measurementType={measurementType}
           />
@@ -320,6 +327,8 @@ interface SupersetContainerProps {
   onPressExercise: (exerciseId: number, isActive: boolean) => void;
   onToggleComplete: (exerciseId: number) => void;
   onSetLogged: (exerciseId: number, set: WorkoutSet) => void;
+  onSetDeleted: (exerciseId: number, set: WorkoutSet) => void;
+  onEditTarget: (exerciseId: number) => void;
   onStartRest: (exerciseId: number) => void;
   onViewHistory: (exerciseId: number) => void;
   onRestChange: (exerciseId: number, newRestSeconds: number) => void;
@@ -339,6 +348,8 @@ function SupersetContainer({
   onPressExercise,
   onToggleComplete,
   onSetLogged,
+  onSetDeleted,
+  onEditTarget,
   onStartRest,
   onViewHistory,
   onRestChange,
@@ -387,6 +398,8 @@ function SupersetContainer({
               onPress={() => onPressExercise(exerciseId, isActive)}
               onToggleComplete={() => onToggleComplete(exerciseId)}
               onSetLogged={(set) => onSetLogged(exerciseId, set)}
+              onSetDeleted={(set) => onSetDeleted(exerciseId, set)}
+              onEditTarget={() => onEditTarget(exerciseId)}
               onStartRest={() => onStartRest(exerciseId)}
               onViewHistory={() => onViewHistory(exerciseId)}
               onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
@@ -564,6 +577,9 @@ export function WorkoutScreen() {
   // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
   const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
 
+  // Inline target editing state
+  const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
+
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
   const [programDayName, setProgramDayName] = useState<string | null>(null);
@@ -642,6 +658,7 @@ export function WorkoutScreen() {
         const map = new Map<number, ProgramTarget>();
         for (const pde of pdes) {
           map.set(pde.exerciseId, {
+            pdeId: pde.id,
             targetSets: pde.targetSets,
             targetReps: pde.targetReps,
             targetWeightLbs: pde.targetWeightLbs,
@@ -787,6 +804,65 @@ export function WorkoutScreen() {
       }).catch(() => {});
     }
   }, [exercises, session]);
+
+  const handleSetDeleted = useCallback((exerciseId: number, set: WorkoutSet) => {
+    setSetCountsByExercise(prev => ({
+      ...prev,
+      [exerciseId]: Math.max((prev[exerciseId] ?? 0) - 1, 0),
+    }));
+    if (!set.isWarmup) {
+      setVolumeTotal(prev => Math.max(prev - set.weightLbs * set.reps, 0));
+    }
+  }, []);
+
+  const handleEditTarget = useCallback((exerciseId: number) => {
+    setEditingExerciseId(exerciseId);
+  }, []);
+
+  const handleSaveTargets = useCallback(async (pdeId: number, sets: number, reps: number, weight: number) => {
+    if (editingExerciseId === null) { return; }
+    // Optimistic local update
+    setProgramTargetsMap(prev => {
+      const next = new Map(prev);
+      next.set(editingExerciseId, { pdeId, targetSets: sets, targetReps: reps, targetWeightLbs: weight });
+      return next;
+    });
+    setEditingExerciseId(null);
+    try {
+      await updateExerciseTargets(pdeId, sets, reps, weight);
+    } catch {
+      // Revert on error — re-fetch from DB
+      if (programDayId) {
+        getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
+          const map = new Map<number, ProgramTarget>();
+          for (const pde of pdes) {
+            map.set(pde.exerciseId, { pdeId: pde.id, targetSets: pde.targetSets, targetReps: pde.targetReps, targetWeightLbs: pde.targetWeightLbs });
+          }
+          setProgramTargetsMap(map);
+        });
+      }
+    }
+  }, [editingExerciseId, programDayId]);
+
+  const editingExerciseName = useMemo(() => {
+    if (editingExerciseId === null) { return ''; }
+    return exercises.find(ex => ex.id === editingExerciseId)?.name ?? '';
+  }, [editingExerciseId, exercises]);
+
+  const editingDayExercise = useMemo((): ProgramDayExercise | null => {
+    if (editingExerciseId === null || !programTargetsMap.has(editingExerciseId) || !programDayId) { return null; }
+    const target = programTargetsMap.get(editingExerciseId)!;
+    return {
+      id: target.pdeId,
+      programDayId,
+      exerciseId: editingExerciseId,
+      targetSets: target.targetSets,
+      targetReps: target.targetReps,
+      targetWeightLbs: target.targetWeightLbs,
+      sortOrder: 0,
+      supersetGroupId: null,
+    };
+  }, [editingExerciseId, programDayId, programTargetsMap]);
 
   const handleRestChange = useCallback(
     (exerciseId: number, newRestSeconds: number) => {
@@ -1089,6 +1165,8 @@ export function WorkoutScreen() {
                   }
                   onToggleComplete={handleToggleComplete}
                   onSetLogged={handleSetLogged}
+                  onSetDeleted={handleSetDeleted}
+                  onEditTarget={handleEditTarget}
                   onStartRest={handleStartRest}
                   onViewHistory={handleViewHistory}
                   onRestChange={handleRestChange}
@@ -1124,6 +1202,8 @@ export function WorkoutScreen() {
                         onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
                         onToggleComplete={() => handleToggleComplete(se.exerciseId)}
                         onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
+                        onSetDeleted={(set) => handleSetDeleted(se.exerciseId, set)}
+                        onEditTarget={() => handleEditTarget(se.exerciseId)}
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onViewHistory={() => handleViewHistory(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
@@ -1156,6 +1236,15 @@ export function WorkoutScreen() {
       <DeviceScanSheet
         visible={scanSheetVisible}
         onClose={handleScanSheetClose}
+      />
+
+      {/* Inline target editing modal */}
+      <EditTargetsModal
+        visible={editingExerciseId !== null}
+        onClose={() => setEditingExerciseId(null)}
+        exerciseName={editingExerciseName}
+        dayExercise={editingDayExercise}
+        onSave={handleSaveTargets}
       />
     </SafeAreaView>
   );
