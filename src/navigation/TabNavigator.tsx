@@ -20,6 +20,7 @@ import { MealBuilderScreen } from '../screens/MealBuilderScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
 import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
+import { AchievementsScreen } from '../screens/AchievementsScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -51,6 +52,7 @@ export type DashboardStackParamList = {
   ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
   Settings: undefined;
   CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
+  Achievements: undefined;
 };
 
 export type ProteinStackParamList = {
@@ -183,6 +185,7 @@ function DashboardStackNavigator() {
       <DashboardStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
       <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressScreen} />
+      <DashboardStack.Screen name="Achievements" component={AchievementsScreen} />
     </DashboardStack.Navigator>
   );
 }
