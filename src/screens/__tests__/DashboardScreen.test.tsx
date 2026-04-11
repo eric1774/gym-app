@@ -8,6 +8,8 @@ jest.mock('../../context/GamificationContext', () => ({
     checkBadges: jest.fn(),
     dismissCelebration: jest.fn(),
     refreshAll: jest.fn(),
+    backfilledBadges: [],
+    clearBackfill: jest.fn(),
   }),
   emitAppEvent: jest.fn(),
 }));
