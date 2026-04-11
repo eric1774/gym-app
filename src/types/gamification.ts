@@ -142,6 +142,8 @@ export interface GamificationContextValue {
   checkBadges: (event: AppEvent) => Promise<void>;
   dismissCelebration: () => void;
   refreshAll: () => Promise<void>;
+  backfilledBadges: Array<{badge: BadgeDefinition; tier: BadgeTier}>;
+  clearBackfill: () => void;
 }
 
 // ── Level Titles ──

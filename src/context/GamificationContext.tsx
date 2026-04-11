@@ -29,10 +29,11 @@ import {
   getUserLevel,
   updateUserLevel,
 } from '../db/badges';
-import { evaluateRelevantBadges } from '../utils/badgeEngine';
+import { evaluateRelevantBadges, determineTier } from '../utils/badgeEngine';
 import { calculateCompositeLevel } from '../utils/levelCalculator';
 import { BADGE_DEFINITIONS, getBadgeDefinition } from '../data/badgeDefinitions';
 import { getNextThreshold } from '../utils/badgeEngine';
+import type { BadgeDefinition } from '../types';
 
 // ── App Event Bus ──
 
@@ -80,6 +81,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
   const [shieldState, setShieldState] = useState<ShieldState>({ workout: 0, protein: 0, water: 0 });
   const [pendingCelebrations, setPendingCelebrations] = useState<CelebrationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [backfilledBadges, setBackfilledBadges] = useState<Array<{badge: BadgeDefinition; tier: BadgeTier}>>([]);
   const isInitialized = useRef(false);
 
   const loadAllState = useCallback(async () => {
@@ -143,7 +145,47 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     setPendingCelebrations(celebrations);
   }, []);
 
-  // ── Initialize: seed badges, load state ──
+  // ── Backfill historical badges on first init ──
+  const backfillBadges = useCallback(async (): Promise<Array<{badge: BadgeDefinition; tier: BadgeTier}>> => {
+    const database = await db;
+
+    // Check if backfill already ran (any badges already earned means not first run)
+    const [countResult] = await database.executeSql('SELECT COUNT(*) as count FROM user_badges');
+    if (countResult.rows.item(0).count > 0) return [];
+
+    // Check if user has any historical data worth backfilling
+    const [sessionResult] = await database.executeSql('SELECT COUNT(*) as count FROM workout_sessions WHERE completed_at IS NOT NULL');
+    const [mealResult] = await database.executeSql('SELECT COUNT(*) as count FROM meals');
+    if (sessionResult.rows.item(0).count === 0 && mealResult.rows.item(0).count === 0) return [];
+
+    // Evaluate ALL badges against historical data
+    const backfilled: Array<{badge: BadgeDefinition; tier: BadgeTier}> = [];
+
+    for (const badge of BADGE_DEFINITIONS) {
+      try {
+        const currentValue = await badge.evaluate(database);
+        const tier = determineTier(currentValue, badge.tierThresholds);
+
+        if (tier !== null) {
+          await earnBadgeTier(badge.id, tier, currentValue);
+          backfilled.push({ badge, tier });
+        }
+      } catch (error) {
+        console.warn(`Backfill failed for ${badge.id}:`, error);
+      }
+    }
+
+    // Mark ALL backfilled badges as already notified (skip celebration modals)
+    if (backfilled.length > 0) {
+      await database.executeSql('UPDATE user_badges SET notified = 1');
+    }
+
+    return backfilled;
+  }, []);
+
+  const clearBackfill = useCallback(() => setBackfilledBadges([]), []);
+
+  // ── Initialize: seed badges, backfill, load state ──
   useEffect(() => {
     if (isInitialized.current) return;
     isInitialized.current = true;
@@ -151,7 +193,12 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
     (async () => {
       try {
         await seedBadges();
+        const backfilled = await backfillBadges();
         await loadAllState();
+        // If backfill found badges, store them for the highlight reel
+        if (backfilled.length > 0) {
+          setBackfilledBadges(backfilled);
+        }
         // Fire APP_OPENED after state is loaded to check tenure/comeback badges
         setTimeout(() => {
           emitAppEvent({ type: 'APP_OPENED', timestamp: new Date().toISOString() });
@@ -162,7 +209,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
         setIsLoading(false);
       }
     })();
-  }, [loadAllState]);
+  }, [loadAllState, backfillBadges]);
 
   // ── Check Badges (called after data mutations) ──
   const checkBadges = useCallback(async (event: AppEvent) => {
@@ -263,8 +310,10 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
       checkBadges,
       dismissCelebration,
       refreshAll,
+      backfilledBadges,
+      clearBackfill,
     }),
-    [badgeStates, levelState, shieldState, pendingCelebrations, isLoading, checkBadges, dismissCelebration, refreshAll],
+    [badgeStates, levelState, shieldState, pendingCelebrations, isLoading, checkBadges, dismissCelebration, refreshAll, backfilledBadges, clearBackfill],
   );
 
   return (
