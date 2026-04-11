@@ -79,20 +79,25 @@ export async function evaluateRelevantBadges(
   const newTierUps: Array<{ badge: BadgeDefinition; newTier: BadgeTier }> = [];
 
   for (const badge of relevantBadges) {
-    const result = await evaluateBadge(badge, db);
-    const previousState = currentStates.get(badge.id);
-    const previousTier = previousState?.currentTier ?? null;
+    try {
+      const result = await evaluateBadge(badge, db);
+      const previousState = currentStates.get(badge.id);
+      const previousTier = previousState?.currentTier ?? null;
 
-    updated.set(badge.id, {
-      badgeId: badge.id,
-      currentTier: result.tier,
-      currentValue: result.currentValue,
-      nextThreshold: result.nextThreshold,
-    });
+      updated.set(badge.id, {
+        badgeId: badge.id,
+        currentTier: result.tier,
+        currentValue: result.currentValue,
+        nextThreshold: result.nextThreshold,
+      });
 
-    // Detect tier-up
-    if (result.tier !== null && (previousTier === null || result.tier > previousTier)) {
-      newTierUps.push({ badge, newTier: result.tier });
+      // Detect tier-up
+      if (result.tier !== null && (previousTier === null || result.tier > previousTier)) {
+        newTierUps.push({ badge, newTier: result.tier });
+      }
+    } catch (error) {
+      console.warn(`Badge evaluation failed for ${badge.id}:`, error);
+      // Continue evaluating other badges — don't let one bad query kill the chain
     }
   }
 

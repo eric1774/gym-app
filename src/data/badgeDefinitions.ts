@@ -80,7 +80,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   cumulative('ton_club', 'The Ton Club', 'Total lifetime volume lifted', 'fitness', 'dumbbell',
     [2000, 10000, 50000, 200000, 500000], ['SET_LOGGED', 'SESSION_COMPLETED'],
-    sqlCount(`SELECT COALESCE(SUM(weight_lbs * reps), 0) as value FROM workout_sets WHERE is_warmup = 0`)),
+    sqlCount(`SELECT COALESCE(SUM(weight_kg * reps), 0) as value FROM workout_sets WHERE is_warmup = 0`)),
 
   cumulative('set_stacker', 'Set Stacker', 'Total lifetime sets completed', 'fitness', 'layers',
     [100, 500, 1500, 5000, 15000], ['SET_LOGGED'],
@@ -92,12 +92,12 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   cumulative('plate_crusher', 'Plate Crusher', 'Heaviest single set logged', 'fitness', 'weight',
     [135, 185, 225, 315, 405], ['SET_LOGGED'],
-    sqlCount(`SELECT COALESCE(MAX(weight_lbs), 0) as value FROM workout_sets WHERE is_warmup = 0`)),
+    sqlCount(`SELECT COALESCE(MAX(weight_kg), 0) as value FROM workout_sets WHERE is_warmup = 0`)),
 
   cumulative('pr_collector', 'PR Collector', 'Total personal records achieved', 'fitness', 'trophy',
     [5, 20, 50, 100, 250], ['PR_ACHIEVED'],
-    sqlCount(`SELECT COUNT(DISTINCT exercise_id || '-' || weight_lbs) as value FROM workout_sets ws
-      WHERE ws.weight_lbs = (SELECT MAX(ws2.weight_lbs) FROM workout_sets ws2 WHERE ws2.exercise_id = ws.exercise_id)
+    sqlCount(`SELECT COUNT(DISTINCT exercise_id || '-' || weight_kg) as value FROM workout_sets ws
+      WHERE ws.weight_kg = (SELECT MAX(ws2.weight_kg) FROM workout_sets ws2 WHERE ws2.exercise_id = ws.exercise_id)
       AND ws.is_warmup = 0`)),
 
   cumulative('session_warrior', 'Session Warrior', 'Total workout sessions completed', 'fitness', 'calendar-check',
@@ -112,12 +112,12 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   cumulative('volume_day', 'Volume Day', 'Highest volume in a single session', 'fitness', 'trending-up',
     [2000, 5000, 10000, 20000, 40000], ['SESSION_COMPLETED'],
     sqlCount(`SELECT COALESCE(MAX(session_vol), 0) as value FROM (
-      SELECT ws.session_id, SUM(ws.weight_lbs * ws.reps) as session_vol
+      SELECT ws.session_id, SUM(ws.weight_kg * ws.reps) as session_vol
       FROM workout_sets ws WHERE ws.is_warmup = 0 GROUP BY ws.session_id)`)),
 
   cumulative('superset_king', 'Superset King', 'Total superset groups completed', 'fitness', 'git-merge',
     [10, 50, 150, 400, 1000], ['SESSION_COMPLETED'],
-    sqlCount(`SELECT COUNT(DISTINCT superset_group_id) as value FROM exercise_sessions WHERE superset_group_id IS NOT NULL`)),
+    sqlCount(`SELECT COUNT(DISTINCT superset_group_id) as value FROM program_day_exercises WHERE superset_group_id IS NOT NULL`)),
 
   cumulative('warmup_disciple', 'Warmup Disciple', 'Total warmup sets logged', 'fitness', 'sun',
     [25, 100, 300, 750, 2000], ['SET_LOGGED'],
@@ -160,8 +160,8 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     sqlCount(`SELECT COALESCE(MAX(pr_count), 0) as value FROM (
       SELECT session_id, COUNT(*) as pr_count FROM (
         SELECT ws.session_id, ws.exercise_id FROM workout_sets ws
-        WHERE ws.is_warmup = 0 AND ws.weight_lbs = (
-          SELECT MAX(ws2.weight_lbs) FROM workout_sets ws2
+        WHERE ws.is_warmup = 0 AND ws.weight_kg = (
+          SELECT MAX(ws2.weight_kg) FROM workout_sets ws2
           WHERE ws2.exercise_id = ws.exercise_id AND ws2.logged_at <= ws.logged_at
         )
         GROUP BY ws.session_id, ws.exercise_id
@@ -183,7 +183,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
     [1, 5, 15, 40, 100], ['SET_LOGGED'],
     sqlCount(`SELECT COUNT(*) as value FROM workout_sets ws
       WHERE ws.reps >= 10 AND ws.is_warmup = 0
-      AND ws.weight_lbs = (SELECT MAX(ws2.weight_lbs) FROM workout_sets ws2 WHERE ws2.exercise_id = ws.exercise_id)`)),
+      AND ws.weight_kg = (SELECT MAX(ws2.weight_kg) FROM workout_sets ws2 WHERE ws2.exercise_id = ws.exercise_id)`)),
 
   cumulative('the_specialist', 'The Specialist', 'Sessions with a specific program', 'fitness', 'bookmark',
     [10, 25, 50, 100, 200], ['SESSION_COMPLETED'],
@@ -239,7 +239,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   cumulative('calorie_counter', 'Calorie Counter', 'Total calories logged', 'nutrition', 'calculator',
     [20000, 100000, 500000, 1500000, 5000000], ['MEAL_LOGGED'],
-    sqlCount(`SELECT COALESCE(SUM(mf.calories * mf.grams / 100.0), 0) as value FROM meal_foods mf`)),
+    sqlCount(`SELECT COALESCE(SUM((mf.protein * 4 + mf.carbs * 4 + mf.fat * 9) * mf.grams / 100.0), 0) as value FROM meal_foods mf`)),
 
   streak('triple_threat', 'Triple Threat', 'Consecutive days hitting all 3 macros', 'nutrition', 'award',
     [3, 7, 14, 30, 60], ['MEAL_LOGGED', 'DAY_BOUNDARY'],
@@ -292,7 +292,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   cumulative('library_architect', 'Library Architect', 'Saved meals in library', 'nutrition', 'archive',
     [3, 10, 25, 50, 100], ['MEAL_LOGGED'],
-    sqlCount(`SELECT COUNT(*) as value FROM library_meals`)),
+    sqlCount(`SELECT COUNT(*) as value FROM meal_library`)),
 
   // ── NUTRITION: Hydration (6) ──
 
@@ -496,7 +496,7 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
 
   oneTime('recipe_creator', 'Recipe Creator', 'Save your first library meal', 'milestone', 'book',
     ['MEAL_LOGGED'],
-    sqlCount(`SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as value FROM library_meals`)),
+    sqlCount(`SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as value FROM meal_library`)),
 
   oneTime('custom_creator', 'Custom Creator', 'Create your first custom food', 'milestone', 'edit-3',
     ['MEAL_LOGGED'],
