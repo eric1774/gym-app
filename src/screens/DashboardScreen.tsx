@@ -27,6 +27,7 @@ import { useGamification } from '../context/GamificationContext';
 import { LevelBar } from '../components/LevelBar';
 import { RecentBadges } from '../components/RecentBadges';
 import { CelebrationModal } from '../components/CelebrationModal';
+import { HighlightReelModal } from '../components/HighlightReelModal';
 import { getEarnedBadges } from '../db/badges';
 import type { UserBadgeRow } from '../types';
 
@@ -69,7 +70,7 @@ export function DashboardScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
   const [toggleWidth, setToggleWidth] = useState(0);
-  const { levelState, pendingCelebrations, dismissCelebration } = useGamification();
+  const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
   const [recentBadges, setRecentBadges] = useState<UserBadgeRow[]>([]);
 
   // Elapsed timer for active session state
@@ -277,8 +278,12 @@ export function DashboardScreen() {
           </ScrollView>
         )}
       </Animated.View>
+      <HighlightReelModal
+        badges={backfilledBadges}
+        onDismiss={clearBackfill}
+      />
       <CelebrationModal
-        celebration={pendingCelebrations.length > 0 ? pendingCelebrations[0] : null}
+        celebration={backfilledBadges.length === 0 && pendingCelebrations.length > 0 ? pendingCelebrations[0] : null}
         onDismiss={dismissCelebration}
       />
     </SafeAreaView>
