@@ -5,6 +5,8 @@ import {
   CREATE_USER_BADGES_TABLE,
   CREATE_STREAK_SHIELDS_TABLE,
   CREATE_USER_LEVEL_TABLE,
+  CREATE_MUSCLE_GROUPS_TABLE,
+  CREATE_EXERCISE_MUSCLE_GROUPS_TABLE,
 } from './schema';
 
 /**
@@ -450,6 +452,148 @@ const MIGRATIONS: Migration[] = [
       );
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_user_badges_badge_id ON user_badges(badge_id)`);
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_streak_shields_type ON streak_shields(shield_type)`);
+    },
+  },
+  {
+    version: 16,
+    description: 'Muscle groups: create tables, seed groups, map all exercises',
+    up: (tx: Transaction) => {
+      tx.executeSql(CREATE_MUSCLE_GROUPS_TABLE);
+      tx.executeSql(CREATE_EXERCISE_MUSCLE_GROUPS_TABLE);
+      tx.executeSql('CREATE INDEX IF NOT EXISTS idx_emg_exercise ON exercise_muscle_groups(exercise_id)');
+      tx.executeSql('CREATE INDEX IF NOT EXISTS idx_emg_muscle_group ON exercise_muscle_groups(muscle_group_id)');
+
+      // Seed muscle groups
+      const groups: Array<[string, string, number]> = [
+        // chest
+        ['Upper Chest', 'chest', 1],
+        ['Lower Chest', 'chest', 2],
+        ['Chest', 'chest', 3],
+        // back
+        ['Lats', 'back', 1],
+        ['Upper Back', 'back', 2],
+        ['Lower Back', 'back', 3],
+        ['Traps', 'back', 4],
+        // legs
+        ['Quads', 'legs', 1],
+        ['Hamstrings', 'legs', 2],
+        ['Glutes', 'legs', 3],
+        ['Calves', 'legs', 4],
+        ['Hip Flexors', 'legs', 5],
+        // shoulders
+        ['Front Delts', 'shoulders', 1],
+        ['Side Delts', 'shoulders', 2],
+        ['Rear Delts', 'shoulders', 3],
+        // arms
+        ['Biceps', 'arms', 1],
+        ['Triceps', 'arms', 2],
+        ['Forearms', 'arms', 3],
+        // core
+        ['Abs', 'core', 1],
+        ['Obliques', 'core', 2],
+        ['Lower Back', 'core', 3],
+        // conditioning
+        ['Cardio', 'conditioning', 1],
+        ['Plyometrics', 'conditioning', 2],
+        // stretching
+        ['Upper Body Flexibility', 'stretching', 1],
+        ['Lower Body Flexibility', 'stretching', 2],
+        ['Hip Mobility', 'stretching', 3],
+      ];
+
+      for (const [name, parentCategory, sortOrder] of groups) {
+        tx.executeSql(
+          'INSERT INTO muscle_groups (name, parent_category, sort_order) VALUES (?, ?, ?)',
+          [name, parentCategory, sortOrder],
+        );
+      }
+
+      // Map preset exercises to muscle groups.
+      const presetMappings: Array<[string, Array<[string, string, number]>]> = [
+        // Chest
+        ['Bench Press', [['Chest', 'chest', 1], ['Triceps', 'arms', 0], ['Front Delts', 'shoulders', 0]]],
+        ['Incline Bench Press', [['Upper Chest', 'chest', 1], ['Triceps', 'arms', 0], ['Front Delts', 'shoulders', 0]]],
+        ['Cable Fly', [['Chest', 'chest', 1]]],
+        ['Push-Up', [['Chest', 'chest', 1], ['Triceps', 'arms', 0], ['Front Delts', 'shoulders', 0]]],
+        ['Chest Dip', [['Lower Chest', 'chest', 1], ['Triceps', 'arms', 0]]],
+        ['Decline Bench Press', [['Lower Chest', 'chest', 1], ['Triceps', 'arms', 0]]],
+        // Back
+        ['Deadlift', [['Lower Back', 'back', 1], ['Hamstrings', 'legs', 0], ['Glutes', 'legs', 0], ['Traps', 'back', 0]]],
+        ['Pull-Up', [['Lats', 'back', 1], ['Biceps', 'arms', 0]]],
+        ['Barbell Row', [['Upper Back', 'back', 1], ['Lats', 'back', 0], ['Biceps', 'arms', 0]]],
+        ['Lat Pulldown', [['Lats', 'back', 1], ['Biceps', 'arms', 0]]],
+        ['Cable Row', [['Upper Back', 'back', 1], ['Lats', 'back', 0]]],
+        ['Face Pull', [['Rear Delts', 'shoulders', 1], ['Upper Back', 'back', 0]]],
+        // Legs
+        ['Squat', [['Quads', 'legs', 1], ['Glutes', 'legs', 0]]],
+        ['Romanian Deadlift', [['Hamstrings', 'legs', 1], ['Glutes', 'legs', 0], ['Lower Back', 'back', 0]]],
+        ['Leg Press', [['Quads', 'legs', 1], ['Glutes', 'legs', 0]]],
+        ['Leg Curl', [['Hamstrings', 'legs', 1]]],
+        ['Leg Extension', [['Quads', 'legs', 1]]],
+        ['Calf Raise', [['Calves', 'legs', 1]]],
+        // Shoulders
+        ['Overhead Press', [['Front Delts', 'shoulders', 1], ['Triceps', 'arms', 0]]],
+        ['Lateral Raise', [['Side Delts', 'shoulders', 1]]],
+        ['Front Raise', [['Front Delts', 'shoulders', 1]]],
+        ['Arnold Press', [['Front Delts', 'shoulders', 1], ['Side Delts', 'shoulders', 0]]],
+        ['Rear Delt Fly', [['Rear Delts', 'shoulders', 1]]],
+        ['Shrug', [['Traps', 'back', 1]]],
+        // Arms
+        ['Bicep Curl', [['Biceps', 'arms', 1]]],
+        ['Hammer Curl', [['Biceps', 'arms', 1], ['Forearms', 'arms', 0]]],
+        ['Tricep Pushdown', [['Triceps', 'arms', 1]]],
+        ['Skull Crusher', [['Triceps', 'arms', 1]]],
+        ['Preacher Curl', [['Biceps', 'arms', 1]]],
+        ['Dip', [['Triceps', 'arms', 1], ['Lower Chest', 'chest', 0]]],
+        // Core
+        ['Plank', [['Abs', 'core', 1]]],
+        ['Crunch', [['Abs', 'core', 1]]],
+        ['Hanging Leg Raise', [['Abs', 'core', 1], ['Hip Flexors', 'legs', 0]]],
+        ['Cable Crunch', [['Abs', 'core', 1]]],
+        ['Ab Wheel', [['Abs', 'core', 1]]],
+        ['Russian Twist', [['Obliques', 'core', 1]]],
+        // Conditioning
+        ['Burpees', [['Cardio', 'conditioning', 1]]],
+        ['Rowing', [['Cardio', 'conditioning', 1]]],
+        ['Jump Rope', [['Cardio', 'conditioning', 1]]],
+        ['Box Jumps', [['Plyometrics', 'conditioning', 1]]],
+        ['Battle Ropes', [['Cardio', 'conditioning', 1]]],
+        ['Mountain Climbers', [['Cardio', 'conditioning', 1], ['Abs', 'core', 0]]],
+      ];
+
+      for (const [exerciseName, muscles] of presetMappings) {
+        for (const [mgName, mgParent, isPrimary] of muscles) {
+          tx.executeSql(
+            `INSERT OR IGNORE INTO exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
+             SELECT e.id, mg.id, ?
+             FROM exercises e, muscle_groups mg
+             WHERE e.name = ? AND mg.name = ? AND mg.parent_category = ?`,
+            [isPrimary, exerciseName, mgName, mgParent],
+          );
+        }
+      }
+
+      // Map custom exercises that aren't in the preset list.
+      const defaultMuscleGroupPerCategory: Array<[string, string, string]> = [
+        ['chest', 'Chest', 'chest'],
+        ['back', 'Lats', 'back'],
+        ['legs', 'Quads', 'legs'],
+        ['shoulders', 'Front Delts', 'shoulders'],
+        ['arms', 'Biceps', 'arms'],
+        ['core', 'Abs', 'core'],
+        ['conditioning', 'Cardio', 'conditioning'],
+      ];
+
+      for (const [category, mgName, mgParent] of defaultMuscleGroupPerCategory) {
+        tx.executeSql(
+          `INSERT OR IGNORE INTO exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
+           SELECT e.id, mg.id, 1
+           FROM exercises e, muscle_groups mg
+           WHERE e.category = ? AND mg.name = ? AND mg.parent_category = ?
+             AND e.id NOT IN (SELECT exercise_id FROM exercise_muscle_groups)`,
+          [category, mgName, mgParent],
+        );
+      }
     },
   },
 ];
