@@ -11,7 +11,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
-import { deleteExercise, getExercisesByCategory, searchExercises } from '../db/exercises';
+import { deleteExercise, searchExercises } from '../db/exercises';
+import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold } from '../theme/typography';
@@ -35,7 +36,7 @@ export function LibraryScreen() {
   const loadByCategory = useCallback(async (category: ExerciseCategory) => {
     setIsLoading(true);
     try {
-      const results = await getExercisesByCategory(category);
+      const results = await getExercisesByCategoryViaGroups(category);
       setExercises(results);
     } catch {
       // ignore load errors silently — list stays empty

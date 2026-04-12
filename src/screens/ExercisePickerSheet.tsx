@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { useSession } from '../context/SessionContext';
-import { getExercisesByCategory, searchExercises } from '../db/exercises';
+import { searchExercises } from '../db/exercises';
+import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -45,7 +46,7 @@ export function ExercisePickerSheet({ visible, onClose, onSelect }: ExercisePick
         const results = await searchExercises(query.trim());
         setExercises(results);
       } else {
-        const results = await getExercisesByCategory(category);
+        const results = await getExercisesByCategoryViaGroups(category);
         setExercises(results);
       }
     } catch {
