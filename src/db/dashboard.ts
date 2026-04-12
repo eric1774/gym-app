@@ -464,13 +464,16 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
   const database = await db;
   const result = await executeSql(
     database,
-    `SELECT e.id AS exercise_id, e.category, e.measurement_type,
+    `SELECT e.id AS exercise_id, mg.parent_category AS category, e.measurement_type,
             ws.session_id, wss.completed_at AS completed_at,
             ws.weight_kg, ws.reps
      FROM workout_sets ws
      INNER JOIN exercises e ON e.id = ws.exercise_id
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = e.id
+     INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
      WHERE wss.completed_at IS NOT NULL
+       AND mg.parent_category != 'stretching'
        AND ws.id = (
          SELECT ws2.id FROM workout_sets ws2
          WHERE ws2.session_id = ws.session_id
@@ -478,11 +481,11 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
          ORDER BY ws2.weight_kg DESC, ws2.reps DESC
          LIMIT 1
        )
-     GROUP BY ws.exercise_id, ws.session_id
+     GROUP BY e.id, ws.session_id, mg.parent_category
      ORDER BY wss.completed_at ASC`,
   );
 
-  // Group rows by category
+  // Group rows by category (now derived from muscle groups)
   const categoryMap = new Map<string, {
     exerciseIds: Set<number>;
     sessions: Map<number, { completedAt: string; bestValue: number }>;
@@ -506,13 +509,11 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
     const cat = categoryMap.get(category)!;
     cat.exerciseIds.add(row.exercise_id);
 
-    // Track measurement type counts for majority rule
     cat.measurementTypes.set(
       measurementType,
       (cat.measurementTypes.get(measurementType) ?? 0) + 1,
     );
 
-    // Per-session: keep the max best value across all exercises in this category
     const sessionId: number = row.session_id;
     const existing = cat.sessions.get(sessionId);
     if (!existing || bestValue > existing.bestValue) {
@@ -525,7 +526,6 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
 
   const summaries: CategorySummary[] = [];
   for (const [category, data] of categoryMap) {
-    // Sparkline: one point per session, ordered oldest-first (already ordered by SQL)
     const sparklinePoints: number[] = [];
     let lastTrainedAt = '';
     for (const session of data.sessions.values()) {
@@ -533,7 +533,6 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
       lastTrainedAt = session.completedAt;
     }
 
-    // Majority rule for measurement type
     let dominantType: 'reps' | 'timed' = 'reps';
     let maxCount = 0;
     for (const [type, count] of data.measurementTypes) {
