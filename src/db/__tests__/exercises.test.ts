@@ -1,4 +1,6 @@
+jest.mock('react-native-sqlite-storage');
 jest.mock('../database');
+jest.mock('../muscleGroups');
 
 import { executeSql } from '../database';
 import { mockResultSet } from '@test-utils/dbMock';
