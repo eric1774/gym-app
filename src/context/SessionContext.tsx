@@ -20,6 +20,7 @@ import {
 } from '../db/sessions';
 import { getExercises } from '../db/exercises';
 import { Exercise, ExerciseSession, WorkoutSession } from '../types';
+import { emitAppEvent } from './GamificationContext';
 
 interface SessionContextValue {
   session: WorkoutSession | null;
@@ -137,6 +138,7 @@ export function SessionProvider({ children }: Props) {
     const hadActivity = await hasSessionActivity(session.id);
     if (hadActivity) {
       await completeSession(session.id);
+      emitAppEvent({ type: 'SESSION_COMPLETED', timestamp: new Date().toISOString() });
     } else {
       await deleteSession(session.id);
     }

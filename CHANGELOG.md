@@ -4,6 +4,31 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v2.0 — Badges, Levels & Achievements
+*April 2026*
+
+### New
+
+- **93 Badges to Earn**: A full badge system spanning five categories — Fitness, Nutrition, Consistency, Recovery, and Milestones. Each badge has a shield emblem design with five tiers to chase: Bronze, Silver, Gold, Platinum, and Diamond. Earn badges for hitting PRs, building streaks, logging meals, staying hydrated, and more.
+
+- **Leveling System**: Your level (1–100) reflects your real fitness behavior, not just accumulated points. Four subscales — Consistency, Volume Progress, Nutrition Adherence, and Variety — combine into a composite score that determines your rank from Beginner to Legend.
+
+- **Achievements Screen**: Tap "View All" from the dashboard or your level bar to see every badge in the system. Filter by category, tap locked badges to reveal what it takes to earn them, and track your progress with mini progress bars on each badge you're working toward.
+
+- **Celebration Modals**: When you earn a badge, a full-screen celebration appears with a radial glow animation that intensifies by tier — a subtle copper glow for Bronze, a bright prismatic shimmer for Diamond. Dismiss with a single tap.
+
+- **Streak Shields**: Earn protective shields by maintaining 7-day streaks. Shields automatically save your streak if you miss a single day — no more losing a 50-day streak to one off day. Track your available shields (up to 3 per streak type) on the Achievements screen.
+
+- **Comeback Badges**: Life happens. The system rewards you for coming back — "The Phoenix" for returning after a week off, "Rebuild Stronger" for hitting a PR right after a break, and "Resilient" for rebuilding a streak longer than the one you lost.
+
+- **Welcome Highlight Reel**: If you already have workout and nutrition history when the badge system launches, you'll see a personalized showcase of your top 5 achievements on first open — no flood of 20 modals, just a clean summary of what you've already accomplished.
+
+### Improved
+
+- **Dashboard Updated**: A new level bar at the top shows your current level, rank title, and progress to the next level. Below it, a horizontal strip of your most recently earned badges gives you a quick snapshot of your latest achievements. All existing dashboard content remains unchanged below.
+
+---
+
 ## v1.9 — Custom Foods & Meal Builder
 *April 2026*
 

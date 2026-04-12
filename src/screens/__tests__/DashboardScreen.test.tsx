@@ -1,3 +1,21 @@
+jest.mock('../../context/GamificationContext', () => ({
+  useGamification: () => ({
+    levelState: { level: 1, title: 'Beginner', consistencyScore: 0, volumeScore: 0, nutritionScore: 0, varietyScore: 0, progressToNext: 0 },
+    badgeStates: new Map(),
+    shieldState: { workout: 0, protein: 0, water: 0 },
+    pendingCelebrations: [],
+    isLoading: false,
+    checkBadges: jest.fn(),
+    dismissCelebration: jest.fn(),
+    refreshAll: jest.fn(),
+    backfilledBadges: [],
+    clearBackfill: jest.fn(),
+  }),
+  emitAppEvent: jest.fn(),
+}));
+jest.mock('../../db/badges', () => ({
+  getEarnedBadges: jest.fn().mockResolvedValue([]),
+}));
 jest.mock('../../db/dashboard', () => ({
   getCategorySummaries: jest.fn().mockResolvedValue([]),
   getNextWorkoutDay: jest.fn().mockResolvedValue(null),

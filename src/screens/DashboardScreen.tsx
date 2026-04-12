@@ -23,6 +23,13 @@ import { CategorySummary, NextWorkoutInfo, Exercise } from '../types';
 import { useSession } from '../context/SessionContext';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
 import { CategorySummaryCard } from '../components/CategorySummaryCard';
+import { useGamification } from '../context/GamificationContext';
+import { LevelBar } from '../components/LevelBar';
+import { RecentBadges } from '../components/RecentBadges';
+import { CelebrationModal } from '../components/CelebrationModal';
+import { HighlightReelModal } from '../components/HighlightReelModal';
+import { getEarnedBadges } from '../db/badges';
+import type { UserBadgeRow } from '../types';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
@@ -63,6 +70,8 @@ export function DashboardScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const cardOpacity = useRef(new Animated.Value(1)).current;
   const [toggleWidth, setToggleWidth] = useState(0);
+  const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
+  const [recentBadges, setRecentBadges] = useState<UserBadgeRow[]>([]);
 
   // Elapsed timer for active session state
   useEffect(() => {
@@ -93,6 +102,9 @@ export function DashboardScreen() {
             if (!cancelled) {
               setCategories(result);
               setNextWorkout(nextDay);
+              // Load recent badges for gamification display
+              const earned = await getEarnedBadges();
+              if (!cancelled) { setRecentBadges(earned.slice(0, 10)); }
               // Fade in new cards
               Animated.timing(cardOpacity, {
                 toValue: 1,
@@ -154,6 +166,13 @@ export function DashboardScreen() {
           <GearIcon color={colors.secondary} />
         </TouchableOpacity>
       </View>
+
+      <LevelBar
+        level={levelState.level}
+        title={levelState.title}
+        progressToNext={levelState.progressToNext}
+      />
+      <RecentBadges badges={recentBadges} />
 
       {/* Strength / Volume toggle */}
       <View style={styles.toggleRowOuter}>
@@ -259,6 +278,14 @@ export function DashboardScreen() {
           </ScrollView>
         )}
       </Animated.View>
+      <HighlightReelModal
+        badges={backfilledBadges}
+        onDismiss={clearBackfill}
+      />
+      <CelebrationModal
+        celebration={backfilledBadges.length === 0 && pendingCelebrations.length > 0 ? pendingCelebrations[0] : null}
+        onDismiss={dismissCelebration}
+      />
     </SafeAreaView>
   );
 }
