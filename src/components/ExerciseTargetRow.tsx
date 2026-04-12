@@ -10,6 +10,7 @@ interface ExerciseTargetRowProps {
   dayExercise: ProgramDayExercise;
   onEdit: () => void;
   onRemove: () => void;
+  onSwap?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   isFirst?: boolean;
@@ -89,6 +90,7 @@ export function ExerciseTargetRow({
   dayExercise,
   onEdit,
   onRemove,
+  onSwap,
   onMoveUp,
   onMoveDown,
   isFirst,
@@ -138,14 +140,25 @@ export function ExerciseTargetRow({
         <Text style={styles.targets}>{targetsText}</Text>
       </View>
 
-      {/* Long-press reveals remove button (only outside selection mode) */}
+      {/* Long-press reveals swap + remove buttons (only outside selection mode) */}
       {!selectionMode && showActions ? (
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={onRemove}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.removeIcon}>{'\u2715'}</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.swapButton}
+            onPress={() => {
+              setShowActions(false);
+              onSwap?.();
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.swapIcon}>{'\u21C4'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={onRemove}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.removeIcon}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
     </TouchableOpacity>
   );
@@ -233,6 +246,22 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     marginTop: 2,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  swapButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swapIcon: {
+    fontSize: fontSize.base,
+    color: colors.accent,
+    fontWeight: weightSemiBold,
   },
   removeButton: {
     width: 44,

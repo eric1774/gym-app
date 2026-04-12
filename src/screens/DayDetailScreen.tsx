@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navigation/native';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { ExerciseTargetRow } from '../components/ExerciseTargetRow';
+import { SwapSheet } from '../components/SwapSheet';
 import {
   addExerciseToProgramDay,
   createSupersetGroup,
@@ -20,6 +21,7 @@ import {
   reorderProgramDayExercises,
   updateExerciseTargets,
 } from '../db/programs';
+import { executeSql, db as dbPromise } from '../db/database';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -70,6 +72,7 @@ export function DayDetailScreen() {
   const [exerciseMap, setExerciseMap] = useState<Map<number, Exercise>>(new Map());
   const [pickerVisible, setPickerVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<ProgramDayExercise | null>(null);
+  const [swapTarget, setSwapTarget] = useState<{ exercise: Exercise; dayExercise: ProgramDayExercise } | null>(null);
 
   // Superset multi-select mode
   const [supersetMode, setSupersetMode] = useState(false);
@@ -353,6 +356,7 @@ export function DayDetailScreen() {
                   dayExercise={item}
                   onEdit={() => setSelectedExercise(item)}
                   onRemove={() => handleRemoveExercise(item)}
+                  onSwap={() => setSwapTarget({ exercise, dayExercise: item })}
                   onMoveUp={() => handleMoveUp(index)}
                   onMoveDown={() => handleMoveDown(index)}
                   isFirst={index === 0}
@@ -380,6 +384,7 @@ export function DayDetailScreen() {
                         dayExercise={item}
                         onEdit={() => setSelectedExercise(item)}
                         onRemove={() => handleRemoveExercise(item)}
+                        onSwap={() => setSwapTarget({ exercise, dayExercise: item })}
                         onMoveUp={() => handleMoveUp(absoluteIndex)}
                         onMoveDown={() => handleMoveDown(absoluteIndex)}
                         isFirst={absoluteIndex === 0}
@@ -435,6 +440,36 @@ export function DayDetailScreen() {
         dayExercise={selectedExercise}
         exerciseName={selectedExerciseName}
         onSave={handleSaveTargets}
+      />
+
+      {/* Swap sheet */}
+      <SwapSheet
+        visible={swapTarget !== null}
+        exercise={swapTarget?.exercise ?? null}
+        excludeExerciseIds={dayExercises.map(de => de.exerciseId)}
+        onSelect={async (newExercise) => {
+          if (!swapTarget) { return; }
+          const { dayExercise } = swapTarget;
+          await removeExerciseFromProgramDay(dayExercise.id);
+          const newPde = await addExerciseToProgramDay(
+            dayExercise.programDayId,
+            newExercise.id,
+            dayExercise.targetSets,
+            dayExercise.targetReps,
+            dayExercise.targetWeightLbs,
+          );
+          if (dayExercise.supersetGroupId != null) {
+            const database = await dbPromise;
+            await executeSql(
+              database,
+              'UPDATE program_day_exercises SET superset_group_id = ? WHERE id = ?',
+              [dayExercise.supersetGroupId, newPde.id],
+            );
+          }
+          setSwapTarget(null);
+          refresh();
+        }}
+        onClose={() => setSwapTarget(null)}
       />
     </SafeAreaView>
   );
