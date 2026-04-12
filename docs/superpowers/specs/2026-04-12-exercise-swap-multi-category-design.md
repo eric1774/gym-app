@@ -63,7 +63,7 @@ The `ExerciseCategory` type gains `'stretching'` as the 8th value.
 1. Create `muscle_groups` and `exercise_muscle_groups` tables
 2. Seed the `muscle_groups` table with ~23 entries
 3. Map all existing 46+ preset exercises to appropriate muscle groups via a hardcoded mapping in the migration
-4. Map any user-created custom exercises to muscle groups based on their current `category` value (assign the general/default muscle group for that category)
+4. Map any user-created custom exercises to muscle groups based on their current `category` value, using this default mapping: chest→Chest, back→Lats, legs→Quads, shoulders→Front Delts, arms→Biceps, core→Abs, conditioning→Cardio, stretching→Upper Body Flexibility. The mapped muscle group is marked as primary.
 5. Add `'stretching'` to the `ExerciseCategory` TypeScript type
 6. Keep `exercises.category` populated — no existing data loss
 
