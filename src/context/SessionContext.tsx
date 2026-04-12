@@ -19,6 +19,7 @@ import {
   deleteSession,
 } from '../db/sessions';
 import { getExercises } from '../db/exercises';
+import { db as dbPromise, executeSql } from '../db/database';
 import { Exercise, ExerciseSession, WorkoutSession } from '../types';
 import { emitAppEvent } from './GamificationContext';
 
@@ -38,6 +39,8 @@ interface SessionContextValue {
   markExerciseComplete: (exerciseId: number) => Promise<void>;
   toggleExerciseComplete: (exerciseId: number) => Promise<void>;
   refreshSession: () => Promise<void>;
+  swapExercise: (oldExerciseId: number, newExercise: Exercise, keepSets: boolean) => Promise<void>;
+  removeExerciseFromSession: (exerciseId: number) => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
@@ -200,6 +203,44 @@ export function SessionProvider({ children }: Props) {
     [session, resolveExercises],
   );
 
+  const removeExerciseFromSession = async (exerciseId: number) => {
+    if (!session) return;
+    const database = await dbPromise;
+    await executeSql(
+      database,
+      'DELETE FROM workout_sets WHERE session_id = ? AND exercise_id = ?',
+      [session.id, exerciseId],
+    );
+    await executeSql(
+      database,
+      'DELETE FROM exercise_sessions WHERE session_id = ? AND exercise_id = ?',
+      [session.id, exerciseId],
+    );
+    await refreshSession();
+  };
+
+  const swapExercise = async (oldExerciseId: number, newExercise: Exercise, keepSets: boolean) => {
+    if (!session) return;
+    if (!keepSets) {
+      await removeExerciseFromSession(oldExerciseId);
+    } else {
+      const database = await dbPromise;
+      await executeSql(
+        database,
+        'UPDATE exercise_sessions SET is_complete = 1 WHERE session_id = ? AND exercise_id = ?',
+        [session.id, oldExerciseId],
+      );
+    }
+    const database = await dbPromise;
+    await executeSql(
+      database,
+      'INSERT OR IGNORE INTO exercise_sessions (exercise_id, session_id, is_complete, rest_seconds) VALUES (?, ?, 0, ?)',
+      [newExercise.id, session.id, newExercise.defaultRestSeconds],
+    );
+    await loadAllExercises();
+    await refreshSession();
+  };
+
   const programDayId = session?.programDayId ?? null;
 
   const value = useMemo<SessionContextValue>(
@@ -216,6 +257,8 @@ export function SessionProvider({ children }: Props) {
       markExerciseComplete,
       toggleExerciseComplete,
       refreshSession,
+      swapExercise,
+      removeExerciseFromSession,
     }),
     [
       session,
@@ -230,6 +273,8 @@ export function SessionProvider({ children }: Props) {
       markExerciseComplete,
       toggleExerciseComplete,
       refreshSession,
+      swapExercise,
+      removeExerciseFromSession,
     ],
   );
 

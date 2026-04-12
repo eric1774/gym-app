@@ -20,6 +20,8 @@ import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
+import { SwapSheet } from '../components/SwapSheet';
+import { getSetsForExerciseInSession } from '../db';
 import { SetLoggingPanel, ProgramTarget } from '../components/SetLoggingPanel';
 import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
@@ -185,6 +187,7 @@ interface ExerciseCardProps {
   onStartRest: () => void;
   onViewHistory: () => void;
   onRestChange: (newRestSeconds: number) => void;
+  onSwap?: () => void;
 }
 
 function ExerciseCard({
@@ -206,6 +209,7 @@ function ExerciseCard({
   onStartRest,
   onViewHistory,
   onRestChange,
+  onSwap,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
   const [restStepperVisible, setRestStepperVisible] = useState(false);
@@ -237,6 +241,13 @@ function ExerciseCard({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.7}>
             <HistoryIcon color={colors.secondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onSwap}
+            style={styles.historyButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}>
+            <Text style={{ fontSize: fontSize.base, color: colors.secondary }}>{'\u21C4'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onToggleComplete}
@@ -332,6 +343,7 @@ interface SupersetContainerProps {
   onStartRest: (exerciseId: number) => void;
   onViewHistory: (exerciseId: number) => void;
   onRestChange: (exerciseId: number, newRestSeconds: number) => void;
+  onSwap: (exerciseId: number) => void;
 }
 
 function SupersetContainer({
@@ -353,6 +365,7 @@ function SupersetContainer({
   onStartRest,
   onViewHistory,
   onRestChange,
+  onSwap,
 }: SupersetContainerProps) {
   // Round = min completed sets across all exercises + 1
   const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
@@ -403,6 +416,7 @@ function SupersetContainer({
               onStartRest={() => onStartRest(exerciseId)}
               onViewHistory={() => onViewHistory(exerciseId)}
               onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
+              onSwap={() => onSwap(exerciseId)}
             />
           </View>
         );
@@ -549,11 +563,13 @@ export function WorkoutScreen() {
     endSession,
     addExercise,
     toggleExerciseComplete,
+    swapExercise: swapExerciseInSession,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
+  const [swapTarget, setSwapTarget] = useState<Exercise | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
@@ -1170,6 +1186,10 @@ export function WorkoutScreen() {
                   onStartRest={handleStartRest}
                   onViewHistory={handleViewHistory}
                   onRestChange={handleRestChange}
+                  onSwap={(exerciseId) => {
+                    const ex = exercises.find(e => e.id === exerciseId);
+                    setSwapTarget(ex ?? null);
+                  }}
                 />
               );
             }
@@ -1207,6 +1227,7 @@ export function WorkoutScreen() {
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onViewHistory={() => handleViewHistory(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
+                        onSwap={() => setSwapTarget(exercise ?? null)}
                       />
                     );
                   })}
@@ -1245,6 +1266,45 @@ export function WorkoutScreen() {
         exerciseName={editingExerciseName}
         dayExercise={editingDayExercise}
         onSave={handleSaveTargets}
+      />
+
+      <SwapSheet
+        visible={swapTarget !== null}
+        exercise={swapTarget}
+        excludeExerciseIds={sessionExercises.map(se => se.exerciseId)}
+        onSelect={async (newExercise) => {
+          if (!swapTarget || !session) return;
+          const sets = await getSetsForExerciseInSession(session.id, swapTarget.id);
+          const setsCount = sets.length;
+          if (setsCount > 0) {
+            Alert.alert(
+              `You've logged ${setsCount} set${setsCount !== 1 ? 's' : ''} on ${swapTarget.name}`,
+              'What would you like to do?',
+              [
+                {
+                  text: 'Keep sets & add new',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, true);
+                    setSwapTarget(null);
+                  },
+                },
+                {
+                  text: 'Discard & replace',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, false);
+                    setSwapTarget(null);
+                  },
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            );
+          } else {
+            await swapExerciseInSession(swapTarget.id, newExercise, false);
+            setSwapTarget(null);
+          }
+        }}
+        onClose={() => setSwapTarget(null)}
       />
     </SafeAreaView>
   );
