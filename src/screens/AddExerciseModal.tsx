@@ -10,8 +10,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
+import { MuscleGroupPicker } from '../components/MuscleGroupPicker';
 import { addExercise, updateExercise } from '../db/exercises';
+import { getExerciseMuscleGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -28,7 +29,7 @@ interface AddExerciseModalProps {
 export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: AddExerciseModalProps) {
   const isEditMode = !!editExercise;
   const [name, setName] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | null>(null);
+  const [muscleGroupMappings, setMuscleGroupMappings] = useState<Array<{ muscleGroupId: number; isPrimary: boolean }>>([]);
   const [measurementType, setMeasurementType] = useState<ExerciseMeasurementType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,16 +38,21 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
   React.useEffect(() => {
     if (editExercise && visible) {
       setName(editExercise.name);
-      setSelectedCategory(editExercise.category);
       setMeasurementType(editExercise.measurementType);
+      // Load existing muscle groups for edit mode
+      getExerciseMuscleGroups(editExercise.id).then(groups => {
+        setMuscleGroupMappings(
+          groups.map(g => ({ muscleGroupId: g.muscleGroupId, isPrimary: g.isPrimary })),
+        );
+      });
     }
   }, [editExercise, visible]);
 
-  const isDisabled = name.trim() === '' || selectedCategory === null || measurementType === null || isSubmitting;
+  const isDisabled = name.trim() === '' || muscleGroupMappings.length === 0 || measurementType === null || isSubmitting;
 
   const handleClose = () => {
     setName('');
-    setSelectedCategory(null);
+    setMuscleGroupMappings([]);
     setMeasurementType(null);
     setError(null);
     setIsSubmitting(false);
@@ -54,17 +60,24 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
   };
 
   const handleSubmit = async () => {
-    if (isDisabled || !selectedCategory || !measurementType) {
+    if (isDisabled || muscleGroupMappings.length === 0 || !measurementType) {
       return;
     }
     setIsSubmitting(true);
     setError(null);
     try {
+      // Category will be synced by setExerciseMuscleGroups, but we need it for the initial insert.
+      // Use 'chest' as placeholder — setExerciseMuscleGroups will overwrite it.
+      const placeholderCategory = 'chest' as ExerciseCategory;
       if (isEditMode && editExercise) {
-        const updated = await updateExercise(editExercise.id, name.trim(), selectedCategory, measurementType);
+        const updated = await updateExercise(
+          editExercise.id, name.trim(), placeholderCategory, measurementType, muscleGroupMappings,
+        );
         onAdded(updated);
       } else {
-        const exercise = await addExercise(name.trim(), selectedCategory, 90, measurementType);
+        const exercise = await addExercise(
+          name.trim(), placeholderCategory, 90, measurementType, muscleGroupMappings,
+        );
         onAdded(exercise);
       }
       handleClose();
@@ -106,8 +119,11 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
             />
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <Text style={[styles.label, styles.categoryLabel]}>Category</Text>
-            <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
+            <Text style={[styles.label, styles.categoryLabel]}>Muscle Groups</Text>
+            <MuscleGroupPicker
+              selected={muscleGroupMappings}
+              onChange={setMuscleGroupMappings}
+            />
 
             <Text style={[styles.label, styles.categoryLabel]}>Measurement</Text>
             <View style={styles.toggleRow}>
