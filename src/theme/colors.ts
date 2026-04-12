@@ -30,6 +30,7 @@ export const categoryColors: Record<string, string> = {
   arms: '#8DC28A',
   core: '#F0B830',
   conditioning: '#E0697E',
+  stretching: '#9B8EC4',
 };
 
 export function getCategoryColor(category: string): string {

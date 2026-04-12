@@ -5,7 +5,8 @@ export type ExerciseCategory =
   | 'shoulders'
   | 'arms'
   | 'core'
-  | 'conditioning';
+  | 'conditioning'
+  | 'stretching';
 
 export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'chest',
@@ -15,6 +16,7 @@ export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'arms',
   'core',
   'conditioning',
+  'stretching',
 ];
 
 export type ExerciseMeasurementType = 'reps' | 'timed';
@@ -27,6 +29,19 @@ export interface Exercise {
   isCustom: boolean;
   measurementType: ExerciseMeasurementType;
   createdAt: string;
+}
+
+export interface MuscleGroup {
+  id: number;
+  name: string;
+  parentCategory: ExerciseCategory;
+  sortOrder: number;
+}
+
+export interface ExerciseMuscleGroup {
+  exerciseId: number;
+  muscleGroupId: number;
+  isPrimary: boolean;
 }
 
 export interface WorkoutSession {

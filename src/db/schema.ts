@@ -155,3 +155,23 @@ export const CREATE_USER_LEVEL_TABLE = `
     last_calculated TEXT NOT NULL
   )
 `;
+
+// ── Muscle Group tables ──────────────────────────────────────────────
+
+export const CREATE_MUSCLE_GROUPS_TABLE = `
+  CREATE TABLE IF NOT EXISTS muscle_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    parent_category TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_EXERCISE_MUSCLE_GROUPS_TABLE = `
+  CREATE TABLE IF NOT EXISTS exercise_muscle_groups (
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id),
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (exercise_id, muscle_group_id)
+  )
+`;
