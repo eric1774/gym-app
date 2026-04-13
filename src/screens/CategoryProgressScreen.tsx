@@ -241,12 +241,11 @@ export function CategoryProgressScreen() {
               accentColor={accentColor}
               isVolume={isVolume}
               onPress={() =>
-                navigation.navigate('ExerciseProgress', {
+                navigation.navigate('ExerciseDetail', {
                   exerciseId: exercise.exerciseId,
                   exerciseName: exercise.exerciseName,
                   measurementType: exercise.measurementType,
                   category,
-                  viewMode,
                 })
               }
             />
