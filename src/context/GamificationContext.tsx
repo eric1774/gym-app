@@ -75,7 +75,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
   const [badgeStates, setBadgeStates] = useState<Map<string, BadgeState>>(new Map());
   const [levelState, setLevelState] = useState<LevelState>({
     level: 1, title: 'Beginner',
-    consistencyScore: 0, volumeScore: 0, nutritionScore: 0, varietyScore: 0,
+    consistencyScore: 0, fitnessScore: 0, nutritionScore: 0, varietyScore: 0,
     progressToNext: 0,
   });
   const [shieldState, setShieldState] = useState<ShieldState>({ workout: 0, protein: 0, water: 0 });
@@ -119,7 +119,7 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
       level: levelRow.current_level,
       title: levelRow.title,
       consistencyScore: levelRow.consistency_score,
-      volumeScore: levelRow.volume_score,
+      fitnessScore: levelRow.fitness_score,
       nutritionScore: levelRow.nutrition_score,
       varietyScore: levelRow.variety_score,
       progressToNext: 0,
@@ -251,14 +251,14 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
       // Recalculate level
       const levelResult = calculateCompositeLevel(
         levelState.consistencyScore,
-        levelState.volumeScore,
+        levelState.fitnessScore,
         levelState.nutritionScore,
         levelState.varietyScore,
       );
       setLevelState(levelResult);
       await updateUserLevel(levelResult.level, levelResult.title, {
         consistency: levelResult.consistencyScore,
-        volume: levelResult.volumeScore,
+        fitness: levelResult.fitnessScore,
         nutrition: levelResult.nutritionScore,
         variety: levelResult.varietyScore,
       });

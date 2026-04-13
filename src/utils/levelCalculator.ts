@@ -35,28 +35,25 @@ export function calculateSubscale(rawValue: number, maxExpected: number): number
  */
 export function calculateCompositeLevel(
   consistencyScore: number,
-  volumeScore: number,
+  fitnessScore: number,
   nutritionScore: number,
   varietyScore: number,
 ): LevelState {
   const weightedScore =
     consistencyScore * WEIGHTS.consistency +
-    volumeScore * WEIGHTS.volume +
+    fitnessScore * WEIGHTS.volume +
     nutritionScore * WEIGHTS.nutrition +
     varietyScore * WEIGHTS.variety;
 
-  // Map 0-100 weighted score to level 1-100
   const level = Math.max(1, Math.min(100, Math.round(weightedScore)));
   const title = getLevelTitle(level);
-
-  // Progress to next level (fractional part of the weighted score)
   const progressToNext = weightedScore - Math.floor(weightedScore);
 
   return {
     level,
     title,
     consistencyScore,
-    volumeScore,
+    fitnessScore,
     nutritionScore,
     varietyScore,
     progressToNext: Math.max(0, Math.min(1, progressToNext)),

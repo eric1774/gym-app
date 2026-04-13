@@ -35,6 +35,9 @@ interface Migration {
  * - Version 12: Create meal_foods table for multi-food meal builder
  * - Version 13: Add food_name column to meal_foods (missing from Phase 37 schema)
  * - Version 14: Remove all USDA food entries (is_custom = 0) from foods table
+ * - Version 15: Create gamification tables (badges, user_badges, streak_shields, user_level)
+ * - Version 16: Create muscle_groups + exercise_muscle_groups tables, seed initial mappings
+ * - Version 17: Fix exercise-muscle-group mappings with comprehensive, accurate data
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -594,6 +597,290 @@ const MIGRATIONS: Migration[] = [
           [category, mgName, mgParent],
         );
       }
+    },
+  },
+  {
+    version: 17,
+    description: 'Fix exercise-muscle-group mappings with comprehensive, accurate data',
+    up: (tx: Transaction) => {
+      // Delete all existing preset exercise mappings (preserve custom exercise mappings).
+      const presetNames = [
+        'Bench Press', 'Incline Bench Press', 'Cable Fly', 'Push-Up', 'Chest Dip', 'Decline Bench Press',
+        'Deadlift', 'Pull-Up', 'Barbell Row', 'Lat Pulldown', 'Cable Row', 'Face Pull',
+        'Squat', 'Romanian Deadlift', 'Leg Press', 'Leg Curl', 'Leg Extension', 'Calf Raise',
+        'Overhead Press', 'Lateral Raise', 'Front Raise', 'Arnold Press', 'Rear Delt Fly', 'Shrug',
+        'Bicep Curl', 'Hammer Curl', 'Tricep Pushdown', 'Skull Crusher', 'Preacher Curl', 'Dip',
+        'Plank', 'Crunch', 'Hanging Leg Raise', 'Cable Crunch', 'Ab Wheel', 'Russian Twist',
+        'Burpees', 'Rowing', 'Jump Rope', 'Box Jumps', 'Battle Ropes', 'Mountain Climbers',
+      ];
+      const placeholders = presetNames.map(() => '?').join(',');
+      tx.executeSql(
+        `DELETE FROM exercise_muscle_groups WHERE exercise_id IN (
+           SELECT id FROM exercises WHERE name IN (${placeholders}) AND is_custom = 0
+         )`,
+        presetNames,
+      );
+
+      // Re-insert with corrected, comprehensive muscle group data.
+      // Format: [exerciseName, [[muscleGroupName, parentCategory, isPrimary], ...]]
+      const correctedMappings: Array<[string, Array<[string, string, number]>]> = [
+        // ── Chest ──────────────────────────────────────────────
+        ['Bench Press', [
+          ['Chest', 'chest', 1],
+          ['Triceps', 'arms', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+        ['Incline Bench Press', [
+          ['Upper Chest', 'chest', 1],
+          ['Front Delts', 'shoulders', 0],
+          ['Triceps', 'arms', 0],
+        ]],
+        ['Cable Fly', [
+          ['Chest', 'chest', 1],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+        ['Push-Up', [
+          ['Chest', 'chest', 1],
+          ['Triceps', 'arms', 0],
+          ['Front Delts', 'shoulders', 0],
+          ['Abs', 'core', 0],
+        ]],
+        ['Chest Dip', [
+          ['Lower Chest', 'chest', 1],
+          ['Triceps', 'arms', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+        ['Decline Bench Press', [
+          ['Lower Chest', 'chest', 1],
+          ['Triceps', 'arms', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+
+        // ── Back ───────────────────────────────────────────────
+        ['Deadlift', [
+          ['Lower Back', 'back', 1],
+          ['Glutes', 'legs', 1],
+          ['Hamstrings', 'legs', 0],
+          ['Quads', 'legs', 0],
+          ['Traps', 'back', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Pull-Up', [
+          ['Lats', 'back', 1],
+          ['Biceps', 'arms', 0],
+          ['Upper Back', 'back', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Barbell Row', [
+          ['Upper Back', 'back', 1],
+          ['Lats', 'back', 0],
+          ['Biceps', 'arms', 0],
+          ['Rear Delts', 'shoulders', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Lat Pulldown', [
+          ['Lats', 'back', 1],
+          ['Biceps', 'arms', 0],
+          ['Upper Back', 'back', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Cable Row', [
+          ['Upper Back', 'back', 1],
+          ['Lats', 'back', 0],
+          ['Biceps', 'arms', 0],
+          ['Rear Delts', 'shoulders', 0],
+        ]],
+        ['Face Pull', [
+          ['Rear Delts', 'shoulders', 1],
+          ['Upper Back', 'back', 0],
+          ['Biceps', 'arms', 0],
+        ]],
+
+        // ── Legs ───────────────────────────────────────────────
+        ['Squat', [
+          ['Quads', 'legs', 1],
+          ['Glutes', 'legs', 1],
+          ['Hamstrings', 'legs', 0],
+          ['Lower Back', 'back', 0],
+          ['Abs', 'core', 0],
+        ]],
+        ['Romanian Deadlift', [
+          ['Hamstrings', 'legs', 1],
+          ['Glutes', 'legs', 1],
+          ['Lower Back', 'back', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Leg Press', [
+          ['Quads', 'legs', 1],
+          ['Glutes', 'legs', 0],
+          ['Hamstrings', 'legs', 0],
+        ]],
+        ['Leg Curl', [
+          ['Hamstrings', 'legs', 1],
+          ['Calves', 'legs', 0],
+        ]],
+        ['Leg Extension', [
+          ['Quads', 'legs', 1],
+        ]],
+        ['Calf Raise', [
+          ['Calves', 'legs', 1],
+        ]],
+
+        // ── Shoulders ──────────────────────────────────────────
+        ['Overhead Press', [
+          ['Front Delts', 'shoulders', 1],
+          ['Side Delts', 'shoulders', 0],
+          ['Triceps', 'arms', 0],
+          ['Upper Chest', 'chest', 0],
+        ]],
+        ['Lateral Raise', [
+          ['Side Delts', 'shoulders', 1],
+        ]],
+        ['Front Raise', [
+          ['Front Delts', 'shoulders', 1],
+          ['Upper Chest', 'chest', 0],
+        ]],
+        ['Arnold Press', [
+          ['Front Delts', 'shoulders', 1],
+          ['Side Delts', 'shoulders', 0],
+          ['Triceps', 'arms', 0],
+        ]],
+        ['Rear Delt Fly', [
+          ['Rear Delts', 'shoulders', 1],
+          ['Upper Back', 'back', 0],
+        ]],
+        ['Shrug', [
+          ['Traps', 'back', 1],
+          ['Upper Back', 'back', 0],
+        ]],
+
+        // ── Arms ───────────────────────────────────────────────
+        ['Bicep Curl', [
+          ['Biceps', 'arms', 1],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Hammer Curl', [
+          ['Biceps', 'arms', 1],
+          ['Forearms', 'arms', 1],
+        ]],
+        ['Tricep Pushdown', [
+          ['Triceps', 'arms', 1],
+        ]],
+        ['Skull Crusher', [
+          ['Triceps', 'arms', 1],
+        ]],
+        ['Preacher Curl', [
+          ['Biceps', 'arms', 1],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Dip', [
+          ['Triceps', 'arms', 1],
+          ['Lower Chest', 'chest', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+
+        // ── Core ───────────────────────────────────────────────
+        ['Plank', [
+          ['Abs', 'core', 1],
+          ['Obliques', 'core', 0],
+          ['Lower Back', 'core', 0],
+        ]],
+        ['Crunch', [
+          ['Abs', 'core', 1],
+        ]],
+        ['Hanging Leg Raise', [
+          ['Abs', 'core', 1],
+          ['Hip Flexors', 'legs', 0],
+          ['Obliques', 'core', 0],
+        ]],
+        ['Cable Crunch', [
+          ['Abs', 'core', 1],
+        ]],
+        ['Ab Wheel', [
+          ['Abs', 'core', 1],
+          ['Lower Back', 'core', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+        ['Russian Twist', [
+          ['Obliques', 'core', 1],
+          ['Abs', 'core', 0],
+        ]],
+
+        // ── Conditioning ───────────────────────────────────────
+        ['Burpees', [
+          ['Cardio', 'conditioning', 1],
+          ['Quads', 'legs', 0],
+          ['Chest', 'chest', 0],
+          ['Front Delts', 'shoulders', 0],
+          ['Triceps', 'arms', 0],
+        ]],
+        ['Rowing', [
+          ['Cardio', 'conditioning', 1],
+          ['Upper Back', 'back', 0],
+          ['Lats', 'back', 0],
+          ['Biceps', 'arms', 0],
+          ['Quads', 'legs', 0],
+          ['Hamstrings', 'legs', 0],
+        ]],
+        ['Jump Rope', [
+          ['Cardio', 'conditioning', 1],
+          ['Calves', 'legs', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Box Jumps', [
+          ['Plyometrics', 'conditioning', 1],
+          ['Quads', 'legs', 0],
+          ['Glutes', 'legs', 0],
+          ['Calves', 'legs', 0],
+          ['Hamstrings', 'legs', 0],
+        ]],
+        ['Battle Ropes', [
+          ['Cardio', 'conditioning', 1],
+          ['Front Delts', 'shoulders', 0],
+          ['Abs', 'core', 0],
+          ['Forearms', 'arms', 0],
+        ]],
+        ['Mountain Climbers', [
+          ['Cardio', 'conditioning', 1],
+          ['Abs', 'core', 0],
+          ['Hip Flexors', 'legs', 0],
+          ['Quads', 'legs', 0],
+          ['Front Delts', 'shoulders', 0],
+        ]],
+      ];
+
+      for (const [exerciseName, muscles] of correctedMappings) {
+        for (const [mgName, mgParent, isPrimary] of muscles) {
+          tx.executeSql(
+            `INSERT OR IGNORE INTO exercise_muscle_groups (exercise_id, muscle_group_id, is_primary)
+             SELECT e.id, mg.id, ?
+             FROM exercises e, muscle_groups mg
+             WHERE e.name = ? AND mg.name = ? AND mg.parent_category = ?`,
+            [isPrimary, exerciseName, mgName, mgParent],
+          );
+        }
+      }
+    },
+  },
+  {
+    version: 18,
+    description: 'Rename volume_score to fitness_score in user_level',
+    up: (tx: Transaction) => {
+      // SQLite < 3.25 doesn't support RENAME COLUMN — recreate the table
+      tx.executeSql(`CREATE TABLE user_level_new (
+        id INTEGER PRIMARY KEY,
+        current_level INTEGER NOT NULL DEFAULT 1,
+        title TEXT NOT NULL DEFAULT 'Beginner',
+        consistency_score REAL NOT NULL DEFAULT 0,
+        fitness_score REAL NOT NULL DEFAULT 0,
+        nutrition_score REAL NOT NULL DEFAULT 0,
+        variety_score REAL NOT NULL DEFAULT 0,
+        last_calculated TEXT NOT NULL DEFAULT (datetime('now'))
+      )`);
+      tx.executeSql(`INSERT INTO user_level_new (id, current_level, title, consistency_score, fitness_score, nutrition_score, variety_score, last_calculated)
+        SELECT id, current_level, title, consistency_score, volume_score, nutrition_score, variety_score, last_calculated FROM user_level`);
+      tx.executeSql(`DROP TABLE user_level`);
+      tx.executeSql(`ALTER TABLE user_level_new RENAME TO user_level`);
     },
   },
 ];

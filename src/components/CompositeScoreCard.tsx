@@ -6,7 +6,7 @@ import { spacing } from '../theme/spacing';
 
 const SUBSCALES = [
   { key: 'consistencyScore' as const, label: 'Consistency', color: '#8DC28A' },
-  { key: 'volumeScore' as const, label: 'Volume', color: '#5B9BF0' },
+  { key: 'fitnessScore' as const, label: 'Fitness', color: '#5B9BF0' },
   { key: 'nutritionScore' as const, label: 'Nutrition', color: '#E0A85C' },
   { key: 'varietyScore' as const, label: 'Variety', color: '#B57AE0' },
 ];
