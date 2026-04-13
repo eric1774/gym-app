@@ -62,7 +62,7 @@ export type DashboardStackParamList = {
 };
 
 export type ProteinStackParamList = {
-  ProteinHome: undefined;
+  ProteinHome: { initialTab?: number } | undefined;
   MealLibrary: undefined;
   MealBuilder: {
     mode: 'normal' | 'edit' | 'library';
