@@ -240,7 +240,7 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
     const prevVol = lastWeekVolume.get(category) ?? 0;
 
     let volumeChangePercent: number | null = null;
-    if (prevVol > 0) {
+    if (prevVol > 0 && thisVol > 0) {
       volumeChangePercent = ((thisVol - prevVol) / prevVol) * 100;
     }
 
