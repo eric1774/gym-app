@@ -13,7 +13,7 @@ export interface DimensionScores {
 const RECENT_DAYS = 90;
 const RECENT_WEIGHT = 0.7;
 const ALLTIME_WEIGHT = 0.3;
-const BADGE_TIER_BONUS = 0.5;
+const BADGE_TIER_BONUS = 0.25;
 
 // ── Helper: clamp to 0-100 ──
 
@@ -63,7 +63,7 @@ async function queryConsistency(db: SQLiteDatabase, sinceDate: string | null): P
     ? weeksInWindow(RECENT_DAYS, firstSessionDate)
     : weeksInWindow(36500, firstSessionDate);
   const workoutsPerWeek = sessionCount / sessionWeeks;
-  const workoutScore = linearScale(workoutsPerWeek, 5); // 5/week = 100
+  const workoutScore = linearScale(workoutsPerWeek, 7); // 7/week = 100 (daily)
 
   // Logging frequency: avg days per week with meal or water log
   const logDays = await executeSql(db,
@@ -92,30 +92,30 @@ async function queryFitness(db: SQLiteDatabase, sinceDate: string | null): Promi
   const maxWeekly = await executeSql(db,
     `SELECT MAX(week_vol) as max_vol FROM (
        SELECT strftime('%Y-%W', ws.completed_at) as week_key,
-              SUM(s.reps * s.weight) as week_vol
+              SUM(s.reps * s.weight_kg) as week_vol
        FROM workout_sets s
-       JOIN exercise_sessions es ON s.exercise_session_id = es.id
-       JOIN workout_sessions ws ON es.session_id = ws.id
+       JOIN workout_sessions ws ON s.session_id = ws.id
        WHERE ws.completed_at IS NOT NULL
        GROUP BY week_key
      )`);
   const allTimeMaxVol = (maxWeekly.rows.item(0).max_vol as number) || 0;
   if (allTimeMaxVol === 0) return 0;
+  // Use 130% of peak as ceiling — even your best week only scores ~77
+  const fitnessCeiling = allTimeMaxVol * 1.3;
 
   // Get average weekly volume in the window
   const whereClause = sinceDate ? `AND ws.completed_at >= '${sinceDate}'` : '';
   const windowVol = await executeSql(db,
-    `SELECT SUM(s.reps * s.weight) as total_vol,
+    `SELECT SUM(s.reps * s.weight_kg) as total_vol,
             COUNT(DISTINCT strftime('%Y-%W', ws.completed_at)) as week_count
      FROM workout_sets s
-     JOIN exercise_sessions es ON s.exercise_session_id = es.id
-     JOIN workout_sessions ws ON es.session_id = ws.id
+     JOIN workout_sessions ws ON s.session_id = ws.id
      WHERE ws.completed_at IS NOT NULL ${whereClause}`);
   const totalVol = (windowVol.rows.item(0).total_vol as number) || 0;
   const weekCount = Math.max(1, (windowVol.rows.item(0).week_count as number) || 1);
   const avgWeeklyVol = totalVol / weekCount;
 
-  return linearScale(avgWeeklyVol, allTimeMaxVol);
+  return linearScale(avgWeeklyVol, fitnessCeiling);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -125,6 +125,15 @@ async function queryFitness(db: SQLiteDatabase, sinceDate: string | null): Promi
 async function queryNutrition(db: SQLiteDatabase, sinceDate: string | null): Promise<number> {
   const dateFilter = sinceDate ? `AND m.local_date >= '${sinceDate}'` : '';
   const waterDateFilter = sinceDate ? `AND wl.local_date >= '${sinceDate}'` : '';
+
+  // Calculate days in window for denominator
+  const daysInWindow = sinceDate ? RECENT_DAYS : await (async () => {
+    const first = await executeSql(db,
+      `SELECT MIN(local_date) as d FROM meals`);
+    if (!first.rows.item(0).d) return 1;
+    const start = new Date(first.rows.item(0).d as string);
+    return Math.max(1, Math.floor((Date.now() - start.getTime()) / 86400000) + 1);
+  })();
 
   // Get macro goals
   const goalResult = await executeSql(db,
@@ -138,7 +147,6 @@ async function queryNutrition(db: SQLiteDatabase, sinceDate: string | null): Pro
     const goals = [pg, cg, fg].filter(g => g !== null && g > 0);
 
     if (goals.length >= 2) {
-      // Days with at least 1 meal in the window
       const mealDays = await executeSql(db,
         `SELECT local_date,
                 SUM(protein_grams) as p, SUM(carb_grams) as c, SUM(fat_grams) as f
@@ -146,7 +154,6 @@ async function queryNutrition(db: SQLiteDatabase, sinceDate: string | null): Pro
          WHERE 1=1 ${dateFilter}
          GROUP BY local_date`);
       let metDays = 0;
-      let totalDays = mealDays.rows.length;
       for (let i = 0; i < mealDays.rows.length; i++) {
         const row = mealDays.rows.item(i);
         let goalsHit = 0;
@@ -155,11 +162,12 @@ async function queryNutrition(db: SQLiteDatabase, sinceDate: string | null): Pro
         if (fg && fg > 0 && (row.f as number) >= fg) goalsHit++;
         if (goalsHit >= 2) metDays++;
       }
-      macroAdherence = totalDays > 0 ? (metDays / totalDays) * 100 : 0;
+      // Use days in window as denominator, not just days with meals
+      macroAdherence = (metDays / daysInWindow) * 100;
     }
   }
 
-  // Hydration adherence
+  // Hydration adherence — also use days in window as denominator
   let hydrationAdherence = 0;
   const waterGoalResult = await executeSql(db,
     `SELECT goal_oz FROM water_settings LIMIT 1`);
@@ -175,7 +183,7 @@ async function queryNutrition(db: SQLiteDatabase, sinceDate: string | null): Pro
       for (let i = 0; i < waterDays.rows.length; i++) {
         if ((waterDays.rows.item(i).total as number) >= goalOz) metDays++;
       }
-      hydrationAdherence = waterDays.rows.length > 0 ? (metDays / waterDays.rows.length) * 100 : 0;
+      hydrationAdherence = (metDays / daysInWindow) * 100;
     }
   }
 
@@ -196,9 +204,9 @@ async function queryVariety(db: SQLiteDatabase, sinceDate: string | null): Promi
      JOIN workout_sessions ws ON es.session_id = ws.id
      WHERE ws.completed_at IS NOT NULL ${whereClause}`);
   const distinctCount = (exercises.rows.item(0).cnt as number) || 0;
-  // Log scale: ln(count+1) / ln(11) * 100
+  // Log scale: ln(count+1) / ln(26) * 100 — need ~25 distinct exercises for 100
   const exerciseScore = distinctCount === 0 ? 0
-    : clamp100(Math.log(distinctCount + 1) / Math.log(11) * 100);
+    : clamp100(Math.log(distinctCount + 1) / Math.log(26) * 100);
 
   // Muscle group coverage
   const totalGroups = await executeSql(db,
@@ -296,18 +304,21 @@ export async function calculateAllScores(database: SQLiteDatabase): Promise<Dime
   ]);
 
   // Weighted blend: 70% recent + 30% all-time + badge bonus
+  // Apply power curve (exponent 1.8) to slow progression — raw 50 → ~29, raw 75 → ~55
+  const dampen = (raw: number) => clamp100(Math.pow(raw / 100, 1.8) * 100);
+
   return {
     consistencyScore: clamp100(
-      (consistencyRecent * RECENT_WEIGHT + consistencyAllTime * ALLTIME_WEIGHT) + badgeBonuses.consistency,
+      dampen(consistencyRecent * RECENT_WEIGHT + consistencyAllTime * ALLTIME_WEIGHT) + badgeBonuses.consistency,
     ),
     fitnessScore: clamp100(
-      (fitnessRecent * RECENT_WEIGHT + fitnessAllTime * ALLTIME_WEIGHT) + badgeBonuses.fitness,
+      dampen(fitnessRecent * RECENT_WEIGHT + fitnessAllTime * ALLTIME_WEIGHT) + badgeBonuses.fitness,
     ),
     nutritionScore: clamp100(
-      (nutritionRecent * RECENT_WEIGHT + nutritionAllTime * ALLTIME_WEIGHT) + badgeBonuses.nutrition,
+      dampen(nutritionRecent * RECENT_WEIGHT + nutritionAllTime * ALLTIME_WEIGHT) + badgeBonuses.nutrition,
     ),
     varietyScore: clamp100(
-      (varietyRecent * RECENT_WEIGHT + varietyAllTime * ALLTIME_WEIGHT) + badgeBonuses.variety,
+      dampen(varietyRecent * RECENT_WEIGHT + varietyAllTime * ALLTIME_WEIGHT) + badgeBonuses.variety,
     ),
   };
 }

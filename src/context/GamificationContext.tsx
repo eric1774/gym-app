@@ -210,6 +210,21 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
       try {
         await seedBadges();
         const backfilled = await backfillBadges();
+        // Always recalculate scores on init from raw data + badges
+        const database = await db;
+        const scores = await calculateAllScores(database);
+        const levelResult = calculateCompositeLevel(
+          scores.consistencyScore,
+          scores.fitnessScore,
+          scores.nutritionScore,
+          scores.varietyScore,
+        );
+        await updateUserLevel(levelResult.level, levelResult.title, {
+          consistency: levelResult.consistencyScore,
+          fitness: levelResult.fitnessScore,
+          nutrition: levelResult.nutritionScore,
+          variety: levelResult.varietyScore,
+        });
         await loadAllState();
         // If backfill found badges, store them for the highlight reel
         if (backfilled.length > 0) {
