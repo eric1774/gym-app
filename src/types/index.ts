@@ -19,7 +19,7 @@ export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'stretching',
 ];
 
-export type ExerciseMeasurementType = 'reps' | 'timed';
+export type ExerciseMeasurementType = 'reps' | 'timed' | 'height_reps';
 
 export interface Exercise {
   id: number;

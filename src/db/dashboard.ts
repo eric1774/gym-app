@@ -8,6 +8,7 @@ import {
   FullDataExport,
   Exercise,
   ExerciseCategory,
+  ExerciseMeasurementType,
   WorkoutSession,
   WorkoutSet,
   Program,
@@ -533,12 +534,12 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
       lastTrainedAt = session.completedAt;
     }
 
-    let dominantType: 'reps' | 'timed' = 'reps';
+    let dominantType: ExerciseMeasurementType = 'reps';
     let maxCount = 0;
     for (const [type, count] of data.measurementTypes) {
       if (count > maxCount) {
         maxCount = count;
-        dominantType = type as 'reps' | 'timed';
+        dominantType = type as ExerciseMeasurementType;
       }
     }
 
@@ -604,14 +605,14 @@ export async function getCategoryExerciseProgress(
   // Group rows by exercise_id
   const exerciseMap = new Map<number, {
     exerciseName: string;
-    measurementType: 'reps' | 'timed';
+    measurementType: ExerciseMeasurementType;
     points: { completedAt: string; bestValue: number }[];
   }>();
 
   for (let i = 0; i < result.rows.length; i++) {
     const row = result.rows.item(i);
     const exerciseId: number = row.exercise_id;
-    const measurementType = (row.measurement_type ?? 'reps') as 'reps' | 'timed';
+    const measurementType = (row.measurement_type ?? 'reps') as ExerciseMeasurementType;
     const bestValue = measurementType === 'timed' ? row.reps : row.weight_kg;
 
     if (!exerciseMap.has(exerciseId)) {
@@ -874,7 +875,7 @@ export async function exportAllData(): Promise<FullDataExport> {
       category: r.category as ExerciseCategory,
       defaultRestSeconds: r.default_rest_seconds,
       isCustom: r.is_custom === 1,
-      measurementType: (r.measurement_type ?? 'reps') as 'reps' | 'timed',
+      measurementType: (r.measurement_type ?? 'reps') as ExerciseMeasurementType,
       createdAt: r.created_at,
     });
   }
