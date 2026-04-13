@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getMuscleGroupProgress } from '../db/progress';
@@ -19,15 +20,51 @@ import { formatRelativeTime } from '../utils/formatRelativeTime';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'ProgressHub'>;
 
+const ICON_SIZE = 32;
+
+/** Chest — front torso with pec outline */
+function ChestIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2C9 2 5 4 4 7c-1 3-.5 6 1 8l2 2.5V21h10v-3.5L19 15c1.5-2 2-5 1-8-1-3-5-5-8-5Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 8c1.5 1.5 2.5 3 4 3s2.5-1.5 4-3" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <Path d="M12 11v4" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Back — rear torso with lat/spine outline */
+function BackIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 2C9 2 5 4 4 7c-1 3-.5 6 1 8l2 2.5V21h10v-3.5L19 15c1.5-2 2-5 1-8-1-3-5-5-8-5Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 5v14" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <Path d="M9 7l3 2 3-2" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 12l4 1.5 4-1.5" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Core — abs grid */
+function CoreIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M8 3h8c1.5 0 3 2 3 5v8c0 3-1.5 5-3 5H8c-1.5 0-3-2-3-5V8c0-3 1.5-5 3-5Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M12 5v14" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <Path d="M7 8.5h10M7 12h10M7 15.5h10" stroke={color} strokeWidth={1.2} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 const CATEGORY_EMOJI: Record<string, string> = {
-  chest: '\uD83E\uDEC1',     // 🫁
-  back: '\uD83E\uDDBB',      // 🦻 (closest to back/spine)
   legs: '\uD83E\uDDB5',      // 🦵
   shoulders: '\uD83C\uDFCB\uFE0F', // 🏋️
   arms: '\uD83D\uDCAA',      // 💪
-  core: '\uD83E\uDEBB',      // 🪻 (abs)
   conditioning: '\u2764\uFE0F', // ❤️
 };
+
+/** Categories that use SVG icons instead of emoji */
+const SVG_ICON_CATEGORIES = new Set(['chest', 'back', 'core']);
 
 function formatVolumeChange(
   volumeChangePercent: number | null,
@@ -47,11 +84,18 @@ interface MuscleCardProps {
   onPress: () => void;
 }
 
+function CategoryIcon({ category, color }: { category: string; color: string }) {
+  if (category === 'chest') return <ChestIcon color={color} />;
+  if (category === 'back') return <BackIcon color={color} />;
+  if (category === 'core') return <CoreIcon color={color} />;
+  const emoji = CATEGORY_EMOJI[category] ?? '\uD83D\uDCAA';
+  return <Text style={styles.cardEmoji}>{emoji}</Text>;
+}
+
 function MuscleCard({ group, onPress }: MuscleCardProps) {
   const accentColor = getCategoryColor(group.category);
   const title =
     group.category.charAt(0).toUpperCase() + group.category.slice(1);
-  const emoji = CATEGORY_EMOJI[group.category] ?? '\uD83D\uDCAA';
   const volumeChange = formatVolumeChange(group.volumeChangePercent);
   const lastTrained = group.lastTrainedAt
     ? formatRelativeTime(group.lastTrainedAt)
@@ -63,7 +107,9 @@ function MuscleCard({ group, onPress }: MuscleCardProps) {
       style={[styles.card, { borderColor: accentColor + '30' }]}
       activeOpacity={0.7}
       onPress={onPress}>
-      <Text style={styles.cardEmoji}>{emoji}</Text>
+      <View style={styles.iconContainer}>
+        <CategoryIcon category={group.category} color={accentColor} />
+      </View>
       <Text style={[styles.cardCategory, { color: accentColor }]}>
         {title}
       </Text>
@@ -187,9 +233,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.base,
   },
+  iconContainer: {
+    marginBottom: spacing.xs,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cardEmoji: {
     fontSize: fontSize.xxl,
-    marginBottom: spacing.xs,
   },
   cardCategory: {
     fontSize: fontSize.base,
