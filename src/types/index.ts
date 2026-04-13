@@ -482,4 +482,32 @@ export interface MealFoodInput {
   fatPer100g: number;
 }
 
+// -- Progress domain types (Phase X) --
+
+export interface WeeklySnapshot {
+  sessionsThisWeek: number;
+  prsThisWeek: number;
+  volumeChangePercent: number | null; // null if no previous week data
+}
+
+export interface MuscleGroupProgress {
+  category: ExerciseCategory;
+  volumeChangePercent: number | null;
+  hasPR: boolean;
+  lastTrainedAt: string | null;
+}
+
+export interface ExerciseInsights {
+  weightChangePercent: number | null;
+  volumeChangePercent: number | null;
+  periodLabel: string; // e.g. "3 months"
+}
+
+export interface SessionComparison {
+  currentSets: ExerciseHistorySet[];
+  comparisonSets: ExerciseHistorySet[];
+  comparisonDate: string;
+  comparisonLabel: string; // "vs Previous Session" or "vs Last Month"
+}
+
 export * from './gamification';
