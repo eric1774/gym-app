@@ -21,6 +21,9 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
 import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
+import { ProgressHubScreen } from '../screens/ProgressHubScreen';
+import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
+import { SessionBreakdownScreen } from '../screens/SessionBreakdownScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -53,6 +56,9 @@ export type DashboardStackParamList = {
   Settings: undefined;
   CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
   Achievements: undefined;
+  ProgressHub: undefined;
+  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
+  SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
 };
 
 export type ProteinStackParamList = {
@@ -186,6 +192,9 @@ function DashboardStackNavigator() {
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
       <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressScreen} />
       <DashboardStack.Screen name="Achievements" component={AchievementsScreen} />
+      <DashboardStack.Screen name="ProgressHub" component={ProgressHubScreen} />
+      <DashboardStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+      <DashboardStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
     </DashboardStack.Navigator>
   );
 }
