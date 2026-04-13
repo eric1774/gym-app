@@ -141,7 +141,7 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
   // This week's volume per category
   const thisWeekResult = await executeSql(
     database,
-    `SELECT mg.name AS category, SUM(ws.weight_kg * ws.reps) AS volume
+    `SELECT mg.parent_category AS category, SUM(ws.weight_kg * ws.reps) AS volume
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
@@ -150,15 +150,15 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
        AND wss.completed_at < ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
        AND emg.is_primary = 1
-       AND mg.name != 'stretching'
-     GROUP BY mg.name`,
+       AND mg.parent_category != 'stretching'
+     GROUP BY mg.parent_category`,
     [weekStart, nextWeekStart],
   );
 
   // Last week's volume per category
   const lastWeekResult = await executeSql(
     database,
-    `SELECT mg.name AS category, SUM(ws.weight_kg * ws.reps) AS volume
+    `SELECT mg.parent_category AS category, SUM(ws.weight_kg * ws.reps) AS volume
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
@@ -167,15 +167,15 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
        AND wss.completed_at < ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
        AND emg.is_primary = 1
-       AND mg.name != 'stretching'
-     GROUP BY mg.name`,
+       AND mg.parent_category != 'stretching'
+     GROUP BY mg.parent_category`,
     [prevWeekStart, weekStart],
   );
 
   // PRs this week per category
   const prResult = await executeSql(
     database,
-    `SELECT DISTINCT mg.name AS category
+    `SELECT DISTINCT mg.parent_category AS category
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
@@ -184,7 +184,7 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
        AND wss.completed_at < ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
        AND emg.is_primary = 1
-       AND mg.name != 'stretching'
+       AND mg.parent_category != 'stretching'
        AND ws.weight_kg > (
          SELECT COALESCE(MAX(ws2.weight_kg), 0)
          FROM workout_sets ws2
@@ -199,15 +199,15 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
   // Last trained per category (within last 2 weeks to determine "recently trained")
   const lastTrainedResult = await executeSql(
     database,
-    `SELECT mg.name AS category, MAX(wss.completed_at) AS last_trained_at
+    `SELECT mg.parent_category AS category, MAX(wss.completed_at) AS last_trained_at
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
      INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
      WHERE wss.completed_at >= ?
        AND emg.is_primary = 1
-       AND mg.name != 'stretching'
-     GROUP BY mg.name`,
+       AND mg.parent_category != 'stretching'
+     GROUP BY mg.parent_category`,
     [twoWeeksAgo],
   );
 
