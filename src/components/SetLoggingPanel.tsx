@@ -177,13 +177,13 @@ export function SetLoggingPanel({ sessionId, exerciseId, onSetLogged, onSetDelet
       )}
 
       {/* Ghost reference from last session */}
-      <GhostReference sets={lastSessionSets} isTimed={isTimed} />
+      <GhostReference sets={lastSessionSets} isTimed={isTimed} isHeightReps={isHeightReps} />
 
       {/* Completed sets list */}
       {completedSets.length > 0 && (
         <ScrollView nestedScrollEnabled style={styles.setList}>
           {completedSets.map(set => (
-            <SetListItem key={set.id} set={set} onDelete={handleDelete} isTimed={isTimed} />
+            <SetListItem key={set.id} set={set} onDelete={handleDelete} isTimed={isTimed} isHeightReps={isHeightReps} />
           ))}
         </ScrollView>
       )}
