@@ -63,8 +63,7 @@ export function NutritionRingsCard() {
   const navigateToHealth = useCallback((tab: 'macros' | 'hydration') => {
     const parent = navigation.getParent<NavigationProp<TabParamList>>();
     if (parent) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (parent as any).navigate('ProteinTab', {
+      parent.navigate('ProteinTab' as any, {
         screen: 'ProteinHome',
         params: { initialTab: tab === 'macros' ? 0 : 1 },
       });
