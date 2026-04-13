@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -26,11 +25,8 @@ import { NutritionRingsCard } from '../components/NutritionRingsCard';
 import { getWeeklySnapshot } from '../db/progress';
 import { useGamification } from '../context/GamificationContext';
 import { LevelBar } from '../components/LevelBar';
-import { RecentBadges } from '../components/RecentBadges';
 import { CelebrationModal } from '../components/CelebrationModal';
 import { HighlightReelModal } from '../components/HighlightReelModal';
-import { getEarnedBadges } from '../db/badges';
-import type { UserBadgeRow } from '../types';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
@@ -68,7 +64,6 @@ export function DashboardScreen() {
   const [activeElapsed, setActiveElapsed] = useState(0);
   const [snapshot, setSnapshot] = useState<WeeklySnapshot>({ sessionsThisWeek: 0, prsThisWeek: 0, volumeChangePercent: null });
   const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
-  const [recentBadges, setRecentBadges] = useState<UserBadgeRow[]>([]);
 
   // Elapsed timer for active session state
   useEffect(() => {
@@ -86,15 +81,13 @@ export function DashboardScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const [nextDay, snap, earned] = await Promise.all([
+          const [nextDay, snap] = await Promise.all([
             getNextWorkoutDay(),
             getWeeklySnapshot(),
-            getEarnedBadges(),
           ]);
           if (!cancelled) {
             setNextWorkout(nextDay);
             setSnapshot(snap);
-            setRecentBadges(earned.slice(0, 10));
           }
         } catch (err) {
           console.warn('Dashboard data fetch failed:', err);
@@ -147,15 +140,13 @@ export function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <LevelBar
-          level={levelState.level}
-          title={levelState.title}
-          progressToNext={levelState.progressToNext}
-        />
-        <RecentBadges badges={recentBadges} />
+      <LevelBar
+        level={levelState.level}
+        title={levelState.title}
+        progressToNext={levelState.progressToNext}
+      />
 
-        {/* Next Workout Card — only shown when an activated program exists */}
+      {/* Next Workout Card — only shown when an activated program exists */}
         {nextWorkout !== null && (
           <View style={styles.nextWorkoutCard}>
             {session ? (
@@ -191,12 +182,11 @@ export function DashboardScreen() {
           </View>
         )}
 
-        <WeeklySnapshotCard
-          snapshot={snapshot}
-          onPress={() => navigation.navigate('ProgressHub')}
-        />
-        <NutritionRingsCard />
-      </ScrollView>
+      <WeeklySnapshotCard
+        snapshot={snapshot}
+        onPress={() => navigation.navigate('ProgressHub')}
+      />
+      <NutritionRingsCard />
       <HighlightReelModal
         badges={backfilledBadges}
         onDismiss={clearBackfill}
@@ -213,9 +203,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl,
   },
   headerRow: {
     flexDirection: 'row',
