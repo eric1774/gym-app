@@ -108,9 +108,9 @@ function formatVolumeChange(
   }
   const rounded = Math.round(volumeChangePercent);
   if (rounded >= 0) {
-    return { text: `+${rounded}%`, color: colors.accent };
+    return { text: `+${rounded}% vol`, color: colors.accent };
   }
-  return { text: `\u2212${Math.abs(rounded)}%`, color: colors.secondary };
+  return { text: `\u2212${Math.abs(rounded)}% vol`, color: colors.secondary };
 }
 
 interface MuscleCardProps {
