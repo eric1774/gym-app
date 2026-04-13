@@ -96,9 +96,11 @@ export async function getWeeklySnapshot(): Promise<WeeklySnapshot> {
     `SELECT SUM(ws.weight_kg * ws.reps) AS volume
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE wss.completed_at >= ?
        AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
+       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       AND e.measurement_type != 'height_reps'`,
     [weekStart, nextWeekStart],
   );
   const thisVolume: number | null = thisVolumeResult.rows.item(0).volume ?? null;
@@ -109,9 +111,11 @@ export async function getWeeklySnapshot(): Promise<WeeklySnapshot> {
     `SELECT SUM(ws.weight_kg * ws.reps) AS volume
      FROM workout_sets ws
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE wss.completed_at >= ?
        AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
+       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       AND e.measurement_type != 'height_reps'`,
     [prevWeekStart, weekStart],
   );
   const prevVolume: number | null = prevVolumeResult.rows.item(0).volume ?? null;
@@ -146,11 +150,13 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
      INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
+     INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE wss.completed_at >= ?
        AND wss.completed_at < ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
        AND emg.is_primary = 1
        AND mg.parent_category != 'stretching'
+       AND e.measurement_type != 'height_reps'
      GROUP BY mg.parent_category`,
     [weekStart, nextWeekStart],
   );
@@ -163,11 +169,13 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
      INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
+     INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE wss.completed_at >= ?
        AND wss.completed_at < ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
        AND emg.is_primary = 1
        AND mg.parent_category != 'stretching'
+       AND e.measurement_type != 'height_reps'
      GROUP BY mg.parent_category`,
     [prevWeekStart, weekStart],
   );

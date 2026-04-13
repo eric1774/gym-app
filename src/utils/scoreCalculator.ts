@@ -95,7 +95,9 @@ async function queryFitness(db: SQLiteDatabase, sinceDate: string | null): Promi
               SUM(s.reps * s.weight_kg) as week_vol
        FROM workout_sets s
        JOIN workout_sessions ws ON s.session_id = ws.id
+       JOIN exercises e ON e.id = s.exercise_id
        WHERE ws.completed_at IS NOT NULL
+         AND e.measurement_type != 'height_reps'
        GROUP BY week_key
      )`);
   const allTimeMaxVol = (maxWeekly.rows.item(0).max_vol as number) || 0;
@@ -110,7 +112,10 @@ async function queryFitness(db: SQLiteDatabase, sinceDate: string | null): Promi
             COUNT(DISTINCT strftime('%Y-%W', ws.completed_at)) as week_count
      FROM workout_sets s
      JOIN workout_sessions ws ON s.session_id = ws.id
-     WHERE ws.completed_at IS NOT NULL ${whereClause}`);
+     JOIN exercises e ON e.id = s.exercise_id
+     WHERE ws.completed_at IS NOT NULL
+       AND e.measurement_type != 'height_reps'
+       ${whereClause}`);
   const totalVol = (windowVol.rows.item(0).total_vol as number) || 0;
   const weekCount = Math.max(1, (windowVol.rows.item(0).week_count as number) || 1);
   const avgWeeklyVol = totalVol / weekCount;
