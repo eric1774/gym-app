@@ -56,15 +56,49 @@ function CoreIcon({ color }: { color: string }) {
   );
 }
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  legs: '\uD83E\uDDB5',      // 🦵
-  shoulders: '\uD83C\uDFCB\uFE0F', // 🏋️
-  arms: '\uD83D\uDCAA',      // 💪
-  conditioning: '\u2764\uFE0F', // ❤️
-};
+/** Legs — thigh and calf with knee bend */
+function LegsIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M9 2c-.5 0-1.5.5-2 2L5.5 10c-.3 1 0 2 .5 2.5l1 1L6 18c-.3 1.2 0 2.5.8 3h2.4c.5 0 .8-.5.8-1v-2l1-4-1-3 1.5-5.5c.2-.8.3-1.5 0-2C11.2 2.5 10 2 9 2Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M15 2c.5 0 1.5.5 2 2l1.5 6c.3 1 0 2-.5 2.5l-1 1L18 18c.3 1.2 0 2.5-.8 3h-2.4c-.5 0-.8-.5-.8-1v-2l-1-4 1-3-1.5-5.5c-.2-.8-.3-1.5 0-2C12.8 2.5 14 2 15 2Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
-/** Categories that use SVG icons instead of emoji */
-const SVG_ICON_CATEGORIES = new Set(['chest', 'back', 'core']);
+/** Shoulders — deltoid cap outline */
+function ShouldersIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" stroke={color} strokeWidth={1.5} />
+      <Path d="M7 10c-2 .5-3.5 2-4 4s0 4 1 5h4v-5" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M17 10c2 .5 3.5 2 4 4s0 4-1 5h-4v-5" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M8 10h8" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+      <Path d="M9 10v9h6v-9" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Arms — flexed bicep */
+function ArmsIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M6 18l1-5c.5-2 1.5-3 3-3h1l2-4c.5-1 1.5-2 3-2s2 .5 2 1.5c0 .5-.5 1.5-1 2.5L15 12" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M15 12c1 0 2 .5 2.5 1.5S18 16 17.5 17c-.5 1.5-2 2-3.5 2H9c-1.5 0-2.5-.5-3-1.5" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M13 7c1 .5 2 1.5 2 3" stroke={color} strokeWidth={1.5} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Conditioning — heart with pulse line */
+function ConditioningIcon({ color }: { color: string }) {
+  return (
+    <Svg width={ICON_SIZE} height={ICON_SIZE} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 21s-7-5-9-9c-1.5-3-.5-7 3-8 2-.5 4 .5 5 2h2c1-1.5 3-2.5 5-2 3.5 1 4.5 5 3 8-2 4-9 9-9 9Z" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M5 12h4l1.5-3 3 6 1.5-3H19" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 function formatVolumeChange(
   volumeChangePercent: number | null,
@@ -85,11 +119,16 @@ interface MuscleCardProps {
 }
 
 function CategoryIcon({ category, color }: { category: string; color: string }) {
-  if (category === 'chest') return <ChestIcon color={color} />;
-  if (category === 'back') return <BackIcon color={color} />;
-  if (category === 'core') return <CoreIcon color={color} />;
-  const emoji = CATEGORY_EMOJI[category] ?? '\uD83D\uDCAA';
-  return <Text style={styles.cardEmoji}>{emoji}</Text>;
+  switch (category) {
+    case 'chest': return <ChestIcon color={color} />;
+    case 'back': return <BackIcon color={color} />;
+    case 'core': return <CoreIcon color={color} />;
+    case 'legs': return <LegsIcon color={color} />;
+    case 'shoulders': return <ShouldersIcon color={color} />;
+    case 'arms': return <ArmsIcon color={color} />;
+    case 'conditioning': return <ConditioningIcon color={color} />;
+    default: return <ArmsIcon color={color} />;
+  }
 }
 
 function MuscleCard({ group, onPress }: MuscleCardProps) {
