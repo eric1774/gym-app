@@ -21,6 +21,7 @@ import type { WeeklySnapshot } from '../types';
 import { useSession } from '../context/SessionContext';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
 import { WeeklySnapshotCard } from '../components/WeeklySnapshotCard';
+import { NutritionRingsCard } from '../components/NutritionRingsCard';
 import { getWeeklySnapshot } from '../db/progress';
 import { useGamification } from '../context/GamificationContext';
 import { LevelBar } from '../components/LevelBar';
@@ -192,6 +193,7 @@ export function DashboardScreen() {
         snapshot={snapshot}
         onPress={() => navigation.navigate('ProgressHub')}
       />
+      <NutritionRingsCard />
       <HighlightReelModal
         badges={backfilledBadges}
         onDismiss={clearBackfill}
