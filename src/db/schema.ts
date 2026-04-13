@@ -149,7 +149,7 @@ export const CREATE_USER_LEVEL_TABLE = `
     current_level INTEGER NOT NULL DEFAULT 1,
     title TEXT NOT NULL DEFAULT 'Beginner',
     consistency_score REAL NOT NULL DEFAULT 0,
-    volume_score REAL NOT NULL DEFAULT 0,
+    fitness_score REAL NOT NULL DEFAULT 0,
     nutrition_score REAL NOT NULL DEFAULT 0,
     variety_score REAL NOT NULL DEFAULT 0,
     last_calculated TEXT NOT NULL
