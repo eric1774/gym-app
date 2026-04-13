@@ -44,6 +44,7 @@ export function ExerciseDetailScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<RouteParams>();
   const { exerciseId, exerciseName, measurementType, category } = route.params;
+  const isHeightReps = measurementType === 'height_reps';
 
   const accentColor = category ? getCategoryColor(category) : colors.accent;
 
@@ -111,14 +112,15 @@ export function ExerciseDetailScreen() {
     const { weightChangePercent, volumeChangePercent, periodLabel } = insights;
     if (weightChangePercent !== null) {
       const direction = weightChangePercent >= 0 ? 'up' : 'down';
-      return `Weight ${direction} ${Math.round(Math.abs(weightChangePercent))}% in ${periodLabel}`;
+      const label = isHeightReps ? 'Height' : 'Weight';
+      return `${label} ${direction} ${Math.round(Math.abs(weightChangePercent))}% in ${periodLabel}`;
     }
     if (volumeChangePercent !== null) {
       const direction = volumeChangePercent >= 0 ? 'up' : 'down';
       return `Volume ${direction} ${Math.round(Math.abs(volumeChangePercent))}% in ${periodLabel}`;
     }
     return 'Holding steady';
-  }, [insights]);
+  }, [insights, isHeightReps]);
 
   const insightPositive =
     (insights.weightChangePercent !== null && insights.weightChangePercent > 0) ||
@@ -138,7 +140,7 @@ export function ExerciseDetailScreen() {
       labels,
       datasets: [
         {
-          data: filteredProgress.map(p => isVolume ? p.bestReps : p.bestWeightLbs),
+          data: filteredProgress.map(p => p.bestWeightLbs),
           color: () => accentColor,
           strokeWidth: 2,
         },
@@ -169,14 +171,16 @@ export function ExerciseDetailScreen() {
             <Text style={[styles.heroValue, { color: accentColor }]}>
               {bestWeight > 0 ? bestWeight : '—'}
             </Text>
-            <Text style={styles.heroLabel}>Best (lbs)</Text>
+            <Text style={styles.heroLabel}>{isHeightReps ? 'Best (in)' : 'Best (lbs)'}</Text>
           </View>
-          <View style={styles.heroStat}>
-            <Text style={[styles.heroValue, { color: '#818CF8' }]}>
-              {totalVolume > 0 ? totalVolume.toLocaleString() : '—'}
-            </Text>
-            <Text style={styles.heroLabel}>Volume (lbs)</Text>
-          </View>
+          {!isHeightReps && (
+            <View style={styles.heroStat}>
+              <Text style={[styles.heroValue, { color: '#818CF8' }]}>
+                {totalVolume > 0 ? totalVolume.toLocaleString() : '—'}
+              </Text>
+              <Text style={styles.heroLabel}>Volume (lbs)</Text>
+            </View>
+          )}
           <View style={styles.heroStat}>
             <Text style={[styles.heroValue, { color: colors.prGold }]}>
               {sessionCount}
@@ -208,24 +212,26 @@ export function ExerciseDetailScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <View style={styles.modePill}>
-            <TouchableOpacity
-              style={[styles.modePillButton, !isVolume && styles.modePillButtonActive]}
-              activeOpacity={0.7}
-              onPress={() => setViewMode('strength')}>
-              <Text style={[styles.modePillText, !isVolume && styles.modePillTextActive]}>
-                Strength
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modePillButton, isVolume && styles.modePillButtonActive]}
-              activeOpacity={0.7}
-              onPress={() => setViewMode('volume')}>
-              <Text style={[styles.modePillText, isVolume && styles.modePillTextActive]}>
-                Volume
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {!isHeightReps && (
+            <View style={styles.modePill}>
+              <TouchableOpacity
+                style={[styles.modePillButton, !isVolume && styles.modePillButtonActive]}
+                activeOpacity={0.7}
+                onPress={() => setViewMode('strength')}>
+                <Text style={[styles.modePillText, !isVolume && styles.modePillTextActive]}>
+                  Strength
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modePillButton, isVolume && styles.modePillButtonActive]}
+                activeOpacity={0.7}
+                onPress={() => setViewMode('volume')}>
+                <Text style={[styles.modePillText, isVolume && styles.modePillTextActive]}>
+                  Volume
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Chart */}
@@ -239,7 +245,7 @@ export function ExerciseDetailScreen() {
               data={chartData}
               width={CHART_WIDTH}
               height={220}
-              yAxisSuffix={isVolume ? '' : ' lb'}
+              yAxisSuffix={isVolume ? '' : (isHeightReps ? ' in' : ' lb')}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
               withOuterLines={false}
@@ -289,6 +295,7 @@ export function ExerciseDetailScreen() {
                 index={index}
                 totalSessions={filteredHistory.length}
                 isPR={isPR}
+                isHeightReps={isHeightReps}
                 onPress={() =>
                   navigation.navigate('SessionBreakdown', {
                     sessionId: session.sessionId,

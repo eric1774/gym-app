@@ -10,6 +10,7 @@ interface SessionTimelineRowProps {
   index: number;
   totalSessions: number;
   isPR?: boolean;
+  isHeightReps?: boolean;
   onPress: () => void;
 }
 
@@ -25,6 +26,7 @@ export function SessionTimelineRow({
   index,
   totalSessions,
   isPR,
+  isHeightReps = false,
   onPress,
 }: SessionTimelineRowProps) {
   const opacity = 1 - (index / totalSessions) * 0.5;
@@ -44,7 +46,7 @@ export function SessionTimelineRow({
         {workingSets.map(s => (
           <View key={s.setNumber} style={styles.pill}>
             <Text style={styles.pillText}>
-              {s.weightLbs}{'\u00D7'}{s.reps}
+              {s.weightLbs}{isHeightReps ? 'in' : ''}{'\u00D7'}{s.reps}
             </Text>
           </View>
         ))}
@@ -52,7 +54,7 @@ export function SessionTimelineRow({
 
       <View style={styles.right}>
         {isPR && <Text style={styles.prBadge}>PR</Text>}
-        <Text style={styles.volume}>{volume.toLocaleString()}</Text>
+        {!isHeightReps && <Text style={styles.volume}>{volume.toLocaleString()}</Text>}
       </View>
     </TouchableOpacity>
   );
