@@ -159,6 +159,22 @@ export function AddExerciseModal({ visible, onClose, onAdded, editExercise }: Ad
                   Timed
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  measurementType === 'height_reps' ? styles.toggleActive : styles.toggleInactive,
+                ]}
+                onPress={() => setMeasurementType('height_reps')}>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    measurementType === 'height_reps'
+                      ? styles.toggleTextActive
+                      : styles.toggleTextInactive,
+                  ]}>
+                  Height
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
