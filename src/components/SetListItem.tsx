@@ -15,6 +15,7 @@ interface Props {
   set: WorkoutSet;
   onDelete: (id: number) => void;
   isTimed?: boolean;
+  isHeightReps?: boolean;
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -23,7 +24,7 @@ function formatDuration(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export const SetListItem = React.memo(function SetListItem({ set, onDelete, isTimed = false }: Props) {
+export const SetListItem = React.memo(function SetListItem({ set, onDelete, isTimed = false, isHeightReps = false }: Props) {
   const deleteVisible = useRef(false);
   const animatedOpacity = useRef(new Animated.Value(0)).current;
 
@@ -45,7 +46,7 @@ export const SetListItem = React.memo(function SetListItem({ set, onDelete, isTi
       <Text style={styles.setText}>
         {isTimed
           ? `Set ${set.setNumber}: ${formatDuration(set.reps)}`
-          : `Set ${set.setNumber}: ${set.weightLbs}lb × ${set.reps} reps${set.isWarmup ? ' (warmup)' : ''}`}
+          : `Set ${set.setNumber}: ${set.weightLbs}${isHeightReps ? 'in' : 'lb'} × ${set.reps} reps${set.isWarmup ? ' (warmup)' : ''}`}
       </Text>
       <Animated.View style={[styles.deleteWrapper, { opacity: animatedOpacity }]}>
         <TouchableOpacity
