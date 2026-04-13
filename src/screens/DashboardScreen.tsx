@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -146,54 +147,56 @@ export function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <LevelBar
-        level={levelState.level}
-        title={levelState.title}
-        progressToNext={levelState.progressToNext}
-      />
-      <RecentBadges badges={recentBadges} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <LevelBar
+          level={levelState.level}
+          title={levelState.title}
+          progressToNext={levelState.progressToNext}
+        />
+        <RecentBadges badges={recentBadges} />
 
-      {/* Next Workout Card — only shown when an activated program exists */}
-      {nextWorkout !== null && (
-        <View style={styles.nextWorkoutCard}>
-          {session ? (
-            /* Active state */
-            <>
-              <View style={styles.nextWorkoutActiveHeader}>
-                <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
-                <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.nextWorkoutButton}
-                activeOpacity={0.7}
-                onPress={handleQuickStart}>
-                <Text style={styles.nextWorkoutButtonText}>Continue</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            /* Idle state */
-            <>
-              <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
-              <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
-              <Text style={styles.nextWorkoutMeta}>
-                {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
-              </Text>
-              <TouchableOpacity
-                style={styles.nextWorkoutButton}
-                activeOpacity={0.7}
-                onPress={handleQuickStart}>
-                <Text style={styles.nextWorkoutButtonText}>Start</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
+        {/* Next Workout Card — only shown when an activated program exists */}
+        {nextWorkout !== null && (
+          <View style={styles.nextWorkoutCard}>
+            {session ? (
+              /* Active state */
+              <>
+                <View style={styles.nextWorkoutActiveHeader}>
+                  <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
+                  <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.nextWorkoutButton}
+                  activeOpacity={0.7}
+                  onPress={handleQuickStart}>
+                  <Text style={styles.nextWorkoutButtonText}>Continue</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* Idle state */
+              <>
+                <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
+                <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
+                <Text style={styles.nextWorkoutMeta}>
+                  {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
+                </Text>
+                <TouchableOpacity
+                  style={styles.nextWorkoutButton}
+                  activeOpacity={0.7}
+                  onPress={handleQuickStart}>
+                  <Text style={styles.nextWorkoutButtonText}>Start</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
 
-      <WeeklySnapshotCard
-        snapshot={snapshot}
-        onPress={() => navigation.navigate('ProgressHub')}
-      />
-      <NutritionRingsCard />
+        <WeeklySnapshotCard
+          snapshot={snapshot}
+          onPress={() => navigation.navigate('ProgressHub')}
+        />
+        <NutritionRingsCard />
+      </ScrollView>
       <HighlightReelModal
         badges={backfilledBadges}
         onDismiss={clearBackfill}
@@ -210,6 +213,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
   },
   headerRow: {
     flexDirection: 'row',
