@@ -20,13 +20,13 @@ import { formatRelativeTime } from '../utils/formatRelativeTime';
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'ProgressHub'>;
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  chest: '\uD83D\uDCAA',
-  back: '\uD83E\uDDBE',
-  legs: '\uD83E\uDDB5',
-  shoulders: '\uD83C\uDFCB\uFE0F',
-  arms: '\uD83D\uDCAA',
-  core: '\uD83E\uDDBF',
-  conditioning: '\u2764\uFE0F',
+  chest: '\uD83E\uDEC1',     // 🫁
+  back: '\uD83E\uDDBB',      // 🦻 (closest to back/spine)
+  legs: '\uD83E\uDDB5',      // 🦵
+  shoulders: '\uD83C\uDFCB\uFE0F', // 🏋️
+  arms: '\uD83D\uDCAA',      // 💪
+  core: '\uD83E\uDEBB',      // 🪻 (abs)
+  conditioning: '\u2764\uFE0F', // ❤️
 };
 
 function formatVolumeChange(
