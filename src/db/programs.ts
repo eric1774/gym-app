@@ -1,5 +1,5 @@
 import { db, executeSql, runTransaction } from './database';
-import { Program, ProgramDay, ProgramDayExercise } from '../types';
+import { Program, ProgramDay, ProgramDayExercise, ProgramWeek } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
@@ -56,6 +56,22 @@ export function rowToProgramDayExercise(row: {
     targetWeightLbs: row.target_weight_kg,
     sortOrder: row.sort_order,
     supersetGroupId: row.superset_group_id ?? null,
+  };
+}
+
+export function rowToProgramWeek(row: {
+  id: number;
+  program_id: number;
+  week_number: number;
+  name: string | null;
+  details: string | null;
+}): ProgramWeek {
+  return {
+    id: row.id,
+    programId: row.program_id,
+    weekNumber: row.week_number,
+    name: row.name ?? null,
+    details: row.details ?? null,
   };
 }
 
@@ -380,4 +396,68 @@ export async function removeSupersetGroup(
     'UPDATE program_day_exercises SET superset_group_id = NULL WHERE program_day_id = ? AND superset_group_id = ?',
     [dayId, groupId],
   );
+}
+
+// ── Program Week Data ──────────────────────────────────────────────
+
+/** Return the week name/details for a specific week, or null if not set. */
+export async function getWeekData(
+  programId: number,
+  weekNumber: number,
+): Promise<ProgramWeek | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT * FROM program_weeks WHERE program_id = ? AND week_number = ?',
+    [programId, weekNumber],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return rowToProgramWeek(result.rows.item(0));
+}
+
+/** Insert or update week name/details. Deletes row if both are empty. */
+export async function upsertWeekData(
+  programId: number,
+  weekNumber: number,
+  name: string | null,
+  details: string | null,
+): Promise<void> {
+  const database = await db;
+  const trimmedName = name?.trim() || null;
+  const trimmedDetails = details?.trim() || null;
+
+  if (trimmedName === null && trimmedDetails === null) {
+    await executeSql(
+      database,
+      'DELETE FROM program_weeks WHERE program_id = ? AND week_number = ?',
+      [programId, weekNumber],
+    );
+    return;
+  }
+
+  await executeSql(
+    database,
+    `INSERT INTO program_weeks (program_id, week_number, name, details)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(program_id, week_number)
+     DO UPDATE SET name = excluded.name, details = excluded.details`,
+    [programId, weekNumber, trimmedName, trimmedDetails],
+  );
+}
+
+/** Return all week data for a program, ordered by week_number. */
+export async function getAllWeekData(programId: number): Promise<ProgramWeek[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT * FROM program_weeks WHERE program_id = ? ORDER BY week_number',
+    [programId],
+  );
+  const weeks: ProgramWeek[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    weeks.push(rowToProgramWeek(result.rows.item(i)));
+  }
+  return weeks;
 }
