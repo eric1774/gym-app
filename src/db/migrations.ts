@@ -39,7 +39,8 @@ interface Migration {
  * - Version 15: Create gamification tables (badges, user_badges, streak_shields, user_level)
  * - Version 16: Create muscle_groups + exercise_muscle_groups tables, seed initial mappings
  * - Version 17: Fix exercise-muscle-group mappings with comprehensive, accurate data
- * - Version 18: Create program_weeks table for week names and details
+ * - Version 18: Rename volume_score to fitness_score in user_level
+ * - Version 19: Create program_weeks table for week names and details
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -896,7 +897,7 @@ const MIGRATIONS: Migration[] = [
     },
   },
   {
-    version: 18,
+    version: 19,
     description: 'Create program_weeks table for week names and details',
     up: (tx: Transaction) => {
       tx.executeSql(CREATE_PROGRAM_WEEKS_TABLE);
