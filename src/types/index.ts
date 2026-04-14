@@ -85,6 +85,14 @@ export interface Program {
   createdAt: string;
 }
 
+export interface ProgramWeek {
+  id: number;
+  programId: number;
+  weekNumber: number;
+  name: string | null;
+  details: string | null;
+}
+
 export interface ProgramDay {
   id: number;
   programId: number;
@@ -118,13 +126,13 @@ export interface CategorySummary {
   exerciseCount: number;
   sparklinePoints: number[];
   lastTrainedAt: string;
-  measurementType: 'reps' | 'timed';
+  measurementType: ExerciseMeasurementType;
 }
 
 export interface CategoryExerciseProgress {
   exerciseId: number;
   exerciseName: string;
-  measurementType: 'reps' | 'timed';
+  measurementType: ExerciseMeasurementType;
   sparklinePoints: number[];
   currentBest: number;
   previousBest: number | null;
