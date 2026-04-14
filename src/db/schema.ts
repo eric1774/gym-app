@@ -83,6 +83,17 @@ export const CREATE_PROGRAM_DAY_EXERCISES_TABLE = `
   )
 `;
 
+export const CREATE_PROGRAM_WEEKS_TABLE = `
+  CREATE TABLE IF NOT EXISTS program_weeks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    name TEXT,
+    details TEXT,
+    UNIQUE(program_id, week_number)
+  )
+`;
+
 // ── Heart Rate tables (Phase 24) ──────────────────────────────────
 
 export const CREATE_HEART_RATE_SAMPLES_TABLE = `

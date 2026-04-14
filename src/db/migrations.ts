@@ -7,6 +7,7 @@ import {
   CREATE_USER_LEVEL_TABLE,
   CREATE_MUSCLE_GROUPS_TABLE,
   CREATE_EXERCISE_MUSCLE_GROUPS_TABLE,
+  CREATE_PROGRAM_WEEKS_TABLE,
 } from './schema';
 
 /**
@@ -38,6 +39,7 @@ interface Migration {
  * - Version 15: Create gamification tables (badges, user_badges, streak_shields, user_level)
  * - Version 16: Create muscle_groups + exercise_muscle_groups tables, seed initial mappings
  * - Version 17: Fix exercise-muscle-group mappings with comprehensive, accurate data
+ * - Version 18: Create program_weeks table for week names and details
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -450,7 +452,7 @@ const MIGRATIONS: Migration[] = [
       tx.executeSql(CREATE_STREAK_SHIELDS_TABLE);
       tx.executeSql(CREATE_USER_LEVEL_TABLE);
       tx.executeSql(
-        `INSERT OR IGNORE INTO user_level (id, current_level, title, consistency_score, volume_score, nutrition_score, variety_score, last_calculated)
+        `INSERT OR IGNORE INTO user_level (id, current_level, title, consistency_score, fitness_score, nutrition_score, variety_score, last_calculated)
          VALUES (1, 1, 'Beginner', 0, 0, 0, 0, datetime('now'))`,
       );
       tx.executeSql(`CREATE INDEX IF NOT EXISTS idx_user_badges_badge_id ON user_badges(badge_id)`);
@@ -866,21 +868,38 @@ const MIGRATIONS: Migration[] = [
     version: 18,
     description: 'Rename volume_score to fitness_score in user_level',
     up: (tx: Transaction) => {
-      // SQLite < 3.25 doesn't support RENAME COLUMN — recreate the table
-      tx.executeSql(`CREATE TABLE user_level_new (
-        id INTEGER PRIMARY KEY,
-        current_level INTEGER NOT NULL DEFAULT 1,
-        title TEXT NOT NULL DEFAULT 'Beginner',
-        consistency_score REAL NOT NULL DEFAULT 0,
-        fitness_score REAL NOT NULL DEFAULT 0,
-        nutrition_score REAL NOT NULL DEFAULT 0,
-        variety_score REAL NOT NULL DEFAULT 0,
-        last_calculated TEXT NOT NULL DEFAULT (datetime('now'))
-      )`);
-      tx.executeSql(`INSERT INTO user_level_new (id, current_level, title, consistency_score, fitness_score, nutrition_score, variety_score, last_calculated)
-        SELECT id, current_level, title, consistency_score, volume_score, nutrition_score, variety_score, last_calculated FROM user_level`);
-      tx.executeSql(`DROP TABLE user_level`);
-      tx.executeSql(`ALTER TABLE user_level_new RENAME TO user_level`);
+      // Idempotent: check if rename already happened (from a prior partial run)
+      tx.executeSql(
+        "SELECT COUNT(*) as cnt FROM pragma_table_info('user_level') WHERE name = 'volume_score'",
+        [],
+        (_tx, result) => {
+          if (result.rows.item(0).cnt > 0) {
+            // Column still named volume_score — perform the rename
+            _tx.executeSql(`CREATE TABLE IF NOT EXISTS user_level_new (
+              id INTEGER PRIMARY KEY,
+              current_level INTEGER NOT NULL DEFAULT 1,
+              title TEXT NOT NULL DEFAULT 'Beginner',
+              consistency_score REAL NOT NULL DEFAULT 0,
+              fitness_score REAL NOT NULL DEFAULT 0,
+              nutrition_score REAL NOT NULL DEFAULT 0,
+              variety_score REAL NOT NULL DEFAULT 0,
+              last_calculated TEXT NOT NULL DEFAULT (datetime('now'))
+            )`);
+            _tx.executeSql(`INSERT INTO user_level_new (id, current_level, title, consistency_score, fitness_score, nutrition_score, variety_score, last_calculated)
+              SELECT id, current_level, title, consistency_score, volume_score, nutrition_score, variety_score, last_calculated FROM user_level`);
+            _tx.executeSql(`DROP TABLE user_level`);
+            _tx.executeSql(`ALTER TABLE user_level_new RENAME TO user_level`);
+          }
+          // else: already renamed — nothing to do
+        },
+      );
+    },
+  },
+  {
+    version: 18,
+    description: 'Create program_weeks table for week names and details',
+    up: (tx: Transaction) => {
+      tx.executeSql(CREATE_PROGRAM_WEEKS_TABLE);
     },
   },
 ];
