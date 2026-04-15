@@ -24,6 +24,7 @@ import { AchievementsScreen } from '../screens/AchievementsScreen';
 import { ProgressHubScreen } from '../screens/ProgressHubScreen';
 import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
 import { SessionBreakdownScreen } from '../screens/SessionBreakdownScreen';
+import { SessionDayProgressScreen } from '../screens/SessionDayProgressScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -41,7 +42,7 @@ export type CalendarStackParamList = {
 
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
 };
 
 export type ProgramsStackParamList = {
@@ -52,13 +53,14 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
   Settings: undefined;
   CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
   Achievements: undefined;
   ProgressHub: undefined;
-  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string };
+  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
   SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
+  SessionDayProgress: { programDayId: number; dayName: string };
 };
 
 export type ProteinStackParamList = {
@@ -195,6 +197,7 @@ function DashboardStackNavigator() {
       <DashboardStack.Screen name="ProgressHub" component={ProgressHubScreen} />
       <DashboardStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
       <DashboardStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
+      <DashboardStack.Screen name="SessionDayProgress" component={SessionDayProgressScreen} />
     </DashboardStack.Navigator>
   );
 }
