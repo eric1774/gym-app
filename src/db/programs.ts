@@ -1,5 +1,5 @@
 import { db, executeSql, runTransaction } from './database';
-import { Program, ProgramDay, ProgramDayExercise, ProgramWeek } from '../types';
+import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
@@ -10,6 +10,7 @@ export function rowToProgram(row: {
   start_date: string | null;
   current_week: number;
   created_at: string;
+  archived_at: string | null;
 }): Program {
   return {
     id: row.id,
@@ -18,6 +19,7 @@ export function rowToProgram(row: {
     startDate: row.start_date ?? null,
     currentWeek: row.current_week,
     createdAt: row.created_at,
+    archivedAt: row.archived_at ?? null,
   };
 }
 
@@ -460,4 +462,50 @@ export async function getAllWeekData(programId: number): Promise<ProgramWeek[]> 
     weeks.push(rowToProgramWeek(result.rows.item(i)));
   }
   return weeks;
+}
+
+export async function archiveProgram(programId: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE programs SET archived_at = ? WHERE id = ?',
+    [new Date().toISOString(), programId],
+  );
+}
+
+export async function unarchiveProgram(programId: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE programs SET archived_at = NULL WHERE id = ?',
+    [programId],
+  );
+}
+
+export async function getProgramsWithSessionData(): Promise<ProgramSelectorItem[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT DISTINCT p.id, p.name, p.archived_at
+     FROM programs p
+     INNER JOIN program_days pd ON pd.program_id = p.id
+     INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
+     WHERE ws.completed_at IS NOT NULL
+     ORDER BY
+       CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END,
+       p.created_at DESC`,
+    [],
+  );
+
+  const items: ProgramSelectorItem[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    items.push({
+      id: row.id,
+      name: row.name,
+      isArchived: row.archived_at !== null,
+      archivedAt: row.archived_at ?? null,
+    });
+  }
+  return items;
 }
