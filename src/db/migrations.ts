@@ -41,6 +41,8 @@ interface Migration {
  * - Version 17: Fix exercise-muscle-group mappings with comprehensive, accurate data
  * - Version 18: Rename volume_score to fitness_score in user_level
  * - Version 19: Create program_weeks table for week names and details
+ * - Version 20: Fix manual-completion session timestamps to match their program week
+ * - Version 21: Add archived_at column to programs for archive support
  */
 const MIGRATIONS: Migration[] = [
   {
@@ -901,6 +903,45 @@ const MIGRATIONS: Migration[] = [
     description: 'Create program_weeks table for week names and details',
     up: (tx: Transaction) => {
       tx.executeSql(CREATE_PROGRAM_WEEKS_TABLE);
+    },
+  },
+  {
+    version: 20,
+    description: 'Fix manual-completion session timestamps to match their program week',
+    up: (tx: Transaction) => {
+      // Zero-duration sessions (started_at = completed_at) are manual completions.
+      // Their timestamps were incorrectly set to "now" instead of the program week
+      // they belong to, inflating the current calendar-week session count.
+      // Backdate them to noon on the first day of their actual program week.
+      tx.executeSql(`
+        UPDATE workout_sessions
+        SET started_at = (
+          SELECT strftime('%Y-%m-%dT12:00:00.000Z', p.start_date, '+' || ((workout_sessions.program_week - 1) * 7) || ' days')
+          FROM programs p
+          INNER JOIN program_days pd ON pd.program_id = p.id
+          WHERE pd.id = workout_sessions.program_day_id
+          LIMIT 1
+        ),
+        completed_at = (
+          SELECT strftime('%Y-%m-%dT12:00:00.000Z', p.start_date, '+' || ((workout_sessions.program_week - 1) * 7) || ' days')
+          FROM programs p
+          INNER JOIN program_days pd ON pd.program_id = p.id
+          WHERE pd.id = workout_sessions.program_day_id
+          LIMIT 1
+        )
+        WHERE started_at = completed_at
+          AND program_week IS NOT NULL
+          AND program_day_id IS NOT NULL
+      `);
+    },
+  },
+  {
+    version: 21,
+    description: 'Add archived_at column to programs for session tab archive support',
+    up: (tx: Transaction) => {
+      tx.executeSql(
+        'ALTER TABLE programs ADD COLUMN archived_at TEXT',
+      );
     },
   },
 ];
