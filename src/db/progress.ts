@@ -6,6 +6,8 @@ import {
   SessionComparison,
   ExerciseHistorySet,
   ExerciseCategory,
+  SessionDayProgress,
+  SessionDayExerciseProgress,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -54,15 +56,17 @@ export async function getWeeklySnapshot(): Promise<WeeklySnapshot> {
   const prevWeekStart = getPreviousWeekStart(now);
 
   // Count completed sessions this week
+  const nextWeekStart = getWeekStart(new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000));
   const sessionsResult = await executeSql(
     database,
     `SELECT COUNT(*) AS cnt
      FROM workout_sessions
      WHERE completed_at >= ?
        AND completed_at < ?`,
-    [weekStart, getWeekStart(new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000))],
+    [weekStart, nextWeekStart],
   );
   const sessionsThisWeek: number = sessionsResult.rows.item(0).cnt ?? 0;
+
 
   // Count PRs this week: exercises where best weight this week > all-time best before this week
   const prResult = await executeSql(
@@ -90,7 +94,6 @@ export async function getWeeklySnapshot(): Promise<WeeklySnapshot> {
   const prsThisWeek: number = prResult.rows.item(0).pr_count ?? 0;
 
   // This week's volume
-  const nextWeekStart = getWeekStart(new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000));
   const thisVolumeResult = await executeSql(
     database,
     `SELECT SUM(ws.weight_kg * ws.reps) AS volume
@@ -257,6 +260,335 @@ export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
       volumeChangePercent,
       hasPR: prCategories.has(category),
       lastTrainedAt,
+    });
+  }
+
+  return result;
+}
+
+// ── getSessionDayProgress ───────────────────────────────────────────
+
+/**
+ * For each day in a program, compare the two most recent completed sessions
+ * to compute volume and strength % changes.
+ */
+export async function getSessionDayProgress(
+  programId: number,
+): Promise<SessionDayProgress[]> {
+  const database = await db;
+
+  // Get all days for this program
+  const daysResult = await executeSql(
+    database,
+    `SELECT id, name FROM program_days
+     WHERE program_id = ?
+     ORDER BY sort_order`,
+    [programId],
+  );
+
+  const result: SessionDayProgress[] = [];
+
+  for (let d = 0; d < daysResult.rows.length; d++) {
+    const day = daysResult.rows.item(d);
+    const dayId: number = day.id;
+    const dayName: string = day.name;
+
+    // Find the two most recent completed sessions for this day
+    const sessionsResult = await executeSql(
+      database,
+      `SELECT id, completed_at
+       FROM workout_sessions
+       WHERE program_day_id = ?
+         AND completed_at IS NOT NULL
+       ORDER BY completed_at DESC
+       LIMIT 2`,
+      [dayId],
+    );
+
+    const sessionCount = sessionsResult.rows.length;
+
+    if (sessionCount === 0) {
+      result.push({
+        programDayId: dayId,
+        dayName,
+        volumeChangePercent: null,
+        strengthChangePercent: null,
+        hasPR: false,
+        lastTrainedAt: null,
+        sessionCount: 0,
+      });
+      continue;
+    }
+
+    const currentSessionId: number = sessionsResult.rows.item(0).id;
+    const lastTrainedAt: string = sessionsResult.rows.item(0).completed_at;
+
+    if (sessionCount < 2) {
+      // Check for PRs in the single session
+      const prCheck = await executeSql(
+        database,
+        `SELECT COUNT(*) AS cnt
+         FROM workout_sets ws
+         WHERE ws.session_id = ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+           AND ws.weight_kg > 0
+           AND ws.weight_kg > (
+             SELECT COALESCE(MAX(ws2.weight_kg), 0)
+             FROM workout_sets ws2
+             INNER JOIN workout_sessions wss2 ON wss2.id = ws2.session_id
+             WHERE ws2.exercise_id = ws.exercise_id
+               AND wss2.id != ?
+               AND wss2.completed_at IS NOT NULL
+               AND (ws2.is_warmup IS NULL OR ws2.is_warmup = 0)
+           )`,
+        [currentSessionId, currentSessionId],
+      );
+
+      result.push({
+        programDayId: dayId,
+        dayName,
+        volumeChangePercent: null,
+        strengthChangePercent: null,
+        hasPR: (prCheck.rows.item(0).cnt ?? 0) > 0,
+        lastTrainedAt,
+        sessionCount: 1,
+      });
+      continue;
+    }
+
+    const previousSessionId: number = sessionsResult.rows.item(1).id;
+
+    // Volume for current session
+    const currentVolResult = await executeSql(
+      database,
+      `SELECT COALESCE(SUM(ws.weight_kg * ws.reps), 0) AS volume
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
+      [currentSessionId],
+    );
+    const currentVolume: number = currentVolResult.rows.item(0).volume;
+
+    // Volume for previous session
+    const prevVolResult = await executeSql(
+      database,
+      `SELECT COALESCE(SUM(ws.weight_kg * ws.reps), 0) AS volume
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
+      [previousSessionId],
+    );
+    const prevVolume: number = prevVolResult.rows.item(0).volume;
+
+    let volumeChangePercent: number | null = null;
+    if (prevVolume > 0) {
+      volumeChangePercent = ((currentVolume - prevVolume) / prevVolume) * 100;
+    }
+
+    // Strength: average of per-exercise max weight (exclude 0-weight bodyweight exercises)
+    const currentStrResult = await executeSql(
+      database,
+      `SELECT AVG(max_weight) AS avg_strength FROM (
+         SELECT MAX(ws.weight_kg) AS max_weight
+         FROM workout_sets ws
+         WHERE ws.session_id = ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+           AND ws.weight_kg > 0
+         GROUP BY ws.exercise_id
+       )`,
+      [currentSessionId],
+    );
+
+    const prevStrResult = await executeSql(
+      database,
+      `SELECT AVG(max_weight) AS avg_strength FROM (
+         SELECT MAX(ws.weight_kg) AS max_weight
+         FROM workout_sets ws
+         WHERE ws.session_id = ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+           AND ws.weight_kg > 0
+         GROUP BY ws.exercise_id
+       )`,
+      [previousSessionId],
+    );
+
+    const currentStr: number | null = currentStrResult.rows.item(0).avg_strength ?? null;
+    const prevStr: number | null = prevStrResult.rows.item(0).avg_strength ?? null;
+
+    let strengthChangePercent: number | null = null;
+    if (currentStr !== null && prevStr !== null && prevStr > 0) {
+      strengthChangePercent = ((currentStr - prevStr) / prevStr) * 100;
+    }
+
+    // PR check for current session
+    const prCheck = await executeSql(
+      database,
+      `SELECT COUNT(*) AS cnt
+       FROM workout_sets ws
+       WHERE ws.session_id = ?
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         AND ws.weight_kg > 0
+         AND ws.weight_kg > (
+           SELECT COALESCE(MAX(ws2.weight_kg), 0)
+           FROM workout_sets ws2
+           INNER JOIN workout_sessions wss2 ON wss2.id = ws2.session_id
+           WHERE ws2.exercise_id = ws.exercise_id
+             AND wss2.id != ?
+             AND wss2.completed_at IS NOT NULL
+             AND (ws2.is_warmup IS NULL OR ws2.is_warmup = 0)
+         )`,
+      [currentSessionId, currentSessionId],
+    );
+
+    result.push({
+      programDayId: dayId,
+      dayName,
+      volumeChangePercent,
+      strengthChangePercent,
+      hasPR: (prCheck.rows.item(0).cnt ?? 0) > 0,
+      lastTrainedAt,
+      sessionCount,
+    });
+  }
+
+  return result;
+}
+
+// ── getSessionDayExerciseProgress ───────────────────────────────────
+
+/**
+ * Per-exercise breakdown for a program day's two most recent sessions.
+ * Returns volume and strength % change per exercise.
+ */
+export async function getSessionDayExerciseProgress(
+  programDayId: number,
+): Promise<SessionDayExerciseProgress[]> {
+  const database = await db;
+
+  // Find two most recent completed sessions for this day
+  const sessionsResult = await executeSql(
+    database,
+    `SELECT id FROM workout_sessions
+     WHERE program_day_id = ?
+       AND completed_at IS NOT NULL
+     ORDER BY completed_at DESC
+     LIMIT 2`,
+    [programDayId],
+  );
+
+  if (sessionsResult.rows.length < 2) {
+    // Not enough sessions to compare — return exercises with null deltas
+    if (sessionsResult.rows.length === 1) {
+      const sessionId = sessionsResult.rows.item(0).id;
+      const exercisesResult = await executeSql(
+        database,
+        `SELECT ws.exercise_id, e.name AS exercise_name
+         FROM workout_sets ws
+         INNER JOIN exercises e ON e.id = ws.exercise_id
+         WHERE ws.session_id = ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         GROUP BY ws.exercise_id, e.name
+         ORDER BY MIN(ws.set_number)`,
+        [sessionId],
+      );
+      const items: SessionDayExerciseProgress[] = [];
+      for (let i = 0; i < exercisesResult.rows.length; i++) {
+        const row = exercisesResult.rows.item(i);
+        items.push({
+          exerciseId: row.exercise_id,
+          exerciseName: row.exercise_name,
+          volumeChangePercent: null,
+          strengthChangePercent: null,
+        });
+      }
+      return items;
+    }
+    return [];
+  }
+
+  const currentSessionId: number = sessionsResult.rows.item(0).id;
+  const previousSessionId: number = sessionsResult.rows.item(1).id;
+
+  // Get all exercises from the current session
+  const exercisesResult = await executeSql(
+    database,
+    `SELECT ws.exercise_id, e.name AS exercise_name
+     FROM workout_sets ws
+     INNER JOIN exercises e ON e.id = ws.exercise_id
+     WHERE ws.session_id = ?
+       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+     GROUP BY ws.exercise_id, e.name
+     ORDER BY MIN(ws.set_number)`,
+    [currentSessionId],
+  );
+
+  const result: SessionDayExerciseProgress[] = [];
+
+  for (let i = 0; i < exercisesResult.rows.length; i++) {
+    const row = exercisesResult.rows.item(i);
+    const exerciseId: number = row.exercise_id;
+    const exerciseName: string = row.exercise_name;
+
+    // Volume per exercise: current session
+    const curVolResult = await executeSql(
+      database,
+      `SELECT COALESCE(SUM(weight_kg * reps), 0) AS volume
+       FROM workout_sets
+       WHERE session_id = ? AND exercise_id = ?
+         AND (is_warmup IS NULL OR is_warmup = 0)`,
+      [currentSessionId, exerciseId],
+    );
+    const curVol: number = curVolResult.rows.item(0).volume;
+
+    // Volume per exercise: previous session
+    const prevVolResult = await executeSql(
+      database,
+      `SELECT COALESCE(SUM(weight_kg * reps), 0) AS volume
+       FROM workout_sets
+       WHERE session_id = ? AND exercise_id = ?
+         AND (is_warmup IS NULL OR is_warmup = 0)`,
+      [previousSessionId, exerciseId],
+    );
+    const prevVol: number = prevVolResult.rows.item(0).volume;
+
+    let volumeChangePercent: number | null = null;
+    if (prevVol > 0) {
+      volumeChangePercent = ((curVol - prevVol) / prevVol) * 100;
+    }
+
+    // Strength per exercise: max weight (exclude bodyweight / 0 weight)
+    const curStrResult = await executeSql(
+      database,
+      `SELECT MAX(weight_kg) AS best
+       FROM workout_sets
+       WHERE session_id = ? AND exercise_id = ?
+         AND (is_warmup IS NULL OR is_warmup = 0)
+         AND weight_kg > 0`,
+      [currentSessionId, exerciseId],
+    );
+    const prevStrResult = await executeSql(
+      database,
+      `SELECT MAX(weight_kg) AS best
+       FROM workout_sets
+       WHERE session_id = ? AND exercise_id = ?
+         AND (is_warmup IS NULL OR is_warmup = 0)
+         AND weight_kg > 0`,
+      [previousSessionId, exerciseId],
+    );
+
+    const curStr: number | null = curStrResult.rows.item(0).best ?? null;
+    const prevStr: number | null = prevStrResult.rows.item(0).best ?? null;
+
+    let strengthChangePercent: number | null = null;
+    if (curStr !== null && prevStr !== null && prevStr > 0) {
+      strengthChangePercent = ((curStr - prevStr) / prevStr) * 100;
+    }
+
+    result.push({
+      exerciseId,
+      exerciseName,
+      volumeChangePercent,
+      strengthChangePercent,
     });
   }
 
