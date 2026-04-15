@@ -593,6 +593,12 @@ export function WorkoutScreen() {
   // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
   const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
 
+  // Stable reference for SwapSheet — avoids useEffect re-fire on every render
+  const excludeIdsForSwap = useMemo(
+    () => sessionExercises.map(se => se.exerciseId),
+    [sessionExercises],
+  );
+
   // Inline target editing state
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
 
@@ -805,13 +811,16 @@ export function WorkoutScreen() {
 
     const exercise = exercises.find(ex => ex.id === exerciseId);
     if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
-      setVolumeTotal(prev => prev + set.weightLbs * set.reps);
+      if (exercise?.measurementType !== 'height_reps') {
+        setVolumeTotal(prev => prev + set.weightLbs * set.reps);
+      }
 
       checkForPR(exerciseId, set.weightLbs, set.reps, session!.id).then(isPR => {
         if (isPR) {
           setPrCount(prev => prev + 1);
           const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
-          prToastRef.current?.showPR(name, set.reps, set.weightLbs);
+          const unit = exercise?.measurementType === 'height_reps' ? 'in' : 'lbs';
+          prToastRef.current?.showPR(name, set.reps, set.weightLbs, unit);
           HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
           setTimeout(() => {
             HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
@@ -826,10 +835,11 @@ export function WorkoutScreen() {
       ...prev,
       [exerciseId]: Math.max((prev[exerciseId] ?? 0) - 1, 0),
     }));
-    if (!set.isWarmup) {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (!set.isWarmup && exercise?.measurementType !== 'timed' && exercise?.measurementType !== 'height_reps') {
       setVolumeTotal(prev => Math.max(prev - set.weightLbs * set.reps, 0));
     }
-  }, []);
+  }, [exercises]);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
@@ -1271,7 +1281,7 @@ export function WorkoutScreen() {
       <SwapSheet
         visible={swapTarget !== null}
         exercise={swapTarget}
-        excludeExerciseIds={sessionExercises.map(se => se.exerciseId)}
+        excludeExerciseIds={excludeIdsForSwap}
         onSelect={async (newExercise) => {
           if (!swapTarget || !session) return;
           const sets = await getSetsForExerciseInSession(session.id, swapTarget.id);

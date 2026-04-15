@@ -56,6 +56,12 @@ export async function initDatabase(): Promise<void> {
   const { seedIfEmpty } = await import('./seed');
   await seedIfEmpty();
 
+  // Ensure muscle group mappings exist for all exercises.
+  // Migration 16 seeds these, but on a fresh install exercises are seeded AFTER
+  // migrations, so the mapping INSERTs find zero rows. This back-fills any gaps.
+  const { ensureMuscleGroupMappings } = await import('./muscleGroups');
+  await ensureMuscleGroupMappings();
+
   // Import program data from prod export (idempotent — skips if data exists)
   const { importProgramData } = await import('./importProgram');
   await importProgramData();

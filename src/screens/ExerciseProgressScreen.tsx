@@ -16,7 +16,7 @@ import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession } from '../types';
-type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+type ExerciseProgressParams = { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
 type RouteParams = RouteProp<{ ExerciseProgress: ExerciseProgressParams }, 'ExerciseProgress'>;
 
 const TIME_RANGES = ['1M', '3M', '6M', 'All'] as const;
@@ -58,6 +58,7 @@ export function ExerciseProgressScreen() {
   const route = useRoute<RouteParams>();
   const { exerciseId, exerciseName, measurementType, category, viewMode: initialViewMode } = route.params;
   const isTimed = measurementType === 'timed';
+  const isHeightReps = measurementType === 'height_reps';
   const [viewMode, setViewMode] = useState<'strength' | 'volume'>(initialViewMode ?? 'strength');
   const isVolume = viewMode === 'volume';
   const accentColor = category ? getCategoryColor(category) : colors.accent;
@@ -222,7 +223,7 @@ export function ExerciseProgressScreen() {
               data={chartData}
               width={CHART_WIDTH}
               height={220}
-              yAxisSuffix={isTimed ? 's' : ' lb'}
+              yAxisSuffix={isTimed ? 's' : isHeightReps ? ' in' : ' lb'}
               formatYLabel={isVolume ? (val: string) => Math.round(Number(val)).toLocaleString() : undefined}
               withDots={filteredProgress.length <= 10}
               withInnerLines={false}
@@ -265,7 +266,7 @@ export function ExerciseProgressScreen() {
                   <Text style={styles.deleteButton}>{'✕'}</Text>
                 </TouchableOpacity>
               </View>
-              {isVolume ? (
+              {isVolume && !isHeightReps ? (
                 <Text style={styles.setText}>
                   {'Total volume: ' + session.sets.reduce((sum, s) => sum + (s.weightLbs || 0) * (s.reps || 0), 0).toLocaleString() + ' lb'}
                 </Text>
@@ -279,7 +280,9 @@ export function ExerciseProgressScreen() {
                     ]}>
                     {isTimed
                       ? 'Set ' + set.setNumber + ': ' + formatDuration(set.reps)
-                      : 'Set ' + set.setNumber + ': ' + set.weightLbs + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
+                      : isHeightReps
+                        ? 'Set ' + set.setNumber + ': ' + set.weightLbs + 'in x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')
+                        : 'Set ' + set.setNumber + ': ' + set.weightLbs + 'lb x ' + set.reps + ' reps' + (set.isWarmup ? ' (warmup)' : '')}
                   </Text>
                 ))
               )}

@@ -29,6 +29,12 @@ interface ExerciseTargetRowProps {
 
 function getTargetsText(exercise: Exercise, dayExercise: ProgramDayExercise): string {
   if (exercise.measurementType === 'timed') { return 'Timed'; }
+  if (exercise.measurementType === 'height_reps') {
+    if (dayExercise.targetWeightLbs > 0) {
+      return `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightLbs}in`;
+    }
+    return `${dayExercise.targetSets}x${dayExercise.targetReps}`;
+  }
   if (dayExercise.targetWeightLbs > 0) {
     return `${dayExercise.targetSets}x${dayExercise.targetReps} @ ${dayExercise.targetWeightLbs}lb`;
   }

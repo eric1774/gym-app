@@ -43,13 +43,24 @@ export function SwapSheet({ visible, exercise, excludeExerciseIds, onSelect, onC
       return;
     }
 
+    let cancelled = false;
+
     (async () => {
       const groups = await getExerciseMuscleGroups(exercise.id);
+      if (cancelled) return;
+
       const mgIds = groups.map((g: { muscleGroupId: number }) => g.muscleGroupId);
       setMuscleGroupNames(groups.map((g: { name: string }) => g.name));
       setTotalMuscleGroups(mgIds.length);
 
+      if (mgIds.length === 0) {
+        setAlternatives([]);
+        return;
+      }
+
       const results = await getExercisesByMuscleGroups(mgIds, excludeExerciseIds);
+      if (cancelled) return;
+
       setAlternatives(
         results.map((r: { exercise: Exercise; matchCount: number }) => ({
           ...r,
@@ -57,6 +68,8 @@ export function SwapSheet({ visible, exercise, excludeExerciseIds, onSelect, onC
         })),
       );
     })();
+
+    return () => { cancelled = true; };
   }, [visible, exercise, excludeExerciseIds]);
 
   if (!exercise) return null;
@@ -93,41 +106,47 @@ export function SwapSheet({ visible, exercise, excludeExerciseIds, onSelect, onC
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose} />
-      <View style={styles.sheet}>
-        <Text style={styles.title}>Swap {exercise.name}</Text>
-        <View style={styles.chipRow}>
-          {muscleGroupNames.map(name => (
-            <View key={name} style={styles.chip}>
-              <Text style={styles.chipText}>{name}</Text>
-            </View>
-          ))}
-        </View>
+      <View style={styles.modalContainer}>
+        <Pressable style={styles.overlay} onPress={onClose} />
+        <View style={styles.sheet}>
+          <Text style={styles.title}>Swap {exercise.name}</Text>
+          <View style={styles.chipRow}>
+            {muscleGroupNames.map(name => (
+              <View key={name} style={styles.chip}>
+                <Text style={styles.chipText}>{name}</Text>
+              </View>
+            ))}
+          </View>
 
-        {alternatives.length === 0 ? (
-          <Text style={styles.emptyText}>No alternatives found</Text>
-        ) : (
-          <FlatList
-            data={listData}
-            keyExtractor={(item, index) => item.type === 'header' ? `h-${index}` : `e-${item.data.exercise.id}`}
-            renderItem={({ item }) => {
-              if (item.type === 'header') {
-                return <Text style={styles.sectionHeader}>{item.title}</Text>;
-              }
-              return renderAlternativeRow(item.data);
-            }}
-            showsVerticalScrollIndicator={false}
-            style={styles.list}
-          />
-        )}
+          {alternatives.length === 0 ? (
+            <Text style={styles.emptyText}>No alternatives found</Text>
+          ) : (
+            <FlatList
+              data={listData}
+              keyExtractor={(item, index) => item.type === 'header' ? `h-${index}` : `e-${item.data.exercise.id}`}
+              renderItem={({ item }) => {
+                if (item.type === 'header') {
+                  return <Text style={styles.sectionHeader}>{item.title}</Text>;
+                }
+                return renderAlternativeRow(item.data);
+              }}
+              showsVerticalScrollIndicator={false}
+              style={styles.list}
+            />
+          )}
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  modalContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   sheet: {
@@ -172,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   list: {
-    flex: 1,
+    maxHeight: SCREEN_HEIGHT * 0.5,
   },
   row: {
     flexDirection: 'row',

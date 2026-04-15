@@ -707,6 +707,7 @@ export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
      INNER JOIN workout_sessions wss ON wss.id = ws.session_id
      WHERE wss.completed_at IS NOT NULL
        AND ws.is_warmup = 0
+       AND e.measurement_type != 'height_reps'
      GROUP BY e.id, ws.session_id
      ORDER BY wss.completed_at ASC`,
   );
@@ -806,6 +807,7 @@ export async function getCategoryExerciseVolumeProgress(
   // Group by exercise_id, then by session_id
   const exerciseMap = new Map<number, {
     exerciseName: string;
+    measurementType: ExerciseMeasurementType;
     sessions: Map<number, { completedAt: string; volumeSum: number }>;
   }>();
 
@@ -817,6 +819,7 @@ export async function getCategoryExerciseVolumeProgress(
     if (!exerciseMap.has(exerciseId)) {
       exerciseMap.set(exerciseId, {
         exerciseName: row.exercise_name,
+        measurementType: (row.measurement_type ?? 'reps') as ExerciseMeasurementType,
         sessions: new Map(),
       });
     }
@@ -846,7 +849,7 @@ export async function getCategoryExerciseVolumeProgress(
     progressList.push({
       exerciseId,
       exerciseName: data.exerciseName,
-      measurementType: 'reps',
+      measurementType: data.measurementType,
       sparklinePoints,
       currentBest,
       previousBest,

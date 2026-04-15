@@ -29,6 +29,10 @@ function formatBestValue(exercise: CategoryExerciseProgress, isVolume: boolean):
   if (exercise.measurementType === 'timed') {
     return `${Math.round(exercise.currentBest)}s`;
   }
+  if (exercise.measurementType === 'height_reps') {
+    if (isVolume) { return '—'; }
+    return `${exercise.currentBest % 1 === 0 ? exercise.currentBest : exercise.currentBest.toFixed(1)} in`;
+  }
   if (isVolume) {
     return `${Math.round(exercise.currentBest).toLocaleString()} lb`;
   }
@@ -45,6 +49,9 @@ function formatDelta(exercise: CategoryExerciseProgress, isVolume: boolean): { t
   let text: string;
   if (exercise.measurementType === 'timed') {
     text = `${sign}${Math.round(abs)}s`;
+  } else if (exercise.measurementType === 'height_reps') {
+    if (isVolume) { return null; }
+    text = `${sign}${abs % 1 === 0 ? abs : abs.toFixed(1)} in`;
   } else if (isVolume) {
     text = `${sign}${Math.round(abs).toLocaleString()} lb`;
   } else {
