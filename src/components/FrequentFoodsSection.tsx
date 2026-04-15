@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { FoodResultItem } from './FoodResultItem';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -13,21 +13,32 @@ interface FrequentFoodsSectionProps {
 }
 
 export function FrequentFoodsSection({ foods, onFoodPress, loading }: FrequentFoodsSectionProps) {
-  return (
-    <View>
-      <Text style={styles.sectionHeader}>FREQUENTLY LOGGED</Text>
-      {loading ? null : foods.length === 0 ? (
+  if (loading) {
+    return null;
+  }
+
+  if (foods.length === 0) {
+    return (
+      <View>
+        <Text style={styles.sectionHeader}>FREQUENTLY LOGGED</Text>
         <Text style={styles.emptyState}>Your frequent foods will appear here</Text>
-      ) : (
-        <View>
-          {foods.map((food, index) => (
-            <View key={food.id} style={index > 0 ? styles.cardGap : undefined}>
-              <FoodResultItem food={food} onPress={onFoodPress} showUsageBadge={true} lastUsedGrams={food.lastUsedGrams} />
-            </View>
-          ))}
-        </View>
+      </View>
+    );
+  }
+
+  return (
+    <FlatList
+      data={foods}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={({ item }) => (
+        <FoodResultItem food={item} onPress={onFoodPress} showUsageBadge={true} lastUsedGrams={item.lastUsedGrams} />
       )}
-    </View>
+      ListHeaderComponent={<Text style={styles.sectionHeader}>FREQUENTLY LOGGED</Text>}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.listContent}
+    />
   );
 }
 
@@ -46,7 +57,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: spacing.xl,
   },
-  cardGap: {
-    marginTop: spacing.sm,
+  separator: {
+    height: spacing.sm,
+  },
+  listContent: {
+    paddingBottom: spacing.xxxl,
   },
 });

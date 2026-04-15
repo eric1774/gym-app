@@ -385,35 +385,34 @@ export async function getSessionDayProgress(
       volumeChangePercent = ((currentVolume - prevVolume) / prevVolume) * 100;
     }
 
-    // Strength: average of per-exercise max weight (exclude 0-weight bodyweight exercises)
-    const currentStrResult = await executeSql(
+    // Strength: average of per-exercise max weight, only for exercises in BOTH sessions.
+    // This prevents adding/removing exercises from skewing the average.
+    const strResult = await executeSql(
       database,
-      `SELECT AVG(max_weight) AS avg_strength FROM (
-         SELECT MAX(ws.weight_kg) AS max_weight
+      `SELECT
+         AVG(cur.max_weight) AS current_avg,
+         AVG(prev.max_weight) AS prev_avg
+       FROM (
+         SELECT ws.exercise_id, MAX(ws.weight_kg) AS max_weight
          FROM workout_sets ws
          WHERE ws.session_id = ?
            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
            AND ws.weight_kg > 0
          GROUP BY ws.exercise_id
-       )`,
-      [currentSessionId],
-    );
-
-    const prevStrResult = await executeSql(
-      database,
-      `SELECT AVG(max_weight) AS avg_strength FROM (
-         SELECT MAX(ws.weight_kg) AS max_weight
+       ) cur
+       INNER JOIN (
+         SELECT ws.exercise_id, MAX(ws.weight_kg) AS max_weight
          FROM workout_sets ws
          WHERE ws.session_id = ?
            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
            AND ws.weight_kg > 0
          GROUP BY ws.exercise_id
-       )`,
-      [previousSessionId],
+       ) prev ON cur.exercise_id = prev.exercise_id`,
+      [currentSessionId, previousSessionId],
     );
 
-    const currentStr: number | null = currentStrResult.rows.item(0).avg_strength ?? null;
-    const prevStr: number | null = prevStrResult.rows.item(0).avg_strength ?? null;
+    const currentStr: number | null = strResult.rows.item(0).current_avg ?? null;
+    const prevStr: number | null = strResult.rows.item(0).prev_avg ?? null;
 
     let strengthChangePercent: number | null = null;
     if (currentStr !== null && prevStr !== null && prevStr > 0) {

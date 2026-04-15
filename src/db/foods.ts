@@ -107,11 +107,11 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
 // ── Frequent Foods ───────────────────────────────────────────────────
 
 /**
- * Get the top 10 most frequently logged foods, ranked by usage count.
+ * Get the top 50 most frequently logged foods, ranked by usage count.
  *
  * Returns empty array if no meal_foods rows exist yet (per D-08).
  *
- * @returns Array of FoodSearchResult, max 10, ordered by frequency DESC
+ * @returns Array of FoodSearchResult, max 50, ordered by frequency DESC
  */
 export async function getFrequentFoods(): Promise<FoodSearchResult[]> {
   const database = await db;
@@ -124,7 +124,7 @@ export async function getFrequentFoods(): Promise<FoodSearchResult[]> {
      INNER JOIN meal_foods mf ON mf.food_id = f.id
      GROUP BY f.id
      ORDER BY usage_count DESC
-     LIMIT 10`,
+     LIMIT 50`,
   );
 
   const foods: FoodSearchResult[] = [];
