@@ -83,6 +83,7 @@ export interface Program {
   startDate: string | null;
   currentWeek: number;
   createdAt: string;
+  archivedAt: string | null;
 }
 
 export interface ProgramWeek {
@@ -516,6 +517,30 @@ export interface SessionComparison {
   comparisonSets: ExerciseHistorySet[];
   comparisonDate: string;
   comparisonLabel: string; // "vs Previous Session" or "vs Last Month"
+}
+
+export interface SessionDayProgress {
+  programDayId: number;
+  dayName: string;
+  volumeChangePercent: number | null;
+  strengthChangePercent: number | null;
+  hasPR: boolean;
+  lastTrainedAt: string | null;
+  sessionCount: number;
+}
+
+export interface SessionDayExerciseProgress {
+  exerciseId: number;
+  exerciseName: string;
+  volumeChangePercent: number | null;
+  strengthChangePercent: number | null;
+}
+
+export interface ProgramSelectorItem {
+  id: number;
+  name: string;
+  isArchived: boolean;
+  archivedAt: string | null;
 }
 
 export * from './gamification';
