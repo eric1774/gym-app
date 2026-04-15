@@ -10,9 +10,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getMuscleGroupProgress } from '../db/progress';
-import { MuscleGroupProgress } from '../types';
+import { getMuscleGroupProgress, getSessionDayProgress } from '../db/progress';
+import { getProgramsWithSessionData } from '../db/programs';
+import { MuscleGroupProgress, SessionDayProgress as SessionDayProgressType, ProgramSelectorItem } from '../types';
 import { DashboardStackParamList } from '../navigation/TabNavigator';
+import { ProgramSelectorBar } from '../components/ProgramSelectorBar';
+import { SessionDayCard } from '../components/SessionDayCard';
 import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -152,13 +155,12 @@ function MuscleCard({ group, onPress }: MuscleCardProps) {
       <Text style={[styles.cardCategory, { color: accentColor }]}>
         {title}
       </Text>
-      {group.hasPR ? (
+      {group.hasPR && (
         <Text style={styles.prFlag}>PR!</Text>
-      ) : (
-        <Text style={[styles.volumeChange, { color: volumeChange.color }]}>
-          {volumeChange.text}
-        </Text>
       )}
+      <Text style={[styles.volumeChange, { color: volumeChange.color }]}>
+        {volumeChange.text}
+      </Text>
       <Text style={styles.lastTrained}>{lastTrained}</Text>
     </TouchableOpacity>
   );
@@ -166,7 +168,13 @@ function MuscleCard({ group, onPress }: MuscleCardProps) {
 
 export function ProgressHubScreen() {
   const navigation = useNavigation<Nav>();
+  const [activeTab, setActiveTab] = useState<'categories' | 'sessions'>('categories');
   const [groups, setGroups] = useState<MuscleGroupProgress[]>([]);
+
+  // Sessions tab state
+  const [programs, setPrograms] = useState<ProgramSelectorItem[]>([]);
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
+  const [sessionDays, setSessionDays] = useState<SessionDayProgressType[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -176,9 +184,34 @@ export function ProgressHubScreen() {
           const data = await getMuscleGroupProgress();
           if (!cancelled) setGroups(data);
         } catch { /* ignore */ }
+
+        try {
+          const progs = await getProgramsWithSessionData();
+          if (!cancelled) {
+            setPrograms(progs);
+            if (progs.length > 0 && selectedProgramId === null) {
+              setSelectedProgramId(progs[0].id);
+            }
+          }
+        } catch { /* ignore */ }
       })();
       return () => { cancelled = true; };
     }, []),
+  );
+
+  // Fetch session day data when selected program changes
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedProgramId === null) return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const data = await getSessionDayProgress(selectedProgramId);
+          if (!cancelled) setSessionDays(data);
+        } catch { /* ignore */ }
+      })();
+      return () => { cancelled = true; };
+    }, [selectedProgramId]),
   );
 
   return (
@@ -194,29 +227,85 @@ export function ProgressHubScreen() {
         <Text style={styles.headerTitle}>Progress</Text>
       </View>
 
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'categories' && styles.tabActive]}
+          activeOpacity={0.7}
+          onPress={() => setActiveTab('categories')}>
+          <Text style={[styles.tabText, activeTab === 'categories' && styles.tabTextActive]}>
+            Categories
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'sessions' && styles.tabActive]}
+          activeOpacity={0.7}
+          onPress={() => setActiveTab('sessions')}>
+          <Text style={[styles.tabText, activeTab === 'sessions' && styles.tabTextActive]}>
+            Sessions
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
-        {groups.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              Start training to see your progress here.
-            </Text>
-          </View>
+        {activeTab === 'categories' ? (
+          /* ── Categories Tab (existing) ── */
+          groups.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                Start training to see your progress here.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.grid}>
+              {groups.map(group => (
+                <MuscleCard
+                  key={group.category}
+                  group={group}
+                  onPress={() =>
+                    navigation.navigate('CategoryProgress', {
+                      category: group.category,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          )
         ) : (
-          <View style={styles.grid}>
-            {groups.map(group => (
-              <MuscleCard
-                key={group.category}
-                group={group}
-                onPress={() =>
-                  navigation.navigate('CategoryProgress', {
-                    category: group.category,
-                  })
-                }
+          /* ── Sessions Tab (new) ── */
+          <>
+            {programs.length > 0 && (
+              <ProgramSelectorBar
+                programs={programs}
+                selectedId={selectedProgramId}
+                onSelect={setSelectedProgramId}
               />
-            ))}
-          </View>
+            )}
+            {sessionDays.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  Complete program workouts to see session progress.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.grid}>
+                {sessionDays.map(day => (
+                  <SessionDayCard
+                    key={day.programDayId}
+                    day={day}
+                    onPress={() =>
+                      navigation.navigate('SessionDayProgress', {
+                        programDayId: day.programDayId,
+                        dayName: day.dayName,
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -251,6 +340,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: weightBold,
     flex: 1,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.base,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 3,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+  },
+  tabActive: {
+    backgroundColor: colors.surfaceElevated,
+  },
+  tabText: {
+    color: colors.secondary,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  tabTextActive: {
+    color: colors.accent,
   },
   scrollView: {
     flex: 1,
@@ -290,7 +404,7 @@ const styles = StyleSheet.create({
     color: colors.prGold,
     fontSize: fontSize.sm,
     fontWeight: weightBold,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   volumeChange: {
     fontSize: fontSize.sm,
