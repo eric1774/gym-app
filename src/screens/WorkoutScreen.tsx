@@ -41,6 +41,8 @@ import { DeviceScanSheet } from './DeviceScanSheet';
 import { getHRSettings } from '../services/HRSettingsService';
 import { HRSettings } from '../types';
 import { getHRZone, computeMaxHR } from '../utils/hrZones';
+import { WarmupSection } from '../components/WarmupSection';
+import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -564,6 +566,13 @@ export function WorkoutScreen() {
     addExercise,
     toggleExerciseComplete,
     swapExercise: swapExerciseInSession,
+    warmupItems,
+    warmupState,
+    loadWarmupTemplate,
+    toggleWarmupItemComplete,
+    dismissWarmup,
+    collapseWarmup,
+    expandWarmup,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
 
@@ -571,6 +580,8 @@ export function WorkoutScreen() {
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
   const [swapTarget, setSwapTarget] = useState<Exercise | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [showWarmupPicker, setShowWarmupPicker] = useState(false);
+  const [showWarmupStartPrompt, setShowWarmupStartPrompt] = useState(false);
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
@@ -761,6 +772,18 @@ export function WorkoutScreen() {
       }
     }
   }, [isRunning]);
+
+  const handleWarmupTemplateSelect = useCallback(async (templateId: number) => {
+    await loadWarmupTemplate(templateId);
+    setShowWarmupPicker(false);
+    setShowWarmupStartPrompt(false);
+  }, [loadWarmupTemplate]);
+
+  useEffect(() => {
+    if (session && warmupState === 'none' && warmupItems.length === 0) {
+      setShowWarmupStartPrompt(true);
+    }
+  }, [session?.id]);
 
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
@@ -1168,6 +1191,14 @@ export function WorkoutScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
+          <WarmupSection
+            items={warmupItems}
+            state={warmupState}
+            onToggleItem={toggleWarmupItemComplete}
+            onCollapse={collapseWarmup}
+            onExpand={expandWarmup}
+            onDismiss={dismissWarmup}
+          />
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
@@ -1245,6 +1276,14 @@ export function WorkoutScreen() {
               </View>
             );
           })}
+          {(warmupState === 'none' || warmupState === 'dismissed') && (
+            <TouchableOpacity
+              style={styles.addWarmupButton}
+              onPress={() => setShowWarmupPicker(true)}
+            >
+              <Text style={styles.addWarmupText}>🔥 Add Warmup</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1315,6 +1354,21 @@ export function WorkoutScreen() {
           }
         }}
         onClose={() => setSwapTarget(null)}
+      />
+
+      <WarmupTemplatePicker
+        visible={showWarmupPicker}
+        onClose={() => setShowWarmupPicker(false)}
+        onSelect={handleWarmupTemplateSelect}
+        title="Select Warmup Template"
+      />
+      <WarmupTemplatePicker
+        visible={showWarmupStartPrompt}
+        onClose={() => setShowWarmupStartPrompt(false)}
+        onSelect={handleWarmupTemplateSelect}
+        showSkip
+        onSkip={() => setShowWarmupStartPrompt(false)}
+        title="Add a warmup?"
       />
     </SafeAreaView>
   );
@@ -1628,6 +1682,22 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.onAccent,
     lineHeight: fontSize.xl + 4,
+  },
+  addWarmupButton: {
+    backgroundColor: 'rgba(141,194,138,0.1)',
+    borderRadius: 10,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.base,
+    alignItems: 'center',
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.2)',
+  },
+  addWarmupText: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '600' as const,
   },
 });
 
