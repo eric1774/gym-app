@@ -9,6 +9,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { macrosDb } from '../db';
+import { ExportMacrosModal } from './ExportMacrosModal';
 import { getLocalDateString } from '../utils/dates';
 import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS, ChartTab, CALORIES_COLOR, CALORIES_PER_GRAM } from '../types';
 import { colors } from '../theme/colors';
@@ -99,6 +100,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
   const [activeTab, setActiveTab] = useState<ChartTab>('protein');
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1W');
   const [data, setData] = useState<MacroChartPoint[]>([]);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -170,7 +172,15 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionHeader}>MACRO INTAKE HISTORY</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionHeader}>MACRO INTAKE HISTORY</Text>
+        <TouchableOpacity
+          style={styles.exportPill}
+          onPress={() => setExportModalVisible(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.exportPillText}>↓ EXPORT</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Tab selector */}
       <View style={styles.tabRow}>
@@ -279,6 +289,10 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
           </TouchableOpacity>
         ))}
       </View>
+      <ExportMacrosModal
+        visible={exportModalVisible}
+        onClose={() => setExportModalVisible(false)}
+      />
     </View>
   );
 }
@@ -288,12 +302,30 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingHorizontal: spacing.base,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
   sectionHeader: {
     fontSize: fontSize.sm,
     fontWeight: weightBold,
     color: colors.secondary,
     letterSpacing: 1.2,
-    marginBottom: spacing.sm,
+  },
+  exportPill: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  exportPillText: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: weightBold,
+    letterSpacing: 0.5,
   },
   tabRow: {
     flexDirection: 'row',

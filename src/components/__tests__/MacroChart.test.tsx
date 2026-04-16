@@ -5,8 +5,13 @@ jest.mock('react-native-chart-kit', () => ({
 jest.mock('../../db', () => ({
   macrosDb: {
     getDailyMacroTotals: jest.fn().mockResolvedValue([]),
+    getMacrosExportData: jest.fn(),
   },
 }));
+jest.mock('../../native/FileSaver', () => ({
+  saveFileToDevice: jest.fn().mockResolvedValue(true),
+}));
+jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
@@ -96,5 +101,18 @@ describe('MacroChart — Calories tab', () => {
     await waitFor(() =>
       expect(UNSAFE_getByType(LineChart).props.yAxisSuffix).toBe(''),
     );
+  });
+
+  it('renders the Export pill in the section header and toggles ExportMacrosModal visibility', async () => {
+    const { getByText, queryByText } = renderChart();
+    await waitFor(() =>
+      expect(macrosDb.getDailyMacroTotals).toHaveBeenCalled(),
+    );
+
+    expect(getByText('↓ EXPORT')).toBeTruthy();
+    expect(queryByText('Export Macros')).toBeNull();
+
+    fireEvent.press(getByText('↓ EXPORT'));
+    await waitFor(() => expect(getByText('Export Macros')).toBeTruthy());
   });
 });

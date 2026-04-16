@@ -11,11 +11,13 @@ jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import { ExportMacrosModal } from '../ExportMacrosModal';
 
 describe('ExportMacrosModal', () => {
   afterEach(() => {
     jest.useRealTimers();
+    jest.clearAllMocks();
   });
 
   it('renders title and action buttons when visible', () => {
@@ -131,7 +133,7 @@ describe('ExportMacrosModal', () => {
     const { macrosDb } = require('../../db');
     (macrosDb.getMacrosExportData as jest.Mock).mockRejectedValue(new Error('db boom'));
 
-    const alertSpy = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const onClose = jest.fn();
 
     const { getByText } = render(
