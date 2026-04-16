@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -10,9 +12,13 @@ import {
   View,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { macrosDb } from '../db';
+import { saveFileToDevice } from '../native/FileSaver';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightRegular } from '../theme/typography';
+import { getLocalDateString } from '../utils/dates';
+import { MACRO_COLORS } from '../types';
 
 interface ExportMacrosModalProps {
   visible: boolean;
@@ -55,6 +61,7 @@ export function ExportMacrosModal({
   );
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const isInvalid = fromDate.getTime() > toDate.getTime();
 
@@ -73,6 +80,26 @@ export function ExportMacrosModal({
     }
     if (event.type === 'set' && picked) {
       setToDate(startOfDay(picked));
+    }
+  };
+
+  const handleExport = async () => {
+    if (isInvalid) return;
+    setSubmitting(true);
+    try {
+      const start = getLocalDateString(fromDate);
+      const end = getLocalDateString(toDate);
+      const data = await macrosDb.getMacrosExportData(start, end);
+      const json = JSON.stringify(data, null, 2);
+      const filename = `gymtrack-macros-${start}-to-${end}.json`;
+      const saved = await saveFileToDevice(json, filename);
+      if (saved) {
+        onClose();
+      }
+    } catch (e: any) {
+      Alert.alert('Export Failed', e?.message ?? 'Could not export macros.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -133,10 +160,19 @@ export function ExportMacrosModal({
               <Text style={styles.btnCancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.btn, styles.btnPrimary, isInvalid && styles.btnDisabled]}
-              disabled={isInvalid}
-              accessibilityState={{ disabled: isInvalid }}>
-              <Text style={styles.btnPrimaryText}>Export JSON</Text>
+              style={[
+                styles.btn,
+                styles.btnPrimary,
+                (isInvalid || submitting) && styles.btnDisabled,
+              ]}
+              disabled={isInvalid || submitting}
+              accessibilityState={{ disabled: isInvalid || submitting }}
+              onPress={handleExport}>
+              {submitting ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <Text style={styles.btnPrimaryText}>Export JSON</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -200,7 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
   },
   errorText: {
-    color: '#E8845C',          // matches FAT macro color (warm orange) for accent contrast
+    color: MACRO_COLORS.fat,   // warm orange borrowed for accent contrast
     fontSize: fontSize.sm,
     marginBottom: spacing.sm,
   },
