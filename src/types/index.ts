@@ -543,4 +543,52 @@ export interface ProgramSelectorItem {
   archivedAt: string | null;
 }
 
+// -- Warmup domain types --
+
+export type WarmupTrackingType = 'checkbox' | 'reps' | 'duration';
+
+export interface WarmupExercise {
+  id: number;
+  name: string;
+  trackingType: WarmupTrackingType;
+  defaultValue: number | null;
+  isCustom: boolean;
+  createdAt: string;
+}
+
+export interface WarmupTemplate {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+export interface WarmupTemplateItem {
+  id: number;
+  templateId: number;
+  exerciseId: number | null;
+  warmupExerciseId: number | null;
+  trackingType: WarmupTrackingType;
+  targetValue: number | null;
+  sortOrder: number;
+}
+
+/** Extended template item with resolved display name for UI rendering. */
+export interface WarmupTemplateItemWithName extends WarmupTemplateItem {
+  displayName: string;
+  /** 'library' if exercise_id is set, 'warmup' if warmup_exercise_id is set */
+  source: 'library' | 'warmup';
+}
+
+export interface WarmupSessionItem {
+  id: number;
+  sessionId: number;
+  exerciseId: number | null;
+  warmupExerciseId: number | null;
+  displayName: string;
+  trackingType: WarmupTrackingType;
+  targetValue: number | null;
+  isComplete: boolean;
+  sortOrder: number;
+}
+
 export * from './gamification';

@@ -186,3 +186,50 @@ export const CREATE_EXERCISE_MUSCLE_GROUPS_TABLE = `
     PRIMARY KEY (exercise_id, muscle_group_id)
   )
 `;
+
+// ── Warmup tables ──────────────────────────────────────────────────
+
+export const CREATE_WARMUP_EXERCISES_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    tracking_type TEXT NOT NULL,
+    default_value INTEGER,
+    is_custom INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_WARMUP_TEMPLATES_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_WARMUP_TEMPLATE_ITEMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_template_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES warmup_templates(id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(id),
+    warmup_exercise_id INTEGER REFERENCES warmup_exercises(id),
+    tracking_type TEXT NOT NULL,
+    target_value INTEGER,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_WARMUP_SESSION_ITEMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_session_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(id),
+    warmup_exercise_id INTEGER REFERENCES warmup_exercises(id),
+    display_name TEXT NOT NULL,
+    tracking_type TEXT NOT NULL,
+    target_value INTEGER,
+    is_complete INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
