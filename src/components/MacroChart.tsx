@@ -74,11 +74,12 @@ function downsample(data: MacroChartPoint[]): MacroChartPoint[] {
   return result;
 }
 
-function getGoalForMacro(goals: MacroSettings, macro: MacroType): number | null {
+function getGoalForMacro(goals: MacroSettings, macro: ChartTab): number | null {
   switch (macro) {
     case 'protein': return goals.proteinGoal;
-    case 'carbs': return goals.carbGoal;
-    case 'fat': return goals.fatGoal;
+    case 'carbs':   return goals.carbGoal;
+    case 'fat':     return goals.fatGoal;
+    case 'calories': return null; // Derived goal wired in Task A3
   }
 }
 
