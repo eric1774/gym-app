@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { macrosDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS } from '../types';
+import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS, ChartTab, CALORIES_COLOR } from '../types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightRegular } from '../theme/typography';
@@ -21,11 +21,18 @@ type TimeRange = (typeof TIME_RANGES)[number];
 const CHART_WIDTH = Dimensions.get('window').width - spacing.base * 2 - 2;
 const MAX_POINTS = 50;
 
-const TAB_BG: Record<MacroType, string> = {
+const TAB_BG: Record<ChartTab, string> = {
   protein: 'rgba(141,194,138,0.15)',
   carbs: 'rgba(91,155,240,0.15)',
   fat: 'rgba(232,132,92,0.15)',
+  calories: 'rgba(240,199,91,0.15)',
 };
+
+const CHART_TABS: ChartTab[] = ['protein', 'carbs', 'fat', 'calories'];
+
+function getColorForTab(tab: ChartTab): string {
+  return tab === 'calories' ? CALORIES_COLOR : MACRO_COLORS[tab];
+}
 
 interface MacroChartProps {
   goals: MacroSettings;
@@ -76,7 +83,7 @@ function getGoalForMacro(goals: MacroSettings, macro: MacroType): number | null 
 }
 
 export function MacroChart({ goals, refreshKey }: MacroChartProps) {
-  const [activeTab, setActiveTab] = useState<MacroType>('protein');
+  const [activeTab, setActiveTab] = useState<ChartTab>('protein');
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1W');
   const [data, setData] = useState<MacroChartPoint[]>([]);
 
@@ -130,7 +137,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
     }[] = [
       {
         data: sampled.map(p => p[activeTab]),
-        color: () => MACRO_COLORS[activeTab],
+        color: () => getColorForTab(activeTab),
         strokeWidth: 2,
       },
     ];
@@ -153,9 +160,10 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
 
       {/* Tab selector */}
       <View style={styles.tabRow}>
-        {(['protein', 'carbs', 'fat'] as MacroType[]).map(tab => {
+        {CHART_TABS.map(tab => {
           const isActive = activeTab === tab;
           const tabLabel = tab.charAt(0).toUpperCase() + tab.slice(1);
+          const tabColor = getColorForTab(tab);
           return (
             <TouchableOpacity
               key={tab}
@@ -165,7 +173,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
                   ? {
                       backgroundColor: TAB_BG[tab],
                       borderWidth: 1,
-                      borderColor: MACRO_COLORS[tab],
+                      borderColor: tabColor,
                     }
                   : styles.tabInactive,
               ]}
@@ -175,7 +183,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
                 style={[
                   styles.tabText,
                   isActive
-                    ? { color: MACRO_COLORS[tab] }
+                    ? { color: tabColor }
                     : styles.tabTextInactive,
                 ]}>
                 {tabLabel}
@@ -190,7 +198,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
         {/* Legend row */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendLine, { backgroundColor: MACRO_COLORS[activeTab] }]} />
+            <View style={[styles.legendLine, { backgroundColor: getColorForTab(activeTab) }]} />
             <Text style={styles.legendText}>DAILY INTAKE</Text>
           </View>
           {activeGoal !== null && (
@@ -220,12 +228,12 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
               backgroundGradientFrom: colors.surface,
               backgroundGradientTo: colors.surface,
               decimalPlaces: 0,
-              color: () => MACRO_COLORS[activeTab],
+              color: () => getColorForTab(activeTab),
               labelColor: () => colors.secondary,
               propsForDots: {
                 r: '4',
                 strokeWidth: '0',
-                fill: MACRO_COLORS[activeTab],
+                fill: getColorForTab(activeTab),
               },
             }}
             bezier
