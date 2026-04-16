@@ -8,6 +8,10 @@ import {
   CREATE_MUSCLE_GROUPS_TABLE,
   CREATE_EXERCISE_MUSCLE_GROUPS_TABLE,
   CREATE_PROGRAM_WEEKS_TABLE,
+  CREATE_WARMUP_EXERCISES_TABLE,
+  CREATE_WARMUP_TEMPLATES_TABLE,
+  CREATE_WARMUP_TEMPLATE_ITEMS_TABLE,
+  CREATE_WARMUP_SESSION_ITEMS_TABLE,
 } from './schema';
 
 /**
@@ -941,6 +945,19 @@ const MIGRATIONS: Migration[] = [
     up: (tx: Transaction) => {
       tx.executeSql(
         'ALTER TABLE programs ADD COLUMN archived_at TEXT',
+      );
+    },
+  },
+  {
+    version: 22,
+    description: 'Add warmup exercises, templates, template items, session items tables; add warmup_template_id to program_days',
+    up: (tx: Transaction) => {
+      tx.executeSql(CREATE_WARMUP_EXERCISES_TABLE);
+      tx.executeSql(CREATE_WARMUP_TEMPLATES_TABLE);
+      tx.executeSql(CREATE_WARMUP_TEMPLATE_ITEMS_TABLE);
+      tx.executeSql(CREATE_WARMUP_SESSION_ITEMS_TABLE);
+      tx.executeSql(
+        'ALTER TABLE program_days ADD COLUMN warmup_template_id INTEGER REFERENCES warmup_templates(id)',
       );
     },
   },
