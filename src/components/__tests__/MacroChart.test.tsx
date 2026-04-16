@@ -1,3 +1,7 @@
+jest.mock('react-native-chart-kit', () => ({
+  LineChart: 'LineChart',
+}));
+
 jest.mock('../../db', () => ({
   macrosDb: {
     getDailyMacroTotals: jest.fn().mockResolvedValue([]),
@@ -10,6 +14,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { MacroChart } from '../MacroChart';
 import { macrosDb } from '../../db';
 import { MacroSettings } from '../../types';
+import { LineChart } from 'react-native-chart-kit';
 
 const allGoalsSet: MacroSettings = {
   id: 1,
@@ -84,7 +89,6 @@ describe('MacroChart — Calories tab', () => {
       expect(macrosDb.getDailyMacroTotals).toHaveBeenCalled(),
     );
 
-    const { LineChart } = require('react-native-chart-kit');
     // Macros tab default: suffix = "g"
     expect(UNSAFE_getByType(LineChart).props.yAxisSuffix).toBe('g');
 

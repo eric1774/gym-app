@@ -126,6 +126,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
   }, []);
 
   const activeGoal = getGoalForTab(goals, activeTab);
+  const yAxisUnit = activeTab === 'calories' ? '' : 'g';
 
   const chartData = useMemo(() => {
     if (data.length === 0) {
@@ -218,7 +219,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
             <View style={styles.legendItem}>
               <View style={styles.legendDot} />
               <Text style={styles.legendText}>
-                {activeGoal}{activeTab === 'calories' ? '' : 'g'} GOAL
+                {activeGoal}{yAxisUnit} GOAL
               </Text>
             </View>
           )}
@@ -234,7 +235,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
             data={chartData}
             width={CHART_WIDTH}
             height={180}
-            yAxisSuffix={activeTab === 'calories' ? '' : 'g'}
+            yAxisSuffix={yAxisUnit}
             withDots={data.length <= 10}
             withInnerLines={false}
             withOuterLines={false}
