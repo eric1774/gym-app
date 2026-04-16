@@ -290,6 +290,28 @@ export interface MacroChartPoint {
   calories: number;
 }
 
+/** Snapshot of goals captured at export time. Mirrors MacroSettings'
+ *  partially-set semantics: each macro field is null if its goal is unset.
+ *  `calories` is null whenever any of protein/carbs/fat goal is null. */
+export interface MacroGoalsSnapshot {
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  calories: number | null;
+}
+
+/** Macros export envelope written to disk by ExportMacrosModal.
+ *  `goals` is non-null whenever a macro_settings row exists (even if all its
+ *  fields are null). It is null only when getMacroGoals() returned null
+ *  (no row exists at all — first-time user who never opened goal setup). */
+export interface MacrosExport {
+  exportedAt: string;          // ISO 8601 UTC timestamp
+  appVersion: string;          // from package.json
+  range: { start: string; end: string };  // YYYY-MM-DD, inclusive
+  goals: MacroGoalsSnapshot | null;
+  days: MacroChartPoint[];     // already includes derived calories per row
+}
+
 /** A reusable macro-aware meal template in the library. */
 export interface MacroLibraryMeal {
   id: number;
