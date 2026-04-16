@@ -1,3 +1,4 @@
+// Forward-compat mocks: wired up in B5 (DateTimePicker) and B7 (FileSaver + getMacrosExportData)
 jest.mock('../../db', () => ({
   macrosDb: {
     getMacrosExportData: jest.fn(),
@@ -29,5 +30,21 @@ describe('ExportMacrosModal', () => {
     );
 
     expect(queryByText('Export Macros')).toBeNull();
+  });
+
+  it('renders From and To date fields with defaults (today and today − 30 days)', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-04-16T10:00:00Z'));
+
+    const { getByText } = render(
+      <ExportMacrosModal visible={true} onClose={jest.fn()} />,
+    );
+
+    expect(getByText('From')).toBeTruthy();
+    expect(getByText('To')).toBeTruthy();
+    expect(getByText('Mar 17, 2026')).toBeTruthy();
+    expect(getByText('Apr 16, 2026')).toBeTruthy();
+
+    jest.useRealTimers();
   });
 });
