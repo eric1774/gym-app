@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { macrosDb } from '../db';
 import { getLocalDateString } from '../utils/dates';
-import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS, ChartTab, CALORIES_COLOR } from '../types';
+import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS, ChartTab, CALORIES_COLOR, CALORIES_PER_GRAM } from '../types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightRegular } from '../theme/typography';
@@ -74,12 +74,24 @@ function downsample(data: MacroChartPoint[]): MacroChartPoint[] {
   return result;
 }
 
-function getGoalForMacro(goals: MacroSettings, macro: ChartTab): number | null {
-  switch (macro) {
+function getGoalForTab(goals: MacroSettings, tab: ChartTab): number | null {
+  switch (tab) {
     case 'protein': return goals.proteinGoal;
     case 'carbs':   return goals.carbGoal;
     case 'fat':     return goals.fatGoal;
-    case 'calories': return null; // Derived goal wired in Task A3
+    case 'calories':
+      if (
+        goals.proteinGoal === null ||
+        goals.carbGoal === null ||
+        goals.fatGoal === null
+      ) {
+        return null;
+      }
+      return (
+        goals.proteinGoal * CALORIES_PER_GRAM.protein +
+        goals.carbGoal   * CALORIES_PER_GRAM.carbs +
+        goals.fatGoal    * CALORIES_PER_GRAM.fat
+      );
   }
 }
 
@@ -113,7 +125,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
     setSelectedRange(range);
   }, []);
 
-  const activeGoal = getGoalForMacro(goals, activeTab);
+  const activeGoal = getGoalForTab(goals, activeTab);
 
   const chartData = useMemo(() => {
     if (data.length === 0) {
@@ -205,7 +217,9 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
           {activeGoal !== null && (
             <View style={styles.legendItem}>
               <View style={styles.legendDot} />
-              <Text style={styles.legendText}>{activeGoal}g GOAL</Text>
+              <Text style={styles.legendText}>
+                {activeGoal}{activeTab === 'calories' ? '' : 'g'} GOAL
+              </Text>
             </View>
           )}
         </View>

@@ -50,4 +50,27 @@ describe('MacroChart — Calories tab', () => {
     fireEvent.press(getByText('Calories'));
     expect(getByText('Calories')).toBeTruthy();
   });
+
+  it('shows derived calorie goal in legend when all three macro goals are set and Calories tab is active', async () => {
+    const { getByText, queryByText } = renderChart(allGoalsSet);
+    await waitFor(() =>
+      expect(macrosDb.getDailyMacroTotals).toHaveBeenCalled(),
+    );
+    fireEvent.press(getByText('Calories'));
+    // 4*150 + 4*200 + 9*70 = 600 + 800 + 630 = 2030
+    await waitFor(() => expect(queryByText('2030 GOAL')).toBeTruthy());
+  });
+
+  it('hides goal legend on Calories tab when any macro goal is unset', async () => {
+    const partialGoals: MacroSettings = {
+      ...allGoalsSet,
+      fatGoal: null,
+    };
+    const { getByText, queryByText } = renderChart(partialGoals);
+    await waitFor(() =>
+      expect(macrosDb.getDailyMacroTotals).toHaveBeenCalled(),
+    );
+    fireEvent.press(getByText('Calories'));
+    expect(queryByText(/GOAL/)).toBeNull();
+  });
 });
