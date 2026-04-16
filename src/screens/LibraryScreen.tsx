@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { WarmupTemplateListScreen } from './WarmupTemplateListScreen';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
@@ -25,6 +26,7 @@ function capitalize(s: string): string {
 
 export function LibraryScreen() {
   const insets = useSafeAreaInsets();
+  const [activeSubTab, setActiveSubTab] = useState<'exercises' | 'warmups'>('exercises');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
   const [searchQuery, setSearchQuery] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -159,6 +161,27 @@ export function LibraryScreen() {
         <Text style={styles.title}>Exercise Library</Text>
       </View>
 
+      <View style={styles.subTabBar}>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === 'exercises' && styles.subTabActive]}
+          onPress={() => setActiveSubTab('exercises')}>
+          <Text style={[styles.subTabText, activeSubTab === 'exercises' && styles.subTabTextActive]}>
+            Exercises
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.subTab, activeSubTab === 'warmups' && styles.subTabActive]}
+          onPress={() => setActiveSubTab('warmups')}>
+          <Text style={[styles.subTabText, activeSubTab === 'warmups' && styles.subTabTextActive]}>
+            Warmups
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeSubTab === 'warmups' ? (
+        <WarmupTemplateListScreen />
+      ) : (
+        <>
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
           <TextInput
@@ -217,6 +240,8 @@ export function LibraryScreen() {
         onAdded={handleExerciseAdded}
         editExercise={editingExercise}
       />
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -319,5 +344,27 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
     fontWeight: weightBold,
     lineHeight: 28,
+  },
+  subTabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+  },
+  subTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  subTabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.accent,
+  },
+  subTabText: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  subTabTextActive: {
+    color: colors.accent,
   },
 });
