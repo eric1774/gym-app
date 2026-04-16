@@ -17,6 +17,10 @@ import { fontSize, weightBold, weightSemiBold, weightRegular } from '../theme/ty
 interface ExportMacrosModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Test seam — overrides the default "today − 30 days" From date. */
+  initialFrom?: Date;
+  /** Test seam — overrides the default "today" To date. */
+  initialTo?: Date;
 }
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -37,11 +41,22 @@ function defaultFrom(): Date {
   return now;
 }
 
-export function ExportMacrosModal({ visible, onClose }: ExportMacrosModalProps) {
-  const [fromDate, setFromDate] = useState<Date>(() => defaultFrom());
-  const [toDate, setToDate] = useState<Date>(() => startOfDay(new Date()));
+export function ExportMacrosModal({
+  visible,
+  onClose,
+  initialFrom,
+  initialTo,
+}: ExportMacrosModalProps) {
+  const [fromDate, setFromDate] = useState<Date>(
+    () => initialFrom ?? defaultFrom(),
+  );
+  const [toDate, setToDate] = useState<Date>(
+    () => initialTo ?? startOfDay(new Date()),
+  );
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+
+  const isInvalid = fromDate.getTime() > toDate.getTime();
 
   const onChangeFrom = (event: DateTimePickerEvent, picked?: Date) => {
     if (Platform.OS === 'android') {
@@ -68,7 +83,7 @@ export function ExportMacrosModal({ visible, onClose }: ExportMacrosModalProps) 
       transparent
       onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardAvoid}>
         <Pressable style={styles.overlay} onPress={onClose} />
         <View style={styles.sheet}>
@@ -92,6 +107,12 @@ export function ExportMacrosModal({ visible, onClose }: ExportMacrosModalProps) 
             </TouchableOpacity>
           </View>
 
+          {isInvalid && (
+            <Text style={styles.errorText}>
+              End date must be on or after start date.
+            </Text>
+          )}
+
           {showFromPicker && (
             <DateTimePicker
               value={fromDate}
@@ -111,7 +132,10 @@ export function ExportMacrosModal({ visible, onClose }: ExportMacrosModalProps) 
             <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={onClose}>
               <Text style={styles.btnCancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.btnPrimary]}>
+            <TouchableOpacity
+              style={[styles.btn, styles.btnPrimary, isInvalid && styles.btnDisabled]}
+              disabled={isInvalid}
+              accessibilityState={{ disabled: isInvalid }}>
               <Text style={styles.btnPrimaryText}>Export JSON</Text>
             </TouchableOpacity>
           </View>
@@ -175,6 +199,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: weightSemiBold,
   },
+  errorText: {
+    color: '#E8845C',          // matches FAT macro color (warm orange) for accent contrast
+    fontSize: fontSize.sm,
+    marginBottom: spacing.sm,
+  },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -195,6 +224,9 @@ const styles = StyleSheet.create({
   },
   btnPrimary: {
     backgroundColor: colors.accent,
+  },
+  btnDisabled: {
+    opacity: 0.4,
   },
   btnCancelText: {
     color: colors.secondary,

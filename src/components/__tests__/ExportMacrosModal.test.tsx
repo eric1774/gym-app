@@ -14,6 +14,10 @@ import { render } from '@testing-library/react-native';
 import { ExportMacrosModal } from '../ExportMacrosModal';
 
 describe('ExportMacrosModal', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('renders title and action buttons when visible', () => {
     const { getByText } = render(
       <ExportMacrosModal visible={true} onClose={jest.fn()} />,
@@ -44,7 +48,22 @@ describe('ExportMacrosModal', () => {
     expect(getByText('To')).toBeTruthy();
     expect(getByText('Mar 17, 2026')).toBeTruthy();
     expect(getByText('Apr 16, 2026')).toBeTruthy();
+  });
 
-    jest.useRealTimers();
+  it('shows inline error and disables Export when From > To', () => {
+    const { getByText } = render(
+      <ExportMacrosModal
+        visible={true}
+        onClose={jest.fn()}
+        initialFrom={new Date('2026-04-16T00:00:00Z')}
+        initialTo={new Date('2026-04-15T00:00:00Z')}
+      />,
+    );
+
+    expect(getByText('End date must be on or after start date.')).toBeTruthy();
+
+    const exportBtn = getByText('Export JSON');
+    // The Text node is wrapped in a host View by RNTL; accessibilityState lives on the grandparent.
+    expect(exportBtn.parent?.parent?.props.accessibilityState?.disabled).toBe(true);
   });
 });
