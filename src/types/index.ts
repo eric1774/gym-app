@@ -237,6 +237,13 @@ export const MACRO_COLORS: Record<MacroType, string> = {
   fat: '#E8845C',
 };
 
+/** Tab identifier in the macro intake history chart. Wider than MacroType
+ *  because calories is a derived series, not a stored macro. */
+export type ChartTab = MacroType | 'calories';
+
+/** Color used to render the Calories series and tab. Distinct from MACRO_COLORS. */
+export const CALORIES_COLOR = '#F0C75B';
+
 export const CALORIES_PER_GRAM: Record<MacroType, number> = {
   protein: 4,
   carbs: 4,
