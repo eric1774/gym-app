@@ -28,16 +28,20 @@ import {
   renameProgram,
   renameProgramDay,
   reorderProgramDays,
+  getWeekData,
+  upsertWeekData,
 } from '../db/programs';
 import { getProgramWeekCompletion, getProgramTotalCompleted, unmarkDayCompletion } from '../db/dashboard';
 import { createCompletedSession } from '../db/sessions';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
-import { Program, ProgramDay, ProgramDayCompletionStatus } from '../types';
+import { Program, ProgramDay, ProgramDayCompletionStatus, ProgramWeek } from '../types';
 import { ProgramsStackParamList } from '../navigation/TabNavigator';
 import { AddDayModal } from './AddDayModal';
 import { RenameModal } from '../components/RenameModal';
+import { WeekEditModal } from '../components/WeekEditModal';
+import { ManageWeeksModal } from '../components/ManageWeeksModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -144,6 +148,9 @@ export function ProgramDetailScreen() {
   const [renameDayTarget, setRenameDayTarget] = useState<ProgramDay | null>(null);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [completedWorkouts, setCompletedWorkouts] = useState(0);
+  const [currentWeekData, setCurrentWeekData] = useState<ProgramWeek | null>(null);
+  const [weekEditVisible, setWeekEditVisible] = useState(false);
+  const [manageWeeksVisible, setManageWeeksVisible] = useState(false);
 
   // Drag state
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -166,6 +173,10 @@ export function ProgramDetailScreen() {
       setDays(d);
       setWeekCompletion(wc);
       setCompletedWorkouts(completed);
+      if (p) {
+        const wd = await getWeekData(programId, p.currentWeek);
+        setCurrentWeekData(wd);
+      }
     } catch {
       // ignore
     }
@@ -300,6 +311,19 @@ export function ProgramDetailScreen() {
       }
     },
     [renameDayTarget, refresh],
+  );
+
+  const handleSaveWeekData = useCallback(
+    async (name: string | null, details: string | null) => {
+      if (!program) return;
+      try {
+        await upsertWeekData(programId, program.currentWeek, name, details);
+        await refresh();
+      } catch {
+        // ignore
+      }
+    },
+    [programId, program, refresh],
   );
 
   const handleDayTap = useCallback(
@@ -512,6 +536,11 @@ export function ProgramDetailScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
+                style={styles.manageWeeksButton}
+                onPress={() => setManageWeeksVisible(true)}>
+                <Text style={styles.manageWeeksText}>Manage Weeks</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[styles.weekNavButton, !canAdvance && styles.weekNavButtonDisabled]}
                 onPress={handleAdvanceWeek}
                 disabled={!canAdvance}>
@@ -539,6 +568,11 @@ export function ProgramDetailScreen() {
             <Text style={styles.weekCardTitle}>
               WEEK {program.currentWeek} OF {program.weeks}
             </Text>
+            {currentWeekData?.name && (
+              <TouchableOpacity onPress={() => setWeekEditVisible(true)} activeOpacity={0.7}>
+                <Text style={styles.weekCardName}>{currentWeekData.name}</Text>
+              </TouchableOpacity>
+            )}
             {orderedWeekCompletion.map((day) => (
               <TouchableOpacity
                 key={day.dayId}
@@ -560,6 +594,29 @@ export function ProgramDetailScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        )}
+
+        {/* Week details card */}
+        {isActivated && currentWeekData?.details && (
+          <View style={styles.weekDetailsCard}>
+            <View style={styles.weekDetailsHeader}>
+              <Text style={styles.weekDetailsTitle}>WEEK DETAILS</Text>
+              <TouchableOpacity onPress={() => setWeekEditVisible(true)}>
+                <Text style={styles.weekDetailsEdit}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.weekDetailsText}>{currentWeekData.details}</Text>
+          </View>
+        )}
+
+        {/* Add week info prompt (when no name AND no details) */}
+        {isActivated && orderedWeekCompletion.length > 0 && !currentWeekData?.name && !currentWeekData?.details && (
+          <TouchableOpacity
+            style={styles.addWeekInfoPrompt}
+            onPress={() => setWeekEditVisible(true)}
+            activeOpacity={0.7}>
+            <Text style={styles.addWeekInfoText}>+ Add week name & details</Text>
+          </TouchableOpacity>
         )}
 
         {/* Section header */}
@@ -672,6 +729,24 @@ export function ProgramDetailScreen() {
         currentName={renameDayTarget?.name ?? ''}
         onClose={() => setRenameDayTarget(null)}
         onSave={handleRenameDay}
+      />
+
+      <WeekEditModal
+        visible={weekEditVisible}
+        weekNumber={program.currentWeek}
+        totalWeeks={program.weeks}
+        currentName={currentWeekData?.name ?? ''}
+        currentDetails={currentWeekData?.details ?? ''}
+        onClose={() => setWeekEditVisible(false)}
+        onSave={handleSaveWeekData}
+      />
+
+      <ManageWeeksModal
+        visible={manageWeeksVisible}
+        programId={programId}
+        totalWeeks={program.weeks}
+        onClose={() => setManageWeeksVisible(false)}
+        onChanged={refresh}
       />
     </SafeAreaView>
   );
@@ -829,6 +904,68 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     letterSpacing: 1.2,
     marginBottom: spacing.sm,
+  },
+  weekCardName: {
+    fontSize: fontSize.sm,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
+    marginBottom: spacing.sm,
+  },
+  weekDetailsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: spacing.base,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  weekDetailsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  weekDetailsTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    color: colors.secondary,
+    letterSpacing: 1.2,
+  },
+  weekDetailsEdit: {
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
+  },
+  weekDetailsText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    lineHeight: 20,
+  },
+  addWeekInfoPrompt: {
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  addWeekInfoText: {
+    fontSize: fontSize.sm,
+    color: colors.secondary,
+  },
+  manageWeeksButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manageWeeksText: {
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+    color: colors.accent,
   },
   weekRow: {
     flexDirection: 'row',

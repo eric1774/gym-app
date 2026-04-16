@@ -5,7 +5,8 @@ export type ExerciseCategory =
   | 'shoulders'
   | 'arms'
   | 'core'
-  | 'conditioning';
+  | 'conditioning'
+  | 'stretching';
 
 export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'chest',
@@ -15,9 +16,10 @@ export const EXERCISE_CATEGORIES: ExerciseCategory[] = [
   'arms',
   'core',
   'conditioning',
+  'stretching',
 ];
 
-export type ExerciseMeasurementType = 'reps' | 'timed';
+export type ExerciseMeasurementType = 'reps' | 'timed' | 'height_reps';
 
 export interface Exercise {
   id: number;
@@ -27,6 +29,19 @@ export interface Exercise {
   isCustom: boolean;
   measurementType: ExerciseMeasurementType;
   createdAt: string;
+}
+
+export interface MuscleGroup {
+  id: number;
+  name: string;
+  parentCategory: ExerciseCategory;
+  sortOrder: number;
+}
+
+export interface ExerciseMuscleGroup {
+  exerciseId: number;
+  muscleGroupId: number;
+  isPrimary: boolean;
 }
 
 export interface WorkoutSession {
@@ -68,6 +83,15 @@ export interface Program {
   startDate: string | null;
   currentWeek: number;
   createdAt: string;
+  archivedAt: string | null;
+}
+
+export interface ProgramWeek {
+  id: number;
+  programId: number;
+  weekNumber: number;
+  name: string | null;
+  details: string | null;
 }
 
 export interface ProgramDay {
@@ -103,13 +127,13 @@ export interface CategorySummary {
   exerciseCount: number;
   sparklinePoints: number[];
   lastTrainedAt: string;
-  measurementType: 'reps' | 'timed';
+  measurementType: ExerciseMeasurementType;
 }
 
 export interface CategoryExerciseProgress {
   exerciseId: number;
   exerciseName: string;
-  measurementType: 'reps' | 'timed';
+  measurementType: ExerciseMeasurementType;
   sparklinePoints: number[];
   currentBest: number;
   previousBest: number | null;
@@ -213,6 +237,13 @@ export const MACRO_COLORS: Record<MacroType, string> = {
   fat: '#E8845C',
 };
 
+/** Tab identifier in the macro intake history chart. Wider than MacroType
+ *  because calories is a derived series, not a stored macro. */
+export type ChartTab = MacroType | 'calories';
+
+/** Color used to render the Calories series and tab. Distinct from MACRO_COLORS. */
+export const CALORIES_COLOR = '#F0C75B';
+
 export const CALORIES_PER_GRAM: Record<MacroType, number> = {
   protein: 4,
   carbs: 4,
@@ -257,6 +288,28 @@ export interface MacroChartPoint {
   carbs: number;
   fat: number;
   calories: number;
+}
+
+/** Snapshot of goals captured at export time. Mirrors MacroSettings'
+ *  partially-set semantics: each macro field is null if its goal is unset.
+ *  `calories` is null whenever any of protein/carbs/fat goal is null. */
+export interface MacroGoalsSnapshot {
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  calories: number | null;
+}
+
+/** Macros export envelope written to disk by ExportMacrosModal.
+ *  `goals` is non-null whenever a macro_settings row exists (even if all its
+ *  fields are null). It is null only when getMacroGoals() returned null
+ *  (no row exists at all — first-time user who never opened goal setup). */
+export interface MacrosExport {
+  exportedAt: string;          // ISO 8601 UTC timestamp
+  appVersion: string;          // from package.json
+  range: { start: string; end: string };  // YYYY-MM-DD, inclusive
+  goals: MacroGoalsSnapshot | null;
+  days: MacroChartPoint[];     // already includes derived calories per row
 }
 
 /** A reusable macro-aware meal template in the library. */
@@ -465,6 +518,106 @@ export interface MealFoodInput {
   proteinPer100g: number;
   carbsPer100g: number;
   fatPer100g: number;
+}
+
+// -- Progress domain types (Phase X) --
+
+export interface WeeklySnapshot {
+  sessionsThisWeek: number;
+  prsThisWeek: number;
+  volumeChangePercent: number | null; // null if no previous week data
+}
+
+export interface MuscleGroupProgress {
+  category: ExerciseCategory;
+  volumeChangePercent: number | null;
+  hasPR: boolean;
+  lastTrainedAt: string | null;
+}
+
+export interface ExerciseInsights {
+  weightChangePercent: number | null;
+  volumeChangePercent: number | null;
+  periodLabel: string; // e.g. "3 months"
+}
+
+export interface SessionComparison {
+  currentSets: ExerciseHistorySet[];
+  comparisonSets: ExerciseHistorySet[];
+  comparisonDate: string;
+  comparisonLabel: string; // "vs Previous Session" or "vs Last Month"
+}
+
+export interface SessionDayProgress {
+  programDayId: number;
+  dayName: string;
+  volumeChangePercent: number | null;
+  strengthChangePercent: number | null;
+  hasPR: boolean;
+  lastTrainedAt: string | null;
+  sessionCount: number;
+}
+
+export interface SessionDayExerciseProgress {
+  exerciseId: number;
+  exerciseName: string;
+  volumeChangePercent: number | null;
+  strengthChangePercent: number | null;
+}
+
+export interface ProgramSelectorItem {
+  id: number;
+  name: string;
+  isArchived: boolean;
+  archivedAt: string | null;
+}
+
+// -- Warmup domain types --
+
+export type WarmupTrackingType = 'checkbox' | 'reps' | 'duration';
+
+export interface WarmupExercise {
+  id: number;
+  name: string;
+  trackingType: WarmupTrackingType;
+  defaultValue: number | null;
+  isCustom: boolean;
+  createdAt: string;
+}
+
+export interface WarmupTemplate {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+export interface WarmupTemplateItem {
+  id: number;
+  templateId: number;
+  exerciseId: number | null;
+  warmupExerciseId: number | null;
+  trackingType: WarmupTrackingType;
+  targetValue: number | null;
+  sortOrder: number;
+}
+
+/** Extended template item with resolved display name for UI rendering. */
+export interface WarmupTemplateItemWithName extends WarmupTemplateItem {
+  displayName: string;
+  /** 'library' if exercise_id is set, 'warmup' if warmup_exercise_id is set */
+  source: 'library' | 'warmup';
+}
+
+export interface WarmupSessionItem {
+  id: number;
+  sessionId: number;
+  exerciseId: number | null;
+  warmupExerciseId: number | null;
+  displayName: string;
+  trackingType: WarmupTrackingType;
+  targetValue: number | null;
+  isComplete: boolean;
+  sortOrder: number;
 }
 
 export * from './gamification';

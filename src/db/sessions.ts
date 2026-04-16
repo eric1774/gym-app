@@ -231,27 +231,39 @@ export async function uncompleteSession(sessionId: number): Promise<void> {
 
 /**
  * Create an already-completed session for a program day (manual day completion).
+ * Timestamps are derived from the program's start_date + week offset so manual
+ * completions for past weeks don't inflate the current calendar-week count.
  */
 export async function createCompletedSession(programDayId: number): Promise<void> {
   const database = await db;
-  const now = new Date().toISOString();
 
-  let programWeek: number | null = null;
-  const weekResult = await executeSql(
+  const progResult = await executeSql(
     database,
-    `SELECT p.current_week FROM programs p
+    `SELECT p.current_week, p.start_date FROM programs p
      INNER JOIN program_days pd ON pd.program_id = p.id
      WHERE pd.id = ?`,
     [programDayId],
   );
-  if (weekResult.rows.length > 0) {
-    programWeek = weekResult.rows.item(0).current_week;
+
+  let programWeek: number | null = null;
+  let timestamp = new Date().toISOString();
+
+  if (progResult.rows.length > 0) {
+    programWeek = progResult.rows.item(0).current_week;
+    const startDate = progResult.rows.item(0).start_date;
+    if (startDate && programWeek != null) {
+      // Place the timestamp at noon on the first day of the program week
+      const d = new Date(startDate);
+      d.setUTCDate(d.getUTCDate() + (programWeek - 1) * 7);
+      d.setUTCHours(12, 0, 0, 0);
+      timestamp = d.toISOString();
+    }
   }
 
   await executeSql(
     database,
     'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, ?, ?, ?)',
-    [now, now, programDayId, programWeek],
+    [timestamp, timestamp, programDayId, programWeek],
   );
 }
 

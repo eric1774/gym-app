@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ProteinStackParamList } from '../navigation/TabNavigator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +16,14 @@ const TABS = ['Macros', 'Hydration'];
 export function ProteinScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<ProteinStackParamList>>();
-  const [activeTab, setActiveTab] = useState(0); // 0 = Macros (default per TAB-01)
+  const route = useRoute<RouteProp<ProteinStackParamList, 'ProteinHome'>>();
+  const [activeTab, setActiveTab] = useState(route.params?.initialTab ?? 0);
+
+  useEffect(() => {
+    if (route.params?.initialTab !== undefined) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route.params?.initialTab]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

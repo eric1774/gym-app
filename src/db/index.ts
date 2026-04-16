@@ -73,3 +73,11 @@ export { hydrationDb };
 // Food database functions (Phase 38) — namespaced for food search and custom foods
 import * as foodsDb from './foods';
 export { foodsDb };
+export {
+  getAllMuscleGroups,
+  getMuscleGroupsByCategory,
+  getExerciseMuscleGroups,
+  setExerciseMuscleGroups,
+  getExercisesByMuscleGroups,
+  getExercisesByCategoryViaGroups,
+} from './muscleGroups';

@@ -20,6 +20,8 @@ import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
+import { SwapSheet } from '../components/SwapSheet';
+import { getSetsForExerciseInSession } from '../db';
 import { SetLoggingPanel, ProgramTarget } from '../components/SetLoggingPanel';
 import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
@@ -39,6 +41,8 @@ import { DeviceScanSheet } from './DeviceScanSheet';
 import { getHRSettings } from '../services/HRSettingsService';
 import { HRSettings } from '../types';
 import { getHRZone, computeMaxHR } from '../utils/hrZones';
+import { WarmupSection } from '../components/WarmupSection';
+import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -185,6 +189,7 @@ interface ExerciseCardProps {
   onStartRest: () => void;
   onViewHistory: () => void;
   onRestChange: (newRestSeconds: number) => void;
+  onSwap?: () => void;
 }
 
 function ExerciseCard({
@@ -206,6 +211,7 @@ function ExerciseCard({
   onStartRest,
   onViewHistory,
   onRestChange,
+  onSwap,
 }: ExerciseCardProps) {
   const isComplete = exerciseSession.isComplete;
   const [restStepperVisible, setRestStepperVisible] = useState(false);
@@ -237,6 +243,13 @@ function ExerciseCard({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.7}>
             <HistoryIcon color={colors.secondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onSwap}
+            style={styles.historyButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}>
+            <Text style={{ fontSize: fontSize.base, color: colors.secondary }}>{'\u21C4'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onToggleComplete}
@@ -332,6 +345,7 @@ interface SupersetContainerProps {
   onStartRest: (exerciseId: number) => void;
   onViewHistory: (exerciseId: number) => void;
   onRestChange: (exerciseId: number, newRestSeconds: number) => void;
+  onSwap: (exerciseId: number) => void;
 }
 
 function SupersetContainer({
@@ -353,6 +367,7 @@ function SupersetContainer({
   onStartRest,
   onViewHistory,
   onRestChange,
+  onSwap,
 }: SupersetContainerProps) {
   // Round = min completed sets across all exercises + 1
   const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
@@ -403,6 +418,7 @@ function SupersetContainer({
               onStartRest={() => onStartRest(exerciseId)}
               onViewHistory={() => onViewHistory(exerciseId)}
               onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
+              onSwap={() => onSwap(exerciseId)}
             />
           </View>
         );
@@ -549,12 +565,23 @@ export function WorkoutScreen() {
     endSession,
     addExercise,
     toggleExerciseComplete,
+    swapExercise: swapExerciseInSession,
+    warmupItems,
+    warmupState,
+    loadWarmupTemplate,
+    toggleWarmupItemComplete,
+    dismissWarmup,
+    collapseWarmup,
+    expandWarmup,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
+  const [swapTarget, setSwapTarget] = useState<Exercise | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
+  const [showWarmupPicker, setShowWarmupPicker] = useState(false);
+  const [showWarmupStartPrompt, setShowWarmupStartPrompt] = useState(false);
   const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
@@ -576,6 +603,12 @@ export function WorkoutScreen() {
   const prToastRef = useRef<PRToastHandle>(null);
   // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
   const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
+
+  // Stable reference for SwapSheet — avoids useEffect re-fire on every render
+  const excludeIdsForSwap = useMemo(
+    () => sessionExercises.map(se => se.exerciseId),
+    [sessionExercises],
+  );
 
   // Inline target editing state
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
@@ -740,6 +773,18 @@ export function WorkoutScreen() {
     }
   }, [isRunning]);
 
+  const handleWarmupTemplateSelect = useCallback(async (templateId: number) => {
+    await loadWarmupTemplate(templateId);
+    setShowWarmupPicker(false);
+    setShowWarmupStartPrompt(false);
+  }, [loadWarmupTemplate]);
+
+  useEffect(() => {
+    if (session && warmupState === 'none' && warmupItems.length === 0) {
+      setShowWarmupStartPrompt(true);
+    }
+  }, [session?.id]);
+
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
       await addExercise(exercise);
@@ -789,13 +834,16 @@ export function WorkoutScreen() {
 
     const exercise = exercises.find(ex => ex.id === exerciseId);
     if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
-      setVolumeTotal(prev => prev + set.weightLbs * set.reps);
+      if (exercise?.measurementType !== 'height_reps') {
+        setVolumeTotal(prev => prev + set.weightLbs * set.reps);
+      }
 
       checkForPR(exerciseId, set.weightLbs, set.reps, session!.id).then(isPR => {
         if (isPR) {
           setPrCount(prev => prev + 1);
           const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
-          prToastRef.current?.showPR(name, set.reps, set.weightLbs);
+          const unit = exercise?.measurementType === 'height_reps' ? 'in' : 'lbs';
+          prToastRef.current?.showPR(name, set.reps, set.weightLbs, unit);
           HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
           setTimeout(() => {
             HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
@@ -810,10 +858,11 @@ export function WorkoutScreen() {
       ...prev,
       [exerciseId]: Math.max((prev[exerciseId] ?? 0) - 1, 0),
     }));
-    if (!set.isWarmup) {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (!set.isWarmup && exercise?.measurementType !== 'timed' && exercise?.measurementType !== 'height_reps') {
       setVolumeTotal(prev => Math.max(prev - set.weightLbs * set.reps, 0));
     }
-  }, []);
+  }, [exercises]);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
@@ -1142,6 +1191,14 @@ export function WorkoutScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
+          <WarmupSection
+            items={warmupItems}
+            state={warmupState}
+            onToggleItem={toggleWarmupItemComplete}
+            onCollapse={collapseWarmup}
+            onExpand={expandWarmup}
+            onDismiss={dismissWarmup}
+          />
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
@@ -1170,6 +1227,10 @@ export function WorkoutScreen() {
                   onStartRest={handleStartRest}
                   onViewHistory={handleViewHistory}
                   onRestChange={handleRestChange}
+                  onSwap={(exerciseId) => {
+                    const ex = exercises.find(e => e.id === exerciseId);
+                    setSwapTarget(ex ?? null);
+                  }}
                 />
               );
             }
@@ -1207,6 +1268,7 @@ export function WorkoutScreen() {
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onViewHistory={() => handleViewHistory(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
+                        onSwap={() => setSwapTarget(exercise ?? null)}
                       />
                     );
                   })}
@@ -1214,6 +1276,14 @@ export function WorkoutScreen() {
               </View>
             );
           })}
+          {(warmupState === 'none' || warmupState === 'dismissed') && (
+            <TouchableOpacity
+              style={styles.addWarmupButton}
+              onPress={() => setShowWarmupPicker(true)}
+            >
+              <Text style={styles.addWarmupText}>🔥 Add Warmup</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1245,6 +1315,60 @@ export function WorkoutScreen() {
         exerciseName={editingExerciseName}
         dayExercise={editingDayExercise}
         onSave={handleSaveTargets}
+      />
+
+      <SwapSheet
+        visible={swapTarget !== null}
+        exercise={swapTarget}
+        excludeExerciseIds={excludeIdsForSwap}
+        onSelect={async (newExercise) => {
+          if (!swapTarget || !session) return;
+          const sets = await getSetsForExerciseInSession(session.id, swapTarget.id);
+          const setsCount = sets.length;
+          if (setsCount > 0) {
+            Alert.alert(
+              `You've logged ${setsCount} set${setsCount !== 1 ? 's' : ''} on ${swapTarget.name}`,
+              'What would you like to do?',
+              [
+                {
+                  text: 'Keep sets & add new',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, true);
+                    setSwapTarget(null);
+                  },
+                },
+                {
+                  text: 'Discard & replace',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, false);
+                    setSwapTarget(null);
+                  },
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            );
+          } else {
+            await swapExerciseInSession(swapTarget.id, newExercise, false);
+            setSwapTarget(null);
+          }
+        }}
+        onClose={() => setSwapTarget(null)}
+      />
+
+      <WarmupTemplatePicker
+        visible={showWarmupPicker}
+        onClose={() => setShowWarmupPicker(false)}
+        onSelect={handleWarmupTemplateSelect}
+        title="Select Warmup Template"
+      />
+      <WarmupTemplatePicker
+        visible={showWarmupStartPrompt}
+        onClose={() => setShowWarmupStartPrompt(false)}
+        onSelect={handleWarmupTemplateSelect}
+        showSkip
+        onSkip={() => setShowWarmupStartPrompt(false)}
+        title="Add a warmup?"
       />
     </SafeAreaView>
   );
@@ -1558,6 +1682,22 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.onAccent,
     lineHeight: fontSize.xl + 4,
+  },
+  addWarmupButton: {
+    backgroundColor: 'rgba(141,194,138,0.1)',
+    borderRadius: 10,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.base,
+    alignItems: 'center',
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.2)',
+  },
+  addWarmupText: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '600' as const,
   },
 });
 

@@ -4,6 +4,45 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v2.1 — Progress Hub & Training Intelligence
+*April 2026*
+
+### New
+
+- **Progress Hub**: A redesigned progress screen with a muscle group grid showing weekly volume and strength changes per body part. Tap any muscle group to drill into individual exercise trends with charts, personal records, and session timelines.
+
+- **Session-over-Session Tracking**: A new Sessions tab on the Progress screen shows cards for each training day with volume and strength deltas compared to your previous session. Tap a card to drill down into per-exercise comparisons. Switch between programs with a dropdown selector.
+
+- **Exercise Swap**: Swap exercises mid-workout or from your program editor. A bottom sheet suggests alternatives targeting the same muscle groups.
+
+- **Multi-Category Muscle Groups**: Exercises now map to specific muscle groups instead of broad categories. The library and picker filter by muscle group, giving you more precise control when building programs.
+
+- **Nutrition Rings on Dashboard**: Animated progress rings for protein, carbs, fat, and calories appear on the dashboard. Tap to jump straight to the Health tab's macro tracker.
+
+- **Height-Based Reps**: A new measurement type for exercises like box jumps where height matters. Log height in inches alongside your reps, with display support across workout logging, ghost references, and exercise detail screens.
+
+- **Program Week Names**: Name and annotate your training weeks (e.g., "Deload Week", "Peak Week"). Manage all weeks at once from the program detail screen.
+
+- **Score-Based Leveling**: Your fitness score is now calculated from real training data — volume, consistency, PRs, and badge bonuses — with tuned thresholds for steady long-term progression.
+
+### Improved
+
+- **Custom SVG Muscle Icons**: Replaced emoji-based muscle group indicators with crisp custom SVG icons across all progress screens.
+
+- **Cleaner Dashboard**: Simplified the main dashboard to a static weekly snapshot card showing sessions completed, PRs hit, and volume change at a glance.
+
+- **Frequently Logged Foods**: The list now shows your top 50 most-used foods (up from 10) and scrolls smoothly so you can find what you need faster.
+
+### Fixed
+
+- Fixed strength percentage on session cards showing wrong values when exercises were added or removed between sessions — now only compares exercises you did in both sessions
+- Fixed progress cards showing -100% when there was no training data for the week
+- Fixed muscle group progress queries using the wrong field for category matching
+- Fixed volume calculations incorrectly including height-based rep exercises
+- Fixed dashboard content getting clipped behind the tab bar
+
+---
+
 ## v2.0 — Badges, Levels & Achievements
 *April 2026*
 
