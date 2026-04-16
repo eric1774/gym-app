@@ -509,3 +509,43 @@ export async function getProgramsWithSessionData(): Promise<ProgramSelectorItem[
   }
   return items;
 }
+
+// ── Warmup Template ID for Program Days ────────────────────────────
+
+export async function getWarmupTemplateIdForDay(
+  dayId: number,
+): Promise<number | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT warmup_template_id FROM program_days WHERE id = ?',
+    [dayId],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows.item(0).warmup_template_id ?? null;
+}
+
+export async function setWarmupTemplateIdForDay(
+  dayId: number,
+  templateId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_days SET warmup_template_id = ? WHERE id = ?',
+    [templateId, dayId],
+  );
+}
+
+export async function clearWarmupTemplateIdForDay(
+  dayId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_days SET warmup_template_id = NULL WHERE id = ?',
+    [dayId],
+  );
+}
