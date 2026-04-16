@@ -73,4 +73,24 @@ describe('MacroChart — Calories tab', () => {
     fireEvent.press(getByText('Calories'));
     expect(queryByText(/GOAL/)).toBeNull();
   });
+
+  it('passes empty y-axis suffix to LineChart on Calories tab and "g" on macro tabs', async () => {
+    // Provide one data point so the LineChart actually renders
+    (macrosDb.getDailyMacroTotals as jest.Mock).mockResolvedValue([
+      { date: '2026-04-15', protein: 100, carbs: 150, fat: 50, calories: 1450 },
+    ]);
+    const { getByText, UNSAFE_getByType } = renderChart(allGoalsSet);
+    await waitFor(() =>
+      expect(macrosDb.getDailyMacroTotals).toHaveBeenCalled(),
+    );
+
+    const { LineChart } = require('react-native-chart-kit');
+    // Macros tab default: suffix = "g"
+    expect(UNSAFE_getByType(LineChart).props.yAxisSuffix).toBe('g');
+
+    fireEvent.press(getByText('Calories'));
+    await waitFor(() =>
+      expect(UNSAFE_getByType(LineChart).props.yAxisSuffix).toBe(''),
+    );
+  });
 });

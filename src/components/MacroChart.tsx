@@ -234,7 +234,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
             data={chartData}
             width={CHART_WIDTH}
             height={180}
-            yAxisSuffix="g"
+            yAxisSuffix={activeTab === 'calories' ? '' : 'g'}
             withDots={data.length <= 10}
             withInnerLines={false}
             withOuterLines={false}
