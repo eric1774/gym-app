@@ -58,7 +58,7 @@ export interface MacrosExport {
   exportedAt: string;          // ISO 8601 UTC timestamp
   appVersion: string;          // from package.json
   range: { start: string; end: string };  // YYYY-MM-DD, inclusive
-  goals: MacroGoalsSnapshot | null;       // null if no goals are set at all
+  goals: MacroGoalsSnapshot | null;       // null only when getMacroGoals() returns null (no settings row exists); if a row exists with all-null fields, returns a snapshot with all-null fields
   days: MacroChartPoint[];                // already includes derived calories
 }
 ```
@@ -154,7 +154,7 @@ const TABS: { id: ChartTab; label: string }[] = [
 
 ### `ExportMacrosModal.tsx` — new
 
-Standalone component co-located with `MacroChart.tsx`.
+Standalone component co-located with `MacroChart.tsx`. Built on React Native's built-in `Modal` (`animationType="slide"`, `transparent={true}`), as a bottom sheet with a tap-outside `Pressable` overlay that dismisses — mirrors the `AddMealModal` presentation pattern already used in the app (`src/screens/AddMealModal.tsx:206-215`).
 
 **Props:**
 ```typescript
