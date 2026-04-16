@@ -7,7 +7,11 @@ import {
   MacroLibraryMeal,
   MealType,
   MEAL_TYPES,
+  CALORIES_PER_GRAM,
+  MacrosExport,
+  MacroGoalsSnapshot,
 } from '../types';
+import pkg from '../../package.json';
 import { getLocalDateString, getLocalDateTimeString } from '../utils/dates';
 import { computeCalories } from '../utils/macros';
 import { emitAppEvent } from '../context/GamificationContext';
@@ -655,4 +659,50 @@ export async function getLibraryMealsByType(): Promise<Record<MealType, MacroLib
 export async function deleteLibraryMeal(id: number): Promise<void> {
   const database = await db;
   await executeSql(database, 'DELETE FROM meal_library WHERE id = ?', [id]);
+}
+
+// ── Export ─────────────────────────────────────────────────────────────
+
+/**
+ * Build the macros-export payload for an inclusive date range.
+ * Reuses getDailyMacroTotals for daily rows and getMacroGoals for the snapshot.
+ */
+export async function getMacrosExportData(
+  startDate: string,
+  endDate: string,
+): Promise<MacrosExport> {
+  const [days, settings] = await Promise.all([
+    getDailyMacroTotals(startDate, endDate),
+    getMacroGoals(),
+  ]);
+
+  let goals: MacroGoalsSnapshot | null = null;
+  if (settings !== null) {
+    const allSet =
+      settings.proteinGoal !== null &&
+      settings.carbGoal !== null &&
+      settings.fatGoal !== null;
+    goals = {
+      protein: settings.proteinGoal,
+      carbs: settings.carbGoal,
+      fat: settings.fatGoal,
+      calories: allSet
+        ? settings.proteinGoal! * CALORIES_PER_GRAM.protein +
+          settings.carbGoal!   * CALORIES_PER_GRAM.carbs +
+          settings.fatGoal!    * CALORIES_PER_GRAM.fat
+        : null,
+    };
+  }
+
+  return {
+    exportedAt: new Date().toISOString(),
+    appVersion: getAppVersion(),
+    range: { start: startDate, end: endDate },
+    goals,
+    days,
+  };
+}
+
+function getAppVersion(): string {
+  return pkg.version;
 }
