@@ -21,7 +21,7 @@ import { CreateWarmupExerciseModal } from './CreateWarmupExerciseModal';
 
 type ActiveTab = 'warmup' | 'library';
 
-interface PendingSelection {
+type PendingSelection = {
   kind: 'warmup';
   exercise: WarmupExercise;
   trackingType: WarmupTrackingType;
