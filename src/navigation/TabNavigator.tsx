@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
-import { LibraryScreen } from '../screens/LibraryScreen';
+import { LibraryStackNavigator } from './LibraryStackNavigator';
 import { ProgramsScreen } from '../screens/ProgramsScreen';
 import { ProgramDetailScreen } from '../screens/ProgramDetailScreen';
 import { DayDetailScreen } from '../screens/DayDetailScreen';
@@ -254,7 +254,7 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="LibraryTab"
-        component={LibraryScreen}
+        component={LibraryStackNavigator}
         options={{
           tabBarLabel: 'Library',
           tabBarIcon: ({ color }) => <BookIcon color={color} />,
