@@ -678,20 +678,28 @@ export async function getMacrosExportData(
 
   let goals: MacroGoalsSnapshot | null = null;
   if (settings !== null) {
-    const allSet =
+    if (
       settings.proteinGoal !== null &&
       settings.carbGoal !== null &&
-      settings.fatGoal !== null;
-    goals = {
-      protein: settings.proteinGoal,
-      carbs: settings.carbGoal,
-      fat: settings.fatGoal,
-      calories: allSet
-        ? settings.proteinGoal! * CALORIES_PER_GRAM.protein +
-          settings.carbGoal!   * CALORIES_PER_GRAM.carbs +
-          settings.fatGoal!    * CALORIES_PER_GRAM.fat
-        : null,
-    };
+      settings.fatGoal !== null
+    ) {
+      goals = {
+        protein: settings.proteinGoal,
+        carbs: settings.carbGoal,
+        fat: settings.fatGoal,
+        calories:
+          settings.proteinGoal * CALORIES_PER_GRAM.protein +
+          settings.carbGoal    * CALORIES_PER_GRAM.carbs +
+          settings.fatGoal     * CALORIES_PER_GRAM.fat,
+      };
+    } else {
+      goals = {
+        protein: settings.proteinGoal,
+        carbs: settings.carbGoal,
+        fat: settings.fatGoal,
+        calories: null,
+      };
+    }
   }
 
   return {
