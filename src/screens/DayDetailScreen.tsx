@@ -12,6 +12,7 @@ import { useNavigation, useRoute, RouteProp, NavigationProp } from '@react-navig
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { ExerciseTargetRow } from '../components/ExerciseTargetRow';
 import { SwapSheet } from '../components/SwapSheet';
+import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 import {
   addExerciseToProgramDay,
   createSupersetGroup,
@@ -20,7 +21,11 @@ import {
   removeSupersetGroup,
   reorderProgramDayExercises,
   updateExerciseTargets,
+  getWarmupTemplateIdForDay,
+  setWarmupTemplateIdForDay,
+  clearWarmupTemplateIdForDay,
 } from '../db/programs';
+import { getWarmupTemplateWithItems } from '../db/warmups';
 import { executeSql, db as dbPromise } from '../db/database';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
@@ -74,6 +79,10 @@ export function DayDetailScreen() {
   const [selectedExercise, setSelectedExercise] = useState<ProgramDayExercise | null>(null);
   const [swapTarget, setSwapTarget] = useState<{ exercise: Exercise; dayExercise: ProgramDayExercise } | null>(null);
 
+  const [warmupTemplateName, setWarmupTemplateName] = useState<string | null>(null);
+  const [warmupItemCount, setWarmupItemCount] = useState(0);
+  const [showWarmupPicker, setShowWarmupPicker] = useState(false);
+
   // Superset multi-select mode
   const [supersetMode, setSupersetMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -98,6 +107,35 @@ export function DayDetailScreen() {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    async function loadWarmupInfo() {
+      const templateId = await getWarmupTemplateIdForDay(dayId);
+      if (templateId) {
+        const { template, items } = await getWarmupTemplateWithItems(templateId);
+        setWarmupTemplateName(template.name);
+        setWarmupItemCount(items.length);
+      } else {
+        setWarmupTemplateName(null);
+        setWarmupItemCount(0);
+      }
+    }
+    loadWarmupInfo();
+  }, [dayId]);
+
+  const handleWarmupTemplateSelect = useCallback(async (templateId: number) => {
+    await setWarmupTemplateIdForDay(dayId, templateId);
+    const { template, items } = await getWarmupTemplateWithItems(templateId);
+    setWarmupTemplateName(template.name);
+    setWarmupItemCount(items.length);
+    setShowWarmupPicker(false);
+  }, [dayId]);
+
+  const handleClearWarmup = useCallback(async () => {
+    await clearWarmupTemplateIdForDay(dayId);
+    setWarmupTemplateName(null);
+    setWarmupItemCount(0);
+  }, [dayId]);
 
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
@@ -336,6 +374,37 @@ export function DayDetailScreen() {
         <Text style={styles.supersetInstruction}>SELECT 2-3 EXERCISES</Text>
       )}
 
+      {/* Warmup badge */}
+      {warmupTemplateName ? (
+        <View style={styles.warmupBadge}>
+          <View style={styles.warmupBadgeLeft}>
+            <Text style={styles.warmupEmoji}>🔥</Text>
+            <View>
+              <Text style={styles.warmupBadgeName}>{warmupTemplateName}</Text>
+              <Text style={styles.warmupBadgeCount}>
+                {warmupItemCount} items · auto-loads on start
+              </Text>
+            </View>
+          </View>
+          <View style={styles.warmupBadgeActions}>
+            <TouchableOpacity onPress={() => setShowWarmupPicker(true)}>
+              <Text style={styles.warmupChangeText}>Change ›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleClearWarmup}>
+              <Text style={styles.warmupRemoveText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.attachWarmupButton}
+          onPress={() => setShowWarmupPicker(true)}
+        >
+          <Text style={styles.warmupEmoji}>🔥</Text>
+          <Text style={styles.attachWarmupText}>Attach Warmup</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Exercise list */}
       {dayExercises.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -440,6 +509,14 @@ export function DayDetailScreen() {
         dayExercise={selectedExercise}
         exerciseName={selectedExerciseName}
         onSave={handleSaveTargets}
+      />
+
+      {/* Warmup template picker */}
+      <WarmupTemplatePicker
+        visible={showWarmupPicker}
+        onClose={() => setShowWarmupPicker(false)}
+        onSelect={handleWarmupTemplateSelect}
+        title="Select Warmup Template"
       />
 
       {/* Swap sheet */}
@@ -601,4 +678,54 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.background,
   },
+  warmupBadge: {
+    backgroundColor: 'rgba(141,194,138,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.2)',
+    borderRadius: 10,
+    padding: spacing.md,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  warmupBadgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  warmupEmoji: { fontSize: 14 },
+  warmupBadgeName: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  warmupBadgeCount: {
+    color: colors.secondary,
+    fontSize: fontSize.xs,
+    marginTop: 2,
+  },
+  warmupBadgeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  warmupChangeText: { color: colors.secondary, fontSize: fontSize.xs },
+  warmupRemoveText: { color: colors.secondary, fontSize: 14 },
+  attachWarmupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(141,194,138,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.15)',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    padding: spacing.md,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.md,
+  },
+  attachWarmupText: { color: colors.accent, fontSize: fontSize.sm },
 });
