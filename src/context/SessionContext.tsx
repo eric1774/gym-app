@@ -52,6 +52,7 @@ interface SessionContextValue {
   warmupState: 'none' | 'expanded' | 'collapsed' | 'dismissed';
   loadWarmupTemplate: (templateId: number) => Promise<void>;
   toggleWarmupItemComplete: (itemId: number) => Promise<void>;
+  skipAllWarmupItems: () => Promise<void>;
   dismissWarmup: () => void;
   collapseWarmup: () => void;
   expandWarmup: () => void;
@@ -124,6 +125,18 @@ export function SessionProvider({ children }: Props) {
       return updated;
     });
   }, []);
+
+  const skipAllWarmupItems = useCallback(async () => {
+    // Mark every incomplete item as complete by invoking the DB toggle.
+    const incomplete = warmupItems.filter(i => !i.isComplete);
+    for (const item of incomplete) {
+      await dbToggleWarmupItem(item.id);
+    }
+    if (incomplete.length > 0) {
+      setWarmupItems(prev => prev.map(i => ({ ...i, isComplete: true })));
+      setWarmupState('collapsed');
+    }
+  }, [warmupItems]);
 
   const dismissWarmup = useCallback(() => {
     setWarmupState('dismissed');
@@ -332,6 +345,7 @@ export function SessionProvider({ children }: Props) {
       warmupState,
       loadWarmupTemplate,
       toggleWarmupItemComplete,
+      skipAllWarmupItems,
       dismissWarmup,
       collapseWarmup,
       expandWarmup,
@@ -355,6 +369,7 @@ export function SessionProvider({ children }: Props) {
       warmupState,
       loadWarmupTemplate,
       toggleWarmupItemComplete,
+      skipAllWarmupItems,
       dismissWarmup,
       collapseWarmup,
       expandWarmup,
