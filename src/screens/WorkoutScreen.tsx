@@ -616,6 +616,9 @@ export function WorkoutScreen() {
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
+  // TODO(workout-v1): wire setProgramDayName from a getProgramDay(programDayId)
+  // DB call so WorkoutHeader can show the real day name (e.g. 'PUSH DAY') instead
+  // of the 'WORKOUT' fallback. Pre-existing state; never populated before V1.
   const [programDayName, setProgramDayName] = useState<string | null>(null);
   // Superset group maps: groupId -> ordered exerciseIds, exerciseId -> groupId
   const [supersetGroups, setSupersetGroups] = useState<Map<number, number[]>>(new Map());
@@ -628,6 +631,10 @@ export function WorkoutScreen() {
   const { deviceState, currentBpm, attemptAutoReconnect, flushHRSamples } = useHeartRate();
   const [hasPairedDevice, setHasPairedDevice] = useState(false);
   const [hrSettings, setHrSettings] = useState<HRSettings | null>(null);
+  // TODO(workout-v1): wire HrPill onPress (when disconnected) to
+  // setScanSheetVisible(true). Task 3.2 removed the inline pair button; users
+  // currently have no in-workout path to pair an HR monitor. Pairing via
+  // Settings still works. See code-quality review of commit 22fe968.
   const [scanSheetVisible, setScanSheetVisible] = useState(false);
   const prevDeviceStateRef = useRef(deviceState);
 
