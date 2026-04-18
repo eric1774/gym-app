@@ -574,6 +574,7 @@ export function WorkoutScreen() {
     dismissWarmup,
     collapseWarmup,
     expandWarmup,
+    skipAllWarmupItems,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer, addTime } = useTimer();
 
@@ -1148,6 +1149,7 @@ export function WorkoutScreen() {
             onCollapse={collapseWarmup}
             onExpand={expandWarmup}
             onDismiss={dismissWarmup}
+            onSkipAll={skipAllWarmupItems}
           />
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
