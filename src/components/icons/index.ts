@@ -1,3 +1,4 @@
+export type { IconProps, Dir } from './types';
 export { Plus } from './Plus';
 export { Minus } from './Minus';
 export { Check } from './Check';

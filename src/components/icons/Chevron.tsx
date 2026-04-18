@@ -1,11 +1,8 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
+import type { Dir, IconProps } from './types';
 
-type Dir = 'up' | 'down' | 'left' | 'right';
-
-interface ChevronProps {
-  size?: number;
-  color?: string;
+interface ChevronProps extends IconProps {
   dir?: Dir;
 }
 

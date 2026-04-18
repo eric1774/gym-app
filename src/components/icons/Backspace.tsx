@@ -1,10 +1,6 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
-
-interface IconProps {
-  size?: number;
-  color?: string;
-}
+import type { IconProps } from './types';
 
 export function Backspace({ size = 22, color = '#FFFFFF' }: IconProps) {
   return (

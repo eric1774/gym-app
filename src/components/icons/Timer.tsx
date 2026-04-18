@@ -1,10 +1,6 @@
 import React from 'react';
 import Svg, { Circle, Path } from 'react-native-svg';
-
-interface IconProps {
-  size?: number;
-  color?: string;
-}
+import type { IconProps } from './types';
 
 export function Timer({ size = 16, color = '#FACC15' }: IconProps) {
   return (

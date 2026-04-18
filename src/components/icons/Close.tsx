@@ -1,10 +1,6 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
-
-interface IconProps {
-  size?: number;
-  color?: string;
-}
+import type { IconProps } from './types';
 
 export function Close({ size = 20, color = '#8E9298' }: IconProps) {
   return (
