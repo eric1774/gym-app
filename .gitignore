@@ -1,6 +1,9 @@
 # Planning (local only)
 .planning/
 
+# Git worktrees (local isolated workspaces)
+.worktrees/
+
 # React Native
 node_modules/
 .bundle/
