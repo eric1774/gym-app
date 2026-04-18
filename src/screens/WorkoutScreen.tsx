@@ -36,8 +36,9 @@ import { checkForPR } from '../db/sets';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
 import { useHeartRate } from '../context/HeartRateContext';
-import { HRConnectionIndicator } from '../components/HRConnectionIndicator';
 import { DeviceScanSheet } from './DeviceScanSheet';
+import { WorkoutHeader } from '../components/WorkoutHeader';
+import { HrZone } from '../components/HrPill';
 import { getHRSettings } from '../services/HRSettingsService';
 import { HRSettings } from '../types';
 import { getHRZone, computeMaxHR } from '../utils/hrZones';
@@ -1096,82 +1097,23 @@ export function WorkoutScreen() {
     );
   }
 
-  // Build a session title from exercise categories (used for banner only)
-  const allCategories = groupByCategory(sessionExercises, exercises);
-  const sessionTitle = programDayId
-    ? allCategories.map(g => g.category.toUpperCase()).join(' & ')
-    : null;
-
   // Build superset-aware grouped sections for rendering
   const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Session header */}
-      <View style={styles.header}>
-        {/* Row 1: Timer, Volume, End Workout — always fits */}
-        <View style={styles.headerTopRow}>
-          <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
-          <Text style={styles.volumeText}>
-            {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
-          </Text>
-
-          {/* Pair HR monitor button — visible when no device is paired */}
-          {!hasPairedDevice && (
-            <TouchableOpacity
-              onPress={() => setScanSheetVisible(true)}
-              style={styles.hrPairButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill={colors.accent}>
-                <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </Svg>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            onPress={handleEndWorkout}
-            style={styles.endButtonTouchable}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.endButton}>End Workout</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 2: HR info — only rendered when device is paired */}
-        {hasPairedDevice && (
-          <View style={styles.headerHRRow}>
-            <HRConnectionIndicator
-              deviceState={deviceState}
-              visible={hasPairedDevice}
-            />
-            {/* Always-rendered BPM display — swaps content without mount/unmount */}
-            <View style={styles.bpmBlock}>
-              <Text
-                style={[
-                  styles.bpmValue,
-                  { color: bpmZone ? bpmZone.color : colors.primary },
-                ]}>
-                {deviceState === 'connected' && currentBpm !== null
-                  ? String(currentBpm)
-                  : '--'}
-              </Text>
-              {bpmZone && (
-                <Text style={styles.bpmZoneLabel}>
-                  {`Zone ${bpmZone.zone} — ${bpmZone.name}`}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Session title banner for program workouts */}
-      {sessionTitle && sessionExercises.length > 0 && (
-        <View style={styles.sessionBanner}>
-          <Text style={styles.sessionBannerText} numberOfLines={2}>
-            ACTIVE WORKOUT SESSION: {sessionTitle}
-          </Text>
-        </View>
-      )}
+      <WorkoutHeader
+        title={programDayName ?? 'WORKOUT'}
+        elapsed={elapsed}
+        volume={0}
+        setCount={0}
+        prCount={0}
+        hr={{
+          bpm: deviceState === 'connected' ? currentBpm : null,
+          zone: (bpmZone?.zone ?? null) as HrZone | null,
+        }}
+        onFinish={handleEndWorkout}
+      />
 
       {/* Rest timer banner */}
       {isRunning && (
@@ -1416,74 +1358,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: weightBold,
     color: colors.onAccent,
-  },
-  header: {
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  headerTopRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-  },
-  headerHRRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginTop: spacing.xs,
-    gap: spacing.sm,
-  },
-  timerText: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-    letterSpacing: 2,
-  },
-  volumeText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.secondary,
-    letterSpacing: 0.5,
-    minWidth: 80,
-    textAlign: 'center',
-  },
-  endButtonTouchable: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 8,
-    minHeight: 40,
-    justifyContent: 'center' as const,
-  },
-  endButton: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.danger,
-  },
-  bpmBlock: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: spacing.xs,
-  },
-  bpmValue: {
-    fontSize: fontSize.base,    // Reduced from fontSize.lg (20) to fontSize.base (15) — compact in HR row
-    fontWeight: weightBold,
-  },
-  bpmZoneLabel: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
-  },
-  hrPairButton: {
-    padding: spacing.xs,
-  },
-  sessionBanner: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
-  },
-  sessionBannerText: {
-    fontSize: fontSize.xs,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.2,
   },
   scroll: {
     flex: 1,
