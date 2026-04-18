@@ -575,7 +575,7 @@ export function WorkoutScreen() {
     collapseWarmup,
     expandWarmup,
   } = useSession();
-  const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
+  const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer, addTime } = useTimer();
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
@@ -1128,6 +1128,7 @@ export function WorkoutScreen() {
           remainingSeconds={remainingSeconds ?? 0}
           totalSeconds={totalSeconds ?? 0}
           onStop={stopTimer}
+          onAdd={() => addTime(15)}
         />
       )}
 
