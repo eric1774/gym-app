@@ -1,9 +1,8 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
-import { fontSize, weightMedium } from '../theme/typography';
-import { spacing } from '../theme/spacing';
 import { WorkoutSet } from '../types';
+import { History, Chevron } from './icons';
 
 interface Props {
   sets: WorkoutSet[];
@@ -18,35 +17,34 @@ function formatDuration(totalSeconds: number): string {
 }
 
 export function GhostReference({ sets, isTimed = false, isHeightReps = false }: Props) {
-  if (!sets || sets.length === 0) {
-    return null;
-  }
-
-  // Use horizontal compact display for 1-3 sets, vertical list for 4+
-  const useVertical = sets.length > 3;
+  const [open, setOpen] = useState(false);
+  if (!sets || sets.length === 0) { return null; }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Last session:</Text>
-      {useVertical ? (
-        <View style={styles.verticalList}>
-          {sets.map(s => (
-            <Text key={s.id} style={styles.setText}>
-              {isTimed
-                ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
-                : `Set ${s.setNumber}: ${s.weightLbs}${isHeightReps ? 'in' : 'lb'} × ${s.reps} reps`}
-            </Text>
-          ))}
+      <TouchableOpacity
+        style={styles.toggle}
+        onPress={() => setOpen(v => !v)}
+        activeOpacity={0.7}>
+        <View style={styles.toggleLeft}>
+          <History size={14} color={colors.secondary} />
+          <Text style={styles.toggleLabel}>
+            Last session {open ? '' : `· ${sets.length} sets`}
+          </Text>
         </View>
-      ) : (
-        <View style={styles.horizontalRow}>
-          {sets.map((s, idx) => (
-            <Text key={s.id} style={styles.setText}>
-              {isTimed
-                ? `Set ${s.setNumber}: ${formatDuration(s.reps)}`
-                : `Set ${s.setNumber}: ${s.weightLbs}${isHeightReps ? 'in' : 'lb'} × ${s.reps}`}
-              {idx < sets.length - 1 ? '   ' : ''}
-            </Text>
+        <Chevron size={14} color={colors.secondary} dir={open ? 'up' : 'down'} />
+      </TouchableOpacity>
+      {open && (
+        <View style={styles.list}>
+          {sets.map((s, i) => (
+            <View key={s.id} style={styles.row}>
+              <Text style={styles.rowText}>Set {i + 1}</Text>
+              <Text style={styles.rowText}>
+                {isTimed
+                  ? formatDuration(s.reps)
+                  : `${s.weightLbs}${isHeightReps ? 'in' : 'lb'} × ${s.reps}`}
+              </Text>
+            </View>
           ))}
         </View>
       )}
@@ -56,26 +54,44 @@ export function GhostReference({ sets, isTimed = false, isHeightReps = false }: 
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.base,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 10,
   },
-  label: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
-    fontWeight: weightMedium,
-    marginBottom: spacing.xs,
-  },
-  horizontalRow: {
+  toggle: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderStyle: 'dashed',
+    borderRadius: 10,
   },
-  verticalList: {
-    flexDirection: 'column',
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  setText: {
-    fontSize: fontSize.sm,
+  toggleLabel: {
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.secondary,
+  },
+  list: {
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  rowText: {
+    fontSize: 13,
+    color: colors.secondary,
+    fontVariant: ['tabular-nums'],
   },
 });
