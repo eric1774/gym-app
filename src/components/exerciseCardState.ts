@@ -22,3 +22,13 @@ export interface PadTarget {
   initialValue: number;
   label: string;           // exercise name for eyebrow
 }
+
+/** Program-day target for an exercise. Sourced from DB via getProgramDayExercises;
+ *  consumed by the WorkoutScreen's programTargetsMap and by ProgramTargetReference.
+ */
+export interface ProgramTarget {
+  pdeId: number;
+  targetSets: number;
+  targetReps: number;
+  targetWeightLbs: number;
+}
