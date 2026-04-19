@@ -4,6 +4,52 @@ All notable changes to GymTrack are documented here.
 
 ---
 
+## v2.2 — Warmups, Workout Redesign & Macros Export
+*April 2026*
+
+### New
+
+- **Warmup Templates**: Build reusable warmup routines from a new Warmups section under the Library tab. Attach a template to any day of a program so it appears at the top of your session, ready to run through before working sets. Add, reorder, and edit items inside each template.
+
+- **Workout Screen Redesign**: A fresh dark V1 look across the whole workout flow — a compact header with live stats and heart-rate pill, cleaner exercise cards with a context "More" menu, and a slide-up NumberPad for fast weight/rep entry. Sessions feel calmer and more focused on the next set.
+
+- **Ghost Reference History**: Your last session for each exercise now appears as a collapsible peek inside the exercise card, so you can pull up historical sets without leaving the workout screen. Tap the History row in the exercise More menu for the full breakdown.
+
+- **Superset Groups**: Pair exercises into supersets on the workout screen. A purple group panel rotates through members as you log sets and schedules rest only after the last member — keeping superset flow tight.
+
+- **Stopwatch for Timed Exercises**: Exercises measured in time (planks, holds, etc.) now have a built-in start/stop stopwatch. The elapsed duration becomes the logged value — no more guessing.
+
+- **Macros Export**: Export your macro history as JSON for any date range from a new Export button on the Macros chart header. Includes your goals and totals per day.
+
+- **Calories Chart Tab**: A fourth tab on the Macro Intake History chart shows calories alongside protein, carbs, and fat — with a derived goal line tracking your daily target.
+
+- **+Time Rest Buttons**: Add or subtract time from an active rest timer without opening settings.
+
+### Improved
+
+- **Dark Sheets Replace White Alerts**: End Workout, Exercise More, and Swap Conflict now use themed dark bottom sheets instead of stock OS alerts — no more jarring white pop-ups mid-session.
+
+- **Cleaner Exercise Card Meta**: Next-set weight and reps stay in sync with the pending NumberPad target, so what you're about to log matches what's shown above.
+
+- **Add Warmup Placement**: The Add Warmup button moved above the exercise list so warmups are the first thing you see.
+
+### Fixed
+
+- Calendar view was flagging every repeated set at a weight/rep combo as a PR — now only the first qualifying set gets the gold trophy, matching the active-workout rule
+- PR flags on previously logged sets no longer break when you toggle a set complete/incomplete
+- PR toast no longer fires for in-session non-best sets
+- Swapping an exercise mid-session correctly preserves edit targets
+- History screen keeps the back arrow on the workout stack
+- Superset rotation stays on the last member until rest finishes and syncs the NOW badge correctly
+- Rest timer preserves rotation state after a mid-round rest
+- Exercise More menu shows live next-set numbers
+- Height-based rep exercises get the correct stepper and NumberPad labels
+- Android navigation bar no longer bleeds through the NumberPad sheet
+- AddWarmupItemModal list scrolls cleanly on long lists
+- Various modal + library UI polish
+
+---
+
 ## v2.1 — Progress Hub & Training Intelligence
 *April 2026*
 
