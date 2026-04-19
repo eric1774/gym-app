@@ -14,7 +14,6 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { Path } from 'react-native-svg';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
@@ -22,10 +21,7 @@ import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
 import { SwapSheet } from '../components/SwapSheet';
 import { getSetsForExerciseInSession } from '../db';
-import { GhostReference } from '../components/GhostReference';
-import { NextSetPanel } from '../components/NextSetPanel';
 import { NumberPad } from '../components/NumberPad';
-import { SetRow } from '../components/SetRow';
 import { SetState, PadTarget, ProgramTarget } from '../components/exerciseCardState';
 import { logSet, getLastSessionSets, deleteSet, checkForPR } from '../db/sets';
 import { RestTimerBanner } from '../components/RestTimerBanner';
@@ -35,7 +31,6 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
 import { getProgramDayExercises, updateExerciseTargets } from '../db/programs';
 import { EditTargetsModal } from '../components/EditTargetsModal';
-import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
@@ -149,19 +144,6 @@ function useElapsedSeconds(startedAt: string | null): number {
   }, [startedAt]);
 
   return elapsed;
-}
-
-const HISTORY_ICON_SIZE = 18;
-const CHECK_CIRCLE_SIZE = 28;
-
-function HistoryIcon({ color }: { color: string }) {
-  return (
-    <Svg width={HISTORY_ICON_SIZE} height={HISTORY_ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 8V12L15 15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M3.05 11A9 9 0 1 1 3.05 13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M3 4V11H10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
 }
 
 interface CategoryHeaderProps {
@@ -818,27 +800,6 @@ export function WorkoutScreen() {
     [restOverrides, sessionExercises, exercises, startTimer],
   );
 
-  const handleViewHistory = useCallback(
-    async (exerciseId: number) => {
-      const exercise = exercises.find(ex => ex.id === exerciseId);
-      if (!exercise) { return; }
-
-      const history = await getExerciseHistory(exerciseId);
-      if (history.length === 0) {
-        Alert.alert('No History', 'No History for this Exercise Exists');
-        return;
-      }
-
-      navigation.navigate('ExerciseProgress', {
-        exerciseId,
-        exerciseName: exercise.name,
-        measurementType: exercise.measurementType,
-        category: exercise.category,
-      });
-    },
-    [exercises, navigation],
-  );
-
   const showCompletionMessage = useCallback((message: string) => {
     if (completionTimerRef.current) {
       clearTimeout(completionTimerRef.current);
@@ -1290,173 +1251,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     marginTop: spacing.xxl,
   },
-  categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    paddingLeft: spacing.xs,
-  },
-  categoryHeaderSpaced: {
-    marginTop: spacing.lg,
-  },
-  categoryLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.5,
-  },
-  categoryLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: spacing.sm,
-  },
   categoryContainer: {
     // Groups exercise cards within a category
-  },
-  card: {
-    borderRadius: 14,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  // Card inside a SupersetGroup — no individual border/radius/margin
-  cardInSuperset: {
-    overflow: 'hidden',
-  },
-  cardActive: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: 'rgba(141, 194, 138, 0.2)',
-  },
-  cardInactive: {
-    backgroundColor: colors.surface,
-  },
-  cardComplete: {
-    backgroundColor: colors.accentDim,
-    borderColor: 'rgba(141, 194, 138, 0.15)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  // Offset header content from the accent bar on the left
-  cardHeaderInSuperset: {
-    paddingLeft: spacing.base + 8,
-  },
-  cardNameContainer: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  cardName: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.primary,
-  },
-  cardNameComplete: {
-    color: colors.secondary,
-  },
-  setCountLabel: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
-    marginTop: 2,
-  },
-  cardHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  checkCircle: {
-    width: CHECK_CIRCLE_SIZE,
-    height: CHECK_CIRCLE_SIZE,
-    borderRadius: CHECK_CIRCLE_SIZE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-  },
-  checkCirclePending: {
-    borderColor: colors.secondary,
-    backgroundColor: 'transparent',
-  },
-  checkCircleDone: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent,
-  },
-  checkIcon: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.onAccent,
-    lineHeight: fontSize.sm + 2,
-  },
-  historyButton: {
-    padding: spacing.xs,
-  },
-  cardExpanded: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.base,
-  },
-  // Offset expanded content from the accent bar
-  cardExpandedInSuperset: {
-    paddingLeft: spacing.base + 8,
-  },
-  restLabelRow: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  restLabelText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.secondary,
-  },
-  restStepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  restStepperButton: {
-    width: 56,
-    height: 48,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  restStepperButtonDisabled: {
-    opacity: 0.3,
-  },
-  restStepperText: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  restStepperTextDisabled: {
-    color: colors.secondary,
-  },
-  restStepperValue: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-    minWidth: 60,
-    textAlign: 'center',
-  },
-  startRestButton: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.timerActive,
-    borderRadius: 10,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  startRestText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.onAccent,
   },
   fab: {
     position: 'absolute',
