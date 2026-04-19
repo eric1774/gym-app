@@ -298,6 +298,12 @@ function SupersetContainer({
         const exercise = exercises.find(ex => ex.id === exerciseId);
         if (!exercise) { return null; }
         const isActive = activeExerciseId === exerciseId;
+        const supersetBadge = {
+          label: String.fromCharCode(64 + (((groupId - 1) % 26) + 1)),
+          index,
+          isCurrent: isActive,
+          color: colors.supersetPurple,
+        };
 
         return (
           <View key={exerciseId}>
@@ -324,6 +330,7 @@ function SupersetContainer({
               onStartRest={() => onStartRest(exerciseId)}
               onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
               onSwap={() => onSwap(exerciseId)}
+              supersetBadge={supersetBadge}
             />
           </View>
         );
