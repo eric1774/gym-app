@@ -227,6 +227,7 @@ const categoryHeaderStyles = StyleSheet.create({
 interface SupersetContainerProps {
   groupId: number;
   exerciseIds: number[];
+  supersetLetter: string;
   sessionExercises: ExerciseSession[];
   exercises: Exercise[];
   activeExerciseId: number | null;
@@ -252,6 +253,7 @@ interface SupersetContainerProps {
 function SupersetContainer({
   groupId,
   exerciseIds,
+  supersetLetter,
   sessionExercises,
   exercises,
   activeExerciseId,
@@ -297,7 +299,7 @@ function SupersetContainer({
         if (!exercise) { return null; }
         const isActive = activeExerciseId === exerciseId;
         const supersetBadge = {
-          label: String.fromCharCode(64 + (((groupId - 1) % 26) + 1)),
+          label: supersetLetter,
           index,
           isCurrent: isActive,
           color: colors.supersetPurple,
@@ -1173,6 +1175,19 @@ export function WorkoutScreen() {
   // Build superset-aware grouped sections for rendering
   const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
 
+  // Map each superset groupId to a position-based letter (first superset = A, second = B, …)
+  const supersetLetterByGroupId = useMemo(() => {
+    const map = new Map<number, string>();
+    let letterIdx = 0;
+    for (const section of workoutSections) {
+      if (section.type === 'superset') {
+        map.set(section.groupId, String.fromCharCode(65 + (letterIdx % 26)));
+        letterIdx++;
+      }
+    }
+    return map;
+  }, [workoutSections]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <WorkoutHeader
@@ -1226,6 +1241,7 @@ export function WorkoutScreen() {
                   key={`superset-${section.groupId}`}
                   groupId={section.groupId}
                   exerciseIds={section.exerciseIds}
+                  supersetLetter={supersetLetterByGroupId.get(section.groupId) ?? 'A'}
                   sessionExercises={sessionExercises}
                   exercises={exercises}
                   activeExerciseId={activeExerciseId}
