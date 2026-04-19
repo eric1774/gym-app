@@ -464,7 +464,7 @@ export function WorkoutScreen() {
   const ensureLastSetsFetched = useCallback((exerciseId: number) => {
     if (!session) { return; }
     setLastSetsByExercise(prev => {
-      if (prev[exerciseId] !== undefined && prev[exerciseId] !== null) {
+      if (prev[exerciseId] !== undefined) {
         return prev; // already fetched (or in-flight) — skip
       }
       getLastSessionSets(exerciseId, session.id)
@@ -473,6 +473,16 @@ export function WorkoutScreen() {
       return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
     });
   }, [session]);
+
+  // Whenever a card becomes active, ensure its last-session data is fetched.
+  // Centralizes the lazy-load so every path that sets activeExerciseId
+  // (manual tap, initial session load, post-rest auto-advance, superset
+  // rotation, handleAddExercise) hydrates the GhostReference peek.
+  useEffect(() => {
+    if (activeExerciseId !== null) {
+      ensureLastSetsFetched(activeExerciseId);
+    }
+  }, [activeExerciseId, ensureLastSetsFetched]);
 
   // Post-rest auto-advance: when rest timer ends and last superset exercise triggered it,
   // auto-expand the FIRST exercise in the group for the next round
@@ -490,12 +500,11 @@ export function WorkoutScreen() {
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setActiveExerciseId(groupExerciseIds[0]);
-        ensureLastSetsFetched(groupExerciseIds[0]);
         // Sync ssCurrentByGroup so the NOW badge moves with the active card.
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: groupExerciseIds[0] }));
       }
     }
-  }, [isRunning, ensureLastSetsFetched]);
+  }, [isRunning]);
 
   // Seed + rehydrate per-exercise set state on session/exercise load
   useEffect(() => {
@@ -653,7 +662,6 @@ export function WorkoutScreen() {
         );
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
         setActiveExerciseId(nextMember);
-        ensureLastSetsFetched(nextMember);
       } else {
         // End-of-cycle (or single-member group): stay put, queue rest, mark round complete.
         setPendingRestExerciseId(exerciseId);
@@ -662,7 +670,7 @@ export function WorkoutScreen() {
     } else {
       setPendingRestExerciseId(exerciseId);
     }
-  }, [session, nextByExercise, exercises, setsByExercise, ensureLastSetsFetched]);
+  }, [session, nextByExercise, exercises, setsByExercise]);
 
   const handleDeleteSet = useCallback(async (exerciseId: number, setId: number) => {
     try {
@@ -704,8 +712,7 @@ export function WorkoutScreen() {
 
   const handleExpandExercise = useCallback((exerciseId: number) => {
     setActiveExerciseId(prev => (prev === exerciseId ? null : exerciseId));
-    ensureLastSetsFetched(exerciseId);
-  }, [ensureLastSetsFetched]);
+  }, []);
 
   const handleSupersetMemberSelect = useCallback((memberId: number) => {
     const groupId = exerciseSupersetMapRef.current.get(memberId);
