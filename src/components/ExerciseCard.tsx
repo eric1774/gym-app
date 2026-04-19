@@ -120,11 +120,16 @@ export function ExerciseCard({
     ? supersetBadge.color
     : getCategoryColor(exercise.category as ExerciseCategory);
 
-  const targetLabel = target
-    ? (isTimed
-        ? `${target.targetReps}s target`
-        : `${target.targetReps} × ${target.targetWeightLbs} lb`)
-    : '';
+  const lastLoggedWeight = sets.length > 0 ? sets[sets.length - 1].w : 0;
+  const liveWeight = next.w > 0 ? next.w : (lastLoggedWeight > 0 ? lastLoggedWeight : (target?.targetWeightLbs ?? 0));
+  const reps = target?.targetReps ?? next.r;
+
+  let targetLabel = '';
+  if (isTimed) {
+    targetLabel = reps > 0 ? `${reps}s target` : '';
+  } else if (liveWeight > 0 && reps > 0) {
+    targetLabel = `${reps} × ${isHeightReps ? `${liveWeight} in` : `${liveWeight} lb`}`;
+  }
 
   const prCount = sets.filter(s => s.isPR).length;
 
