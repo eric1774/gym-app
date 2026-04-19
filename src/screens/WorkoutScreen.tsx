@@ -753,13 +753,17 @@ export function WorkoutScreen() {
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
         setActiveExerciseId(nextMember);
       }
-      // Always start a rest after a superset log (V1 behavior change).
+      // Always queue a rest after a superset log (V1 behavior change).
       setPendingRestExerciseId(exerciseId);
-      lastSupersetRestRef.current = { groupId, exerciseId };
+      // Only mark "round complete" when the last member of the cycle was logged,
+      // so the post-rest auto-advance effect resets to member 0 for the next round.
+      if (idx === members.length - 1) {
+        lastSupersetRestRef.current = { groupId, exerciseId };
+      }
     } else {
       setPendingRestExerciseId(exerciseId);
     }
-  }, [session, nextByExercise, exercises]);
+  }, [session, nextByExercise, exercises, setsByExercise]);
 
   const handleDeleteSet = useCallback(async (exerciseId: number, setId: number) => {
     try {
