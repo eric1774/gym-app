@@ -542,7 +542,22 @@ export function WorkoutScreen() {
       }
       if (!cancelled) {
         setNextByExercise(seededNext);
-        setSetsByExercise(rehydratedSets);
+        // Preserve ephemeral isPR flags across rehydrations (e.g. when
+        // toggleExerciseComplete changes sessionExercises and retriggers
+        // this effect). DB rows have no isPR; merge by set id from prev.
+        setSetsByExercise(prev => {
+          const merged: Record<number, SetState[]> = {};
+          for (const exIdStr of Object.keys(rehydratedSets)) {
+            const exId = Number(exIdStr);
+            const prevById = new Map<number, boolean | undefined>();
+            for (const s of prev[exId] ?? []) { prevById.set(s.id, s.isPR); }
+            merged[exId] = rehydratedSets[exId].map(s => {
+              const pr = prevById.get(s.id);
+              return pr === undefined ? s : { ...s, isPR: pr };
+            });
+          }
+          return merged;
+        });
       }
     })();
 
