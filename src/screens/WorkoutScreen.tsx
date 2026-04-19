@@ -29,7 +29,7 @@ import { SetRow } from '../components/SetRow';
 import { SetState, PadTarget, ProgramTarget } from '../components/exerciseCardState';
 import { logSet, getLastSessionSets, deleteSet, checkForPR } from '../db/sets';
 import { RestTimerBanner } from '../components/RestTimerBanner';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
@@ -48,6 +48,7 @@ import { HRSettings } from '../types';
 import { getHRZone, computeMaxHR } from '../utils/hrZones';
 import { WarmupSection } from '../components/WarmupSection';
 import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
+import { ExerciseCard } from '../components/ExerciseCard';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -161,6 +162,7 @@ function useElapsedSeconds(startedAt: string | null): number {
 }
 
 const HISTORY_ICON_SIZE = 18;
+const CHECK_CIRCLE_SIZE = 28;
 
 function HistoryIcon({ color }: { color: string }) {
   return (
@@ -172,196 +174,55 @@ function HistoryIcon({ color }: { color: string }) {
   );
 }
 
-const CHECK_CIRCLE_SIZE = 28;
-
-interface ExerciseCardProps {
-  exerciseSession: ExerciseSession;
-  exerciseName: string;
-  isActive: boolean;
-  setCount: number;
-  pendingRest: boolean;
-  programTarget: ProgramTarget | null;
-  measurementType: ExerciseMeasurementType;
-  restSeconds: number;
-  insideSuperset?: boolean;
-  isLastInSuperset?: boolean;
-  sets: SetState[];
-  lastSets: WorkoutSet[] | null;
-  next: { w: number; r: number };
-  onPress: () => void;
-  onToggleComplete: () => void;
-  onLog: () => void;
-  onNextChange: (field: 'w' | 'r', value: number) => void;
-  onOpenPad: (field: 'w' | 'r') => void;
-  onDeleteSet: (setId: number) => void;
-  onEditTarget?: () => void;
-  onStartRest: () => void;
-  onViewHistory: () => void;
-  onRestChange: (newRestSeconds: number) => void;
-  onSwap?: () => void;
+interface CategoryHeaderProps {
+  category: ExerciseCategory;
+  done: number;
+  total: number;
 }
 
-function ExerciseCard({
-  exerciseSession,
-  exerciseName,
-  isActive,
-  setCount,
-  pendingRest,
-  programTarget,
-  measurementType,
-  restSeconds,
-  insideSuperset = false,
-  sets,
-  lastSets,
-  next,
-  onPress,
-  onToggleComplete,
-  onLog,
-  onNextChange,
-  onOpenPad,
-  onDeleteSet,
-  onEditTarget,
-  onStartRest,
-  onViewHistory,
-  onRestChange,
-  onSwap,
-}: ExerciseCardProps) {
-  const isComplete = exerciseSession.isComplete;
-  const [restStepperVisible, setRestStepperVisible] = useState(false);
-
+function CategoryHeader({ category, done, total }: CategoryHeaderProps) {
   return (
-    <TouchableOpacity
-      style={[
-        insideSuperset ? styles.cardInSuperset : styles.card,
-        isActive ? styles.cardActive : styles.cardInactive,
-        isComplete && styles.cardComplete,
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}>
-      <View style={[styles.cardHeader, insideSuperset && styles.cardHeaderInSuperset]}>
-        <View style={styles.cardNameContainer}>
-          <Text style={[styles.cardName, isComplete && styles.cardNameComplete]}>
-            {exerciseName}
-          </Text>
-          {!isActive && setCount > 0 && (
-            <Text style={styles.setCountLabel}>
-              {setCount} set{setCount !== 1 ? 's' : ''} logged
-            </Text>
-          )}
-        </View>
-        <View style={styles.cardHeaderRight}>
-          <TouchableOpacity
-            onPress={onViewHistory}
-            style={styles.historyButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}>
-            <HistoryIcon color={colors.secondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onSwap}
-            style={styles.historyButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}>
-            <Text style={{ fontSize: fontSize.base, color: colors.secondary }}>{'\u21C4'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onToggleComplete}
-            style={[
-              styles.checkCircle,
-              isComplete ? styles.checkCircleDone : styles.checkCirclePending,
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            {isComplete && (
-              <Text style={styles.checkIcon}>{'\u2713'}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {isActive && (
-        <View style={[styles.cardExpanded, insideSuperset && styles.cardExpandedInSuperset]}>
-          {/* Rest duration label + stepper */}
-          <TouchableOpacity
-            style={styles.restLabelRow}
-            onPress={() => setRestStepperVisible(v => !v)}
-            activeOpacity={0.7}>
-            <Text style={styles.restLabelText}>Rest: {restSeconds}s</Text>
-          </TouchableOpacity>
-          {restStepperVisible && (
-            <View style={styles.restStepperRow}>
-              <TouchableOpacity
-                style={[styles.restStepperButton, restSeconds <= 30 && styles.restStepperButtonDisabled]}
-                onPress={() => {
-                  if (restSeconds > 30) {
-                    onRestChange(restSeconds - 15);
-                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
-                  }
-                }}
-                disabled={restSeconds <= 30}
-                activeOpacity={0.7}>
-                <Text style={[styles.restStepperText, restSeconds <= 30 && styles.restStepperTextDisabled]}>-15</Text>
-              </TouchableOpacity>
-              <Text style={styles.restStepperValue}>{restSeconds}s</Text>
-              <TouchableOpacity
-                style={[styles.restStepperButton, restSeconds >= 180 && styles.restStepperButtonDisabled]}
-                onPress={() => {
-                  if (restSeconds < 180) {
-                    onRestChange(restSeconds + 15);
-                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
-                  }
-                }}
-                disabled={restSeconds >= 180}
-                activeOpacity={0.7}>
-                <Text style={[styles.restStepperText, restSeconds >= 180 && styles.restStepperTextDisabled]}>+15</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Logged sets */}
-          {sets.map(s => (
-            <SetRow
-              key={s.id}
-              setNumber={s.setNumber}
-              weightLbs={s.w}
-              reps={s.r}
-              type={s.isPR ? 'pr' : 'done'}
-              isTimed={measurementType === 'timed'}
-              isHeightReps={measurementType === 'height_reps'}
-              onDelete={() => onDeleteSet(s.id)}
-            />
-          ))}
-
-          {/* Last-session history peek */}
-          <GhostReference
-            sets={lastSets ?? []}
-            isTimed={measurementType === 'timed'}
-            isHeightReps={measurementType === 'height_reps'}
-          />
-
-          {/* Next-set panel */}
-          <NextSetPanel
-            setNumber={sets.length + 1}
-            measurementType={measurementType}
-            nextW={next.w}
-            nextR={next.r}
-            onNextChange={(field, value) => onNextChange(field, value)}
-            onOpenPad={(field) => onOpenPad(field)}
-            onLog={onLog}
-          />
-
-          {pendingRest && (
-            <TouchableOpacity
-              style={styles.startRestButton}
-              onPress={onStartRest}
-              activeOpacity={0.85}>
-              <Text style={styles.startRestText}>Start Rest Timer</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </TouchableOpacity>
+    <View style={categoryHeaderStyles.row}>
+      <View style={[categoryHeaderStyles.dot, { backgroundColor: getCategoryColor(category) }]} />
+      <Text style={categoryHeaderStyles.label}>{category}</Text>
+      <View style={categoryHeaderStyles.divider} />
+      <Text style={categoryHeaderStyles.counter}>{done}/{total}</Text>
+    </View>
   );
 }
+
+const categoryHeaderStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.secondary,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  counter: {
+    fontSize: 11,
+    color: colors.secondaryDim,
+    fontVariant: ['tabular-nums'],
+  },
+});
 
 interface SupersetContainerProps {
   groupId: number;
@@ -435,29 +296,25 @@ function SupersetContainer({
         const se = sessionExercises.find(s => s.exerciseId === exerciseId);
         if (!se) { return null; }
         const exercise = exercises.find(ex => ex.id === exerciseId);
-        const name = exercise?.name ?? `Exercise ${exerciseId}`;
+        if (!exercise) { return null; }
         const isActive = activeExerciseId === exerciseId;
-        const setCount = setCountsByExercise[exerciseId] ?? 0;
-        const isLast = index === exerciseIds.length - 1;
 
         return (
           <View key={exerciseId}>
             {index > 0 && <View style={supersetStyles.divider} />}
             <ExerciseCard
               exerciseSession={se}
-              exerciseName={name}
+              exercise={exercise}
               isActive={isActive}
-              setCount={setCount}
               pendingRest={pendingRestExerciseId === exerciseId}
               programTarget={programTargetsMap.get(exerciseId) ?? null}
-              measurementType={exercise?.measurementType ?? 'reps'}
+              measurementType={exercise.measurementType ?? 'reps'}
               restSeconds={restOverrides[exerciseId] ?? se.restSeconds}
               insideSuperset={true}
-              isLastInSuperset={isLast}
               sets={sets[exerciseId] ?? []}
               lastSets={lastSets[exerciseId] ?? null}
               next={next[exerciseId] ?? { w: 0, r: 0 }}
-              onPress={() => onPressExercise(exerciseId, isActive)}
+              onExpand={() => onPressExercise(exerciseId, isActive)}
               onToggleComplete={() => onToggleComplete(exerciseId)}
               onLog={() => onLog(exerciseId)}
               onNextChange={(field, value) => onNextChange(exerciseId, field, value)}
@@ -465,7 +322,6 @@ function SupersetContainer({
               onDeleteSet={(setId) => onDeleteSet(exerciseId, setId)}
               onEditTarget={() => onEditTarget(exerciseId)}
               onStartRest={() => onStartRest(exerciseId)}
-              onViewHistory={() => onViewHistory(exerciseId)}
               onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
               onSwap={() => onSwap(exerciseId)}
             />
@@ -1398,31 +1254,30 @@ export function WorkoutScreen() {
             // Category section
             return (
               <View key={section.category}>
-                <View style={[styles.categoryHeader, (sectionIdx > 0) && styles.categoryHeaderSpaced]}>
-                  <Text style={styles.categoryLabel}>{section.category.toUpperCase()}</Text>
-                  <View style={styles.categoryLine} />
-                </View>
+                <CategoryHeader
+                  category={section.category}
+                  done={section.items.filter(i => i.isComplete).length}
+                  total={section.items.length}
+                />
                 <View style={styles.categoryContainer}>
                   {section.items.map((se) => {
                     const exercise = exercises.find(ex => ex.id === se.exerciseId);
-                    const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
+                    if (!exercise) { return null; }
                     const isActive = activeExerciseId === se.exerciseId;
-                    const setCount = setCountsByExercise[se.exerciseId] ?? 0;
                     return (
                       <ExerciseCard
                         key={se.exerciseId}
                         exerciseSession={se}
-                        exerciseName={name}
+                        exercise={exercise}
                         isActive={isActive}
-                        setCount={setCount}
                         pendingRest={pendingRestExerciseId === se.exerciseId}
                         programTarget={programTargetsMap.get(se.exerciseId) ?? null}
-                        measurementType={exercise?.measurementType ?? 'reps'}
+                        measurementType={exercise.measurementType ?? 'reps'}
                         restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
                         sets={setsByExercise[se.exerciseId] ?? []}
                         lastSets={lastSetsByExercise[se.exerciseId] ?? null}
                         next={nextByExercise[se.exerciseId] ?? { w: 0, r: 0 }}
-                        onPress={() => handleExpandExercise(se.exerciseId)}
+                        onExpand={() => handleExpandExercise(se.exerciseId)}
                         onToggleComplete={() => handleToggleComplete(se.exerciseId)}
                         onLog={() => handleLog(se.exerciseId)}
                         onNextChange={(field, value) => handleNextChange(se.exerciseId, field, value)}
@@ -1430,7 +1285,6 @@ export function WorkoutScreen() {
                         onDeleteSet={(setId) => handleDeleteSet(se.exerciseId, setId)}
                         onEditTarget={() => handleEditTarget(se.exerciseId)}
                         onStartRest={() => handleStartRest(se.exerciseId)}
-                        onViewHistory={() => handleViewHistory(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
                         onSwap={() => setSwapTarget(exercise ?? null)}
                       />
