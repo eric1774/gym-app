@@ -15,7 +15,7 @@ import { Backspace } from './icons';
 
 interface NumberPadProps {
   visible: boolean;
-  field: 'weight' | 'reps';
+  field: 'weight' | 'reps' | 'height';
   initialValue: number;
   label?: string;          // e.g. "BENCH PRESS"
   onCommit: (value: number) => void;
@@ -76,7 +76,9 @@ export function NumberPad({ visible, field, initialValue, label, onCommit, onCan
     onCommit(v);
   };
 
-  const unitLabel = field === 'weight' ? 'pounds' : 'reps';
+  const unitLabel = field === 'weight' ? 'pounds'
+    : field === 'height' ? 'inches'
+    : 'reps';
   const displayValue = buf || '0';
 
   return (

@@ -18,7 +18,8 @@ export interface NextSet {
 
 export interface PadTarget {
   exerciseId: number;
-  field: 'w' | 'r';
+  field: 'w' | 'r';                        // semantic field on the exercise (weight/reps slot)
+  numberPadField: 'weight' | 'reps' | 'height'; // display label for NumberPad
   initialValue: number;
   label: string;           // exercise name for eyebrow
 }

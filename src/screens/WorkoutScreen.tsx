@@ -1044,10 +1044,15 @@ export function WorkoutScreen() {
 
   const handleOpenPad = useCallback((exerciseId: number, field: 'w' | 'r') => {
     const next = nextByExercise[exerciseId];
-    const name = exercises.find(e => e.id === exerciseId)?.name ?? '';
+    const exercise = exercises.find(e => e.id === exerciseId);
+    const name = exercise?.name ?? '';
+    const isHeightReps = exercise?.measurementType === 'height_reps';
+    const numberPadField: 'weight' | 'reps' | 'height' =
+      field === 'r' ? 'reps' : (isHeightReps ? 'height' : 'weight');
     setPad({
       exerciseId,
       field,
+      numberPadField,
       initialValue: next ? (field === 'w' ? next.w : next.r) : 0,
       label: name,
     });
@@ -1517,7 +1522,7 @@ export function WorkoutScreen() {
 
       <NumberPad
         visible={pad !== null}
-        field={pad?.field === 'w' ? 'weight' : 'reps'}
+        field={pad?.numberPadField ?? 'weight'}
         initialValue={pad?.initialValue ?? 0}
         label={pad?.label}
         onCancel={() => setPad(null)}

@@ -114,7 +114,7 @@ export function NextSetPanel({
       ) : (
         <View style={styles.stepperColumn}>
           <StepperRow
-            label="WEIGHT"
+            label={isHeightReps ? 'HEIGHT' : 'WEIGHT'}
             value={nextW}
             unit={weightUnit}
             step={weightStep}
