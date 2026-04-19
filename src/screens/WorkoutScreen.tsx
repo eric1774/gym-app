@@ -958,13 +958,21 @@ export function WorkoutScreen() {
       return;
     }
 
-    // PR check — only for reps-based, non-warmup sets
+    // PR check — only for reps-based, non-warmup sets.
+    // Also exclude when an in-session set at the same rep count already
+    // matched or exceeded this weight (otherwise checkForPR would still
+    // fire because it ignores the current session in its DB query).
     let isPR = false;
     if (!isTimed && !newSet.isWarmup) {
-      try {
-        isPR = await checkForPR(exerciseId, w, r, session.id);
-      } catch {
-        isPR = false;
+      const inSessionMaxAtSameReps = (setsByExercise[exerciseId] ?? [])
+        .filter(s => !s.isWarmup && s.r === r)
+        .reduce((max, s) => Math.max(max, s.w), 0);
+      if (w > inSessionMaxAtSameReps) {
+        try {
+          isPR = await checkForPR(exerciseId, w, r, session.id);
+        } catch {
+          isPR = false;
+        }
       }
     }
 
