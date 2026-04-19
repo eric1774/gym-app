@@ -760,7 +760,15 @@ export function WorkoutScreen() {
       next.set(editingExerciseId, { pdeId, targetSets: sets, targetReps: reps, targetWeightLbs: weight });
       return next;
     });
+    // Also update nextByExercise so the meta row + stepper reflect the new targets.
+    setNextByExercise(prev => ({
+      ...prev,
+      [editingExerciseId]: { w: weight, r: reps },
+    }));
     setEditingExerciseId(null);
+    // pdeId <= 0 is a sentinel for swapped-in exercises that have no program_day_exercises
+    // row. Persist session-local only — do not hit the DB.
+    if (pdeId <= 0) { return; }
     try {
       await updateExerciseTargets(pdeId, sets, reps, weight);
     } catch {
@@ -783,19 +791,35 @@ export function WorkoutScreen() {
   }, [editingExerciseId, exercises]);
 
   const editingDayExercise = useMemo((): ProgramDayExercise | null => {
-    if (editingExerciseId === null || !programTargetsMap.has(editingExerciseId) || !programDayId) { return null; }
-    const target = programTargetsMap.get(editingExerciseId)!;
+    if (editingExerciseId === null) { return null; }
+    const target = programTargetsMap.get(editingExerciseId);
+    if (target && programDayId) {
+      return {
+        id: target.pdeId,
+        programDayId,
+        exerciseId: editingExerciseId,
+        targetSets: target.targetSets,
+        targetReps: target.targetReps,
+        targetWeightLbs: target.targetWeightLbs,
+        sortOrder: 0,
+        supersetGroupId: null,
+      };
+    }
+    // Swapped-in exercise with no program_day_exercises row: synthesize a
+    // session-local day-exercise with sentinel pdeId=-1 so the EditTargetsModal
+    // can seed values from the user's current next-set dial.
+    const next = nextByExercise[editingExerciseId] ?? { w: 0, r: 0 };
     return {
-      id: target.pdeId,
-      programDayId,
+      id: -1,
+      programDayId: programDayId ?? -1,
       exerciseId: editingExerciseId,
-      targetSets: target.targetSets,
-      targetReps: target.targetReps,
-      targetWeightLbs: target.targetWeightLbs,
+      targetSets: 3,
+      targetReps: next.r > 0 ? next.r : 10,
+      targetWeightLbs: next.w,
       sortOrder: 0,
       supersetGroupId: null,
     };
-  }, [editingExerciseId, programDayId, programTargetsMap]);
+  }, [editingExerciseId, programDayId, programTargetsMap, nextByExercise]);
 
   const handleRestChange = useCallback(
     (exerciseId: number, newRestSeconds: number) => {
