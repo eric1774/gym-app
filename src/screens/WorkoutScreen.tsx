@@ -1317,9 +1317,9 @@ export function WorkoutScreen() {
       <WorkoutHeader
         title={programDayName ?? 'WORKOUT'}
         elapsed={elapsed}
-        volume={0}
-        setCount={0}
-        prCount={0}
+        volume={volumeTotal}
+        setCount={Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0)}
+        prCount={prCount}
         hr={{
           bpm: deviceState === 'connected' ? currentBpm : null,
           zone: (bpmZone?.zone ?? null) as HrZone | null,
