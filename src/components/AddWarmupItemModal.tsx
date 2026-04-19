@@ -395,7 +395,7 @@ export function AddWarmupItemModal({
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
   keyboardAvoid: {
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl,
     paddingHorizontal: spacing.base,
-    maxHeight: '85%',
+    height: '85%',
   },
   sheetTitle: {
     fontSize: fontSize.lg,
