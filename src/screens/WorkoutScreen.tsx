@@ -22,7 +22,13 @@ import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
 import { SwapSheet } from '../components/SwapSheet';
 import { getSetsForExerciseInSession } from '../db';
-import { SetLoggingPanel, ProgramTarget } from '../components/SetLoggingPanel';
+import { ProgramTarget } from '../components/SetLoggingPanel';
+import { GhostReference } from '../components/GhostReference';
+import { NextSetPanel } from '../components/NextSetPanel';
+import { NumberPad } from '../components/NumberPad';
+import { SetRow } from '../components/SetRow';
+import { SetState, PadTarget } from '../components/exerciseCardState';
+import { logSet, getLastSessionSets, deleteSet, checkForPR } from '../db/sets';
 import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -32,7 +38,6 @@ import { getProgramDayExercises, updateExerciseTargets } from '../db/programs';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
-import { checkForPR } from '../db/sets';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
 import { useHeartRate } from '../context/HeartRateContext';
@@ -175,17 +180,21 @@ interface ExerciseCardProps {
   exerciseName: string;
   isActive: boolean;
   setCount: number;
-  sessionId: number;
   pendingRest: boolean;
   programTarget: ProgramTarget | null;
   measurementType: ExerciseMeasurementType;
   restSeconds: number;
   insideSuperset?: boolean;
   isLastInSuperset?: boolean;
+  sets: SetState[];
+  lastSets: WorkoutSet[] | null;
+  next: { w: number; r: number };
   onPress: () => void;
   onToggleComplete: () => void;
-  onSetLogged: (set: WorkoutSet) => void;
-  onSetDeleted: (set: WorkoutSet) => void;
+  onLog: () => void;
+  onNextChange: (field: 'w' | 'r', value: number) => void;
+  onOpenPad: (field: 'w' | 'r') => void;
+  onDeleteSet: (setId: number) => void;
   onEditTarget?: () => void;
   onStartRest: () => void;
   onViewHistory: () => void;
@@ -198,16 +207,20 @@ function ExerciseCard({
   exerciseName,
   isActive,
   setCount,
-  sessionId,
   pendingRest,
   programTarget,
   measurementType,
   restSeconds,
   insideSuperset = false,
+  sets,
+  lastSets,
+  next,
   onPress,
   onToggleComplete,
-  onSetLogged,
-  onSetDeleted,
+  onLog,
+  onNextChange,
+  onOpenPad,
+  onDeleteSet,
   onEditTarget,
   onStartRest,
   onViewHistory,
@@ -304,15 +317,39 @@ function ExerciseCard({
               </TouchableOpacity>
             </View>
           )}
-          <SetLoggingPanel
-            sessionId={sessionId}
-            exerciseId={exerciseSession.exerciseId}
-            onSetLogged={onSetLogged}
-            onSetDeleted={onSetDeleted}
-            onEditTarget={onEditTarget}
-            programTarget={programTarget}
-            measurementType={measurementType}
+
+          {/* Logged sets */}
+          {sets.map(s => (
+            <SetRow
+              key={s.id}
+              setNumber={s.setNumber}
+              weightLbs={s.w}
+              reps={s.r}
+              type={s.isPR ? 'pr' : 'done'}
+              isTimed={measurementType === 'timed'}
+              isHeightReps={measurementType === 'height_reps'}
+              onDelete={() => onDeleteSet(s.id)}
+            />
+          ))}
+
+          {/* Last-session history peek */}
+          <GhostReference
+            sets={lastSets ?? []}
+            isTimed={measurementType === 'timed'}
+            isHeightReps={measurementType === 'height_reps'}
           />
+
+          {/* Next-set panel */}
+          <NextSetPanel
+            setNumber={sets.length + 1}
+            measurementType={measurementType}
+            nextW={next.w}
+            nextR={next.r}
+            onNextChange={(field, value) => onNextChange(field, value)}
+            onOpenPad={(field) => onOpenPad(field)}
+            onLog={onLog}
+          />
+
           {pendingRest && (
             <TouchableOpacity
               style={styles.startRestButton}
@@ -337,11 +374,15 @@ interface SupersetContainerProps {
   pendingRestExerciseId: number | null;
   programTargetsMap: Map<number, ProgramTarget>;
   restOverrides: Record<number, number>;
-  sessionId: number;
+  sets: Record<number, SetState[]>;
+  lastSets: Record<number, WorkoutSet[] | null>;
+  next: Record<number, { w: number; r: number }>;
   onPressExercise: (exerciseId: number, isActive: boolean) => void;
   onToggleComplete: (exerciseId: number) => void;
-  onSetLogged: (exerciseId: number, set: WorkoutSet) => void;
-  onSetDeleted: (exerciseId: number, set: WorkoutSet) => void;
+  onLog: (id: number) => void;
+  onNextChange: (id: number, field: 'w' | 'r', value: number) => void;
+  onOpenPad: (id: number, field: 'w' | 'r') => void;
+  onDeleteSet: (id: number, setId: number) => void;
   onEditTarget: (exerciseId: number) => void;
   onStartRest: (exerciseId: number) => void;
   onViewHistory: (exerciseId: number) => void;
@@ -359,11 +400,15 @@ function SupersetContainer({
   pendingRestExerciseId,
   programTargetsMap,
   restOverrides,
-  sessionId,
+  sets,
+  lastSets,
+  next,
   onPressExercise,
   onToggleComplete,
-  onSetLogged,
-  onSetDeleted,
+  onLog,
+  onNextChange,
+  onOpenPad,
+  onDeleteSet,
   onEditTarget,
   onStartRest,
   onViewHistory,
@@ -404,17 +449,21 @@ function SupersetContainer({
               exerciseName={name}
               isActive={isActive}
               setCount={setCount}
-              sessionId={sessionId}
               pendingRest={pendingRestExerciseId === exerciseId}
               programTarget={programTargetsMap.get(exerciseId) ?? null}
               measurementType={exercise?.measurementType ?? 'reps'}
               restSeconds={restOverrides[exerciseId] ?? se.restSeconds}
               insideSuperset={true}
               isLastInSuperset={isLast}
+              sets={sets[exerciseId] ?? []}
+              lastSets={lastSets[exerciseId] ?? null}
+              next={next[exerciseId] ?? { w: 0, r: 0 }}
               onPress={() => onPressExercise(exerciseId, isActive)}
               onToggleComplete={() => onToggleComplete(exerciseId)}
-              onSetLogged={(set) => onSetLogged(exerciseId, set)}
-              onSetDeleted={(set) => onSetDeleted(exerciseId, set)}
+              onLog={() => onLog(exerciseId)}
+              onNextChange={(field, value) => onNextChange(exerciseId, field, value)}
+              onOpenPad={(field) => onOpenPad(exerciseId, field)}
+              onDeleteSet={(setId) => onDeleteSet(exerciseId, setId)}
               onEditTarget={() => onEditTarget(exerciseId)}
               onStartRest={() => onStartRest(exerciseId)}
               onViewHistory={() => onViewHistory(exerciseId)}
@@ -584,12 +633,9 @@ export function WorkoutScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showWarmupPicker, setShowWarmupPicker] = useState(false);
   const [showWarmupStartPrompt, setShowWarmupStartPrompt] = useState(false);
-  const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
-  const [volumeTotal, setVolumeTotal] = useState(0);
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
-  const [prCount, setPrCount] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState<{
     duration: number;
@@ -605,6 +651,44 @@ export function WorkoutScreen() {
   const prToastRef = useRef<PRToastHandle>(null);
   // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
   const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
+
+  // ─── Phase 7: hoisted per-exercise set state ────────────────────────────
+  const [setsByExercise, setSetsByExercise] = useState<Record<number, SetState[]>>({});
+  const [nextByExercise, setNextByExercise] = useState<Record<number, { w: number; r: number }>>({});
+  const [lastSetsByExercise, setLastSetsByExercise] = useState<Record<number, WorkoutSet[] | null>>({});
+  const [pad, setPad] = useState<PadTarget | null>(null);
+
+  // Derived aggregates — match old handleSetLogged exclusions
+  const volumeTotal = useMemo(() => {
+    let total = 0;
+    for (const exIdStr in setsByExercise) {
+      const exId = Number(exIdStr);
+      const ex = exercises.find(e => e.id === exId);
+      if (!ex) { continue; }
+      if (ex.measurementType === 'timed' || ex.measurementType === 'height_reps') { continue; }
+      for (const s of setsByExercise[exId]) {
+        if (s.isWarmup) { continue; }
+        total += s.w * s.r;
+      }
+    }
+    return total;
+  }, [setsByExercise, exercises]);
+
+  const setCountsByExercise = useMemo<Record<number, number>>(() => {
+    const counts: Record<number, number> = {};
+    for (const exIdStr in setsByExercise) {
+      counts[Number(exIdStr)] = setsByExercise[Number(exIdStr)].length;
+    }
+    return counts;
+  }, [setsByExercise]);
+
+  const prCount = useMemo(() => {
+    let c = 0;
+    for (const exIdStr in setsByExercise) {
+      for (const s of setsByExercise[Number(exIdStr)]) { if (s.isPR) { c += 1; } }
+    }
+    return c;
+  }, [setsByExercise]);
 
   // Stable reference for SwapSheet — avoids useEffect re-fire on every render
   const excludeIdsForSwap = useMemo(
@@ -782,6 +866,49 @@ export function WorkoutScreen() {
     }
   }, [isRunning]);
 
+  // Seed + rehydrate per-exercise set state on session/exercise load
+  useEffect(() => {
+    if (!session) {
+      setSetsByExercise({});
+      setNextByExercise({});
+      setLastSetsByExercise({});
+      return;
+    }
+    let cancelled = false;
+
+    (async () => {
+      const seededNext: Record<number, { w: number; r: number }> = {};
+      const rehydratedSets: Record<number, SetState[]> = {};
+      for (const se of sessionExercises) {
+        const tgt = programTargetsMap.get(se.exerciseId);
+        seededNext[se.exerciseId] = {
+          w: tgt?.targetWeightLbs ?? 0,
+          r: tgt?.targetReps ?? 0,
+        };
+        const existing = await getSetsForExerciseInSession(session.id, se.exerciseId);
+        rehydratedSets[se.exerciseId] = existing.map(s => ({
+          id: s.id,
+          setNumber: s.setNumber,
+          w: s.weightLbs,
+          r: s.reps,
+          isWarmup: s.isWarmup,
+          // isPR intentionally undefined — ephemeral
+        }));
+        // Prefer last existing set over program target for next seeded values
+        if (existing.length > 0) {
+          const last = existing[existing.length - 1];
+          seededNext[se.exerciseId] = { w: last.weightLbs, r: last.reps };
+        }
+      }
+      if (!cancelled) {
+        setNextByExercise(seededNext);
+        setSetsByExercise(rehydratedSets);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [session, sessionExercises, programTargetsMap]);
+
   const handleWarmupTemplateSelect = useCallback(async (templateId: number) => {
     await loadWarmupTemplate(templateId);
     setShowWarmupPicker(false);
@@ -810,13 +937,70 @@ export function WorkoutScreen() {
     [toggleExerciseComplete],
   );
 
-  const handleSetLogged = useCallback((exerciseId: number, set: WorkoutSet) => {
-    setSetCountsByExercise(prev => ({
+  const handleLog = useCallback(async (exerciseId: number) => {
+    if (!session) { return; }
+    const next = nextByExercise[exerciseId];
+    if (!next) { return; }
+
+    const exercise = exercises.find(e => e.id === exerciseId);
+    const isTimed = exercise?.measurementType === 'timed';
+    const isHeightReps = exercise?.measurementType === 'height_reps';
+
+    // Timed sets read duration from nextR directly (stopwatch path is deferred to Task 7.x timed support)
+    const w = isTimed ? 0 : next.w;
+    const r = next.r;
+    if (r <= 0) { return; }
+    if (!isTimed && w < 0) { return; }
+
+    let newSet: WorkoutSet;
+    try {
+      newSet = await logSet(session.id, exerciseId, w, r);
+    } catch {
+      return;
+    }
+
+    // PR check — only for reps-based, non-warmup sets
+    let isPR = false;
+    if (!isTimed && !newSet.isWarmup) {
+      try {
+        isPR = await checkForPR(exerciseId, w, r, session.id);
+      } catch {
+        isPR = false;
+      }
+    }
+
+    setSetsByExercise(prev => ({
       ...prev,
-      [exerciseId]: (prev[exerciseId] ?? 0) + 1,
+      [exerciseId]: [
+        ...(prev[exerciseId] ?? []),
+        {
+          id: newSet.id,
+          setNumber: newSet.setNumber,
+          w: newSet.weightLbs,
+          r: newSet.reps,
+          isWarmup: newSet.isWarmup,
+          isPR,
+        },
+      ],
     }));
 
-    // Superset auto-advance: check if this exercise is in a superset group
+    if (isPR) {
+      const name = exercise?.name ?? 'Exercise';
+      const unit = isHeightReps ? 'in' : 'lbs';
+      prToastRef.current?.showPR(name, newSet.reps, newSet.weightLbs, unit);
+      HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+      setTimeout(() => {
+        HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+      }, 400);
+    }
+
+    // Pre-fill next set with just-logged values
+    setNextByExercise(prev => ({
+      ...prev,
+      [exerciseId]: { w: newSet.weightLbs, r: newSet.reps },
+    }));
+
+    // Superset rotation — preserves existing behavior
     const groupId = exerciseSupersetMapRef.current.get(exerciseId);
     if (groupId !== undefined) {
       const groupExerciseIds = supersetGroupsRef.current.get(groupId) ?? [];
@@ -824,54 +1008,66 @@ export function WorkoutScreen() {
       const isLastInGroup = currentIndex === groupExerciseIds.length - 1;
 
       if (!isLastInGroup) {
-        // Not the last exercise — auto-advance to next, suppress rest timer
         const nextExerciseId = groupExerciseIds[currentIndex + 1];
         LayoutAnimation.configureNext(
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setActiveExerciseId(nextExerciseId);
-        // Do NOT set pendingRestExerciseId — rest is suppressed for non-last exercises
+        // Do NOT set pendingRest — rest suppressed for non-last superset member
       } else {
-        // Last exercise in group — show rest timer as normal, track for post-rest advance
         setPendingRestExerciseId(exerciseId);
         lastSupersetRestRef.current = { groupId, exerciseId };
       }
     } else {
-      // Not in a superset — normal behavior
       setPendingRestExerciseId(exerciseId);
     }
+  }, [session, nextByExercise, exercises]);
 
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
-      if (exercise?.measurementType !== 'height_reps') {
-        setVolumeTotal(prev => prev + set.weightLbs * set.reps);
-      }
-
-      checkForPR(exerciseId, set.weightLbs, set.reps, session!.id).then(isPR => {
-        if (isPR) {
-          setPrCount(prev => prev + 1);
-          const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
-          const unit = exercise?.measurementType === 'height_reps' ? 'in' : 'lbs';
-          prToastRef.current?.showPR(name, set.reps, set.weightLbs, unit);
-          HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-          setTimeout(() => {
-            HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-          }, 400);
-        }
-      }).catch(() => {});
+  const handleDeleteSet = useCallback(async (exerciseId: number, setId: number) => {
+    try {
+      await deleteSet(setId);
+    } catch {
+      return;
     }
-  }, [exercises, session]);
-
-  const handleSetDeleted = useCallback((exerciseId: number, set: WorkoutSet) => {
-    setSetCountsByExercise(prev => ({
+    setSetsByExercise(prev => ({
       ...prev,
-      [exerciseId]: Math.max((prev[exerciseId] ?? 0) - 1, 0),
+      [exerciseId]: (prev[exerciseId] ?? []).filter(s => s.id !== setId),
     }));
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    if (!set.isWarmup && exercise?.measurementType !== 'timed' && exercise?.measurementType !== 'height_reps') {
-      setVolumeTotal(prev => Math.max(prev - set.weightLbs * set.reps, 0));
+  }, []);
+
+  const handleOpenPad = useCallback((exerciseId: number, field: 'w' | 'r') => {
+    const next = nextByExercise[exerciseId];
+    const name = exercises.find(e => e.id === exerciseId)?.name ?? '';
+    setPad({
+      exerciseId,
+      field,
+      initialValue: next ? (field === 'w' ? next.w : next.r) : 0,
+      label: name,
+    });
+  }, [nextByExercise, exercises]);
+
+  const handleNextChange = useCallback((exerciseId: number, field: 'w' | 'r', value: number) => {
+    setNextByExercise(prev => ({
+      ...prev,
+      [exerciseId]: {
+        w: field === 'w' ? value : prev[exerciseId]?.w ?? 0,
+        r: field === 'r' ? value : prev[exerciseId]?.r ?? 0,
+      },
+    }));
+  }, []);
+
+  const handleExpandExercise = useCallback(async (exerciseId: number) => {
+    setActiveExerciseId(prev => (prev === exerciseId ? null : exerciseId));
+    if (!session) { return; }
+    if (lastSetsByExercise[exerciseId] === undefined || lastSetsByExercise[exerciseId] === null) {
+      try {
+        const sets = await getLastSessionSets(exerciseId, session.id);
+        setLastSetsByExercise(prev => ({ ...prev, [exerciseId]: sets }));
+      } catch {
+        setLastSetsByExercise(prev => ({ ...prev, [exerciseId]: [] }));
+      }
     }
-  }, [exercises]);
+  }, [session, lastSetsByExercise]);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
@@ -988,11 +1184,8 @@ export function WorkoutScreen() {
     setShowSummary(false);
     setSummaryData(null);
     setActiveExerciseId(null);
-    setSetCountsByExercise({});
     setPendingRestExerciseId(null);
-    setVolumeTotal(0);
     setRestOverrides({});
-    setPrCount(0);
     (navigation as any).navigate('DashboardTab');
   }, [navigation]);
 
@@ -1015,11 +1208,8 @@ export function WorkoutScreen() {
               if (isRunning) { stopTimer(); }
               await endSession();
               setActiveExerciseId(null);
-              setSetCountsByExercise({});
               setPendingRestExerciseId(null);
-              setVolumeTotal(0);
               setRestOverrides({});
-              setPrCount(0);
               if (wasProgramWorkout) {
                 (navigation as any).navigate('ProgramsTab');
               }
@@ -1168,13 +1358,17 @@ export function WorkoutScreen() {
                   pendingRestExerciseId={pendingRestExerciseId}
                   programTargetsMap={programTargetsMap}
                   restOverrides={restOverrides}
-                  sessionId={session.id}
+                  sets={setsByExercise}
+                  lastSets={lastSetsByExercise}
+                  next={nextByExercise}
                   onPressExercise={(exerciseId, isActive) =>
-                    setActiveExerciseId(isActive ? null : exerciseId)
+                    handleExpandExercise(exerciseId)
                   }
                   onToggleComplete={handleToggleComplete}
-                  onSetLogged={handleSetLogged}
-                  onSetDeleted={handleSetDeleted}
+                  onLog={handleLog}
+                  onNextChange={handleNextChange}
+                  onOpenPad={handleOpenPad}
+                  onDeleteSet={handleDeleteSet}
                   onEditTarget={handleEditTarget}
                   onStartRest={handleStartRest}
                   onViewHistory={handleViewHistory}
@@ -1207,15 +1401,19 @@ export function WorkoutScreen() {
                         exerciseName={name}
                         isActive={isActive}
                         setCount={setCount}
-                        sessionId={session.id}
                         pendingRest={pendingRestExerciseId === se.exerciseId}
                         programTarget={programTargetsMap.get(se.exerciseId) ?? null}
                         measurementType={exercise?.measurementType ?? 'reps'}
                         restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
-                        onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
+                        sets={setsByExercise[se.exerciseId] ?? []}
+                        lastSets={lastSetsByExercise[se.exerciseId] ?? null}
+                        next={nextByExercise[se.exerciseId] ?? { w: 0, r: 0 }}
+                        onPress={() => handleExpandExercise(se.exerciseId)}
                         onToggleComplete={() => handleToggleComplete(se.exerciseId)}
-                        onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-                        onSetDeleted={(set) => handleSetDeleted(se.exerciseId, set)}
+                        onLog={() => handleLog(se.exerciseId)}
+                        onNextChange={(field, value) => handleNextChange(se.exerciseId, field, value)}
+                        onOpenPad={(field) => handleOpenPad(se.exerciseId, field)}
+                        onDeleteSet={(setId) => handleDeleteSet(se.exerciseId, setId)}
                         onEditTarget={() => handleEditTarget(se.exerciseId)}
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onViewHistory={() => handleViewHistory(se.exerciseId)}
@@ -1306,6 +1504,20 @@ export function WorkoutScreen() {
           }
         }}
         onClose={() => setSwapTarget(null)}
+      />
+
+      <NumberPad
+        visible={pad !== null}
+        field={pad?.field === 'w' ? 'weight' : 'reps'}
+        initialValue={pad?.initialValue ?? 0}
+        label={pad?.label}
+        onCancel={() => setPad(null)}
+        onCommit={(v) => {
+          if (pad) {
+            handleNextChange(pad.exerciseId, pad.field, v);
+          }
+          setPad(null);
+        }}
       />
 
       <WarmupTemplatePicker
