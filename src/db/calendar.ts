@@ -171,35 +171,49 @@ export async function getDaySessionDetails(
       }
     }
 
-    // PR detection: for each non-warmup set, check if volume (weight_lbs * reps)
-    // exceeds the max volume for that exercise across working sets in prior sessions.
-    // Consistent with Phase 10 decision: first-ever performance returns false (no baseline).
+    // PR detection: matches the active-workout rule in src/db/sets.ts#checkForPR.
+    // A non-warmup set is a PR when its weight strictly exceeds the max weight ever
+    // logged for that (exercise, reps) pair in earlier completed sessions AND the
+    // max weight seen earlier at the same rep count within this same session.
+    // First-ever performance returns false (no baseline to beat).
     const exercises: CalendarExerciseDetail[] = [];
     let prCount = 0;
 
     for (const exId of exerciseOrder) {
       const exData = exerciseMap.get(exId)!;
 
-      // Get max volume per set for this exercise in ALL prior completed sessions
+      // Max weight grouped by rep count across all prior completed sessions.
       const priorMaxResult = await executeSql(
         database,
-        `SELECT MAX(ws.weight_kg * ws.reps) AS max_volume
+        `SELECT ws.reps, MAX(ws.weight_kg) AS max_weight
          FROM workout_sets ws
          INNER JOIN workout_sessions wss ON wss.id = ws.session_id
          WHERE ws.exercise_id = ?
            AND ws.is_warmup = 0
            AND wss.completed_at IS NOT NULL
-           AND wss.completed_at < ?`,
+           AND wss.completed_at < ?
+         GROUP BY ws.reps`,
         [exId, session.completed_at],
       );
 
-      const priorMax: number | null = priorMaxResult.rows.item(0).max_volume;
+      const priorMaxByReps = new Map<number, number>();
+      for (let i = 0; i < priorMaxResult.rows.length; i++) {
+        const row = priorMaxResult.rows.item(i);
+        priorMaxByReps.set(row.reps, row.max_weight);
+      }
+
+      const inSessionMaxByReps = new Map<number, number>();
 
       const setDetails: CalendarSetDetail[] = exData.sets.map(s => {
         let isPR = false;
-        if (!s.isWarmup && priorMax !== null) {
-          isPR = (s.weightLbs * s.reps) > priorMax;
-          if (isPR) { prCount++; }
+        if (!s.isWarmup) {
+          const priorMax = priorMaxByReps.get(s.reps);
+          const inSessionMax = inSessionMaxByReps.get(s.reps) ?? 0;
+          if (priorMax !== undefined && s.weightLbs > priorMax && s.weightLbs > inSessionMax) {
+            isPR = true;
+            prCount++;
+          }
+          inSessionMaxByReps.set(s.reps, Math.max(inSessionMax, s.weightLbs));
         }
         return {
           setNumber: s.setNumber,

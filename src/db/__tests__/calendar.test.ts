@@ -148,10 +148,13 @@ describe('getDaySessionDetails', () => {
         { set_number: 2, weight_kg: 110, reps: 6, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
       ]),
     );
-    // Call 3: SELECT max_volume for exercise_id=1 prior sessions → {max_volume: 700}
-    // 100*8=800 > 700 → isPR=true; 110*6=660 < 700 → isPR=false
+    // Call 3: max weight grouped by reps for prior completed sessions
+    // 8 reps prior max = 95 → 100 > 95 → isPR; 6 reps prior max = 115 → 110 <= 115 → not PR
     mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ max_volume: 700 }]),
+      mockResultSet([
+        { reps: 8, max_weight: 95 },
+        { reps: 6, max_weight: 115 },
+      ]),
     );
 
     const result = await getDaySessionDetails('2026-03-15');
@@ -170,7 +173,7 @@ describe('getDaySessionDetails', () => {
     expect(detail.exercises[0].sets[1].isPR).toBe(false);
   });
 
-  it('sets isPR=false for all sets when no prior sessions exist (null max_volume)', async () => {
+  it('sets isPR=false for all sets when no prior sessions exist at this rep count', async () => {
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([
         { id: 1, started_at: '2026-03-15T09:00:00Z', completed_at: '2026-03-15T10:00:00Z', program_day_id: null, program_day_name: null },
@@ -184,15 +187,72 @@ describe('getDaySessionDetails', () => {
         { set_number: 1, weight_kg: 100, reps: 8, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
       ]),
     );
-    // prior max → null (first-ever session)
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ max_volume: null }]),
-    );
+    // prior max → empty (first-ever session, no rows grouped by reps)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
 
     const result = await getDaySessionDetails('2026-03-15');
 
     expect(result[0].prCount).toBe(0);
     expect(result[0].exercises[0].sets[0].isPR).toBe(false);
+  });
+
+  it('only flags the first set as PR when the same weight x reps is repeated in one session', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { id: 1, started_at: '2026-03-15T09:00:00Z', completed_at: '2026-03-15T10:00:00Z', program_day_id: null, program_day_name: null },
+      ]),
+    );
+    mockGetLocalDateString.mockReturnValueOnce('2026-03-15');
+
+    // 4 identical working sets of 160 x 12
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { set_number: 1, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+        { set_number: 2, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+        { set_number: 3, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+        { set_number: 4, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+      ]),
+    );
+    // Prior max at 12 reps = 150 → set 1 (160 > 150) is PR; sets 2-4 match set 1 so not PR
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ reps: 12, max_weight: 150 }]),
+    );
+
+    const result = await getDaySessionDetails('2026-03-15');
+
+    expect(result[0].prCount).toBe(1);
+    expect(result[0].exercises[0].sets[0].isPR).toBe(true);
+    expect(result[0].exercises[0].sets[1].isPR).toBe(false);
+    expect(result[0].exercises[0].sets[2].isPR).toBe(false);
+    expect(result[0].exercises[0].sets[3].isPR).toBe(false);
+  });
+
+  it('flags a later heavier set at the same rep count as a new PR', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { id: 1, started_at: '2026-03-15T09:00:00Z', completed_at: '2026-03-15T10:00:00Z', program_day_id: null, program_day_name: null },
+      ]),
+    );
+    mockGetLocalDateString.mockReturnValueOnce('2026-03-15');
+
+    // 160 x 12, then 170 x 12 later in the same session
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { set_number: 1, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+        { set_number: 2, weight_kg: 160, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+        { set_number: 3, weight_kg: 170, reps: 12, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
+      ]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ reps: 12, max_weight: 150 }]),
+    );
+
+    const result = await getDaySessionDetails('2026-03-15');
+
+    expect(result[0].prCount).toBe(2);
+    expect(result[0].exercises[0].sets[0].isPR).toBe(true);  // 160 > 150 prior
+    expect(result[0].exercises[0].sets[1].isPR).toBe(false); // 160 matches in-session max
+    expect(result[0].exercises[0].sets[2].isPR).toBe(true);  // 170 > 160 in-session
   });
 
   it('excludes warmup sets from totalSets and totalVolume, warmup isPR is always false', async () => {
@@ -210,9 +270,9 @@ describe('getDaySessionDetails', () => {
         { set_number: 2, weight_kg: 100, reps: 8, is_warmup: 0, exercise_id: 1, exercise_name: 'Bench Press' },
       ]),
     );
-    // max_volume check (warmup is excluded from this query on source side, but set isPR=false anyway)
+    // Prior max at 8 reps = 90 → working set 100 > 90 is a PR
     mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ max_volume: 700 }]),
+      mockResultSet([{ reps: 8, max_weight: 90 }]),
     );
 
     const result = await getDaySessionDetails('2026-03-15');
@@ -221,7 +281,7 @@ describe('getDaySessionDetails', () => {
     expect(result[0].totalVolume).toBe(100 * 8); // 800 — warmup excluded
     expect(result[0].exercises[0].sets[0].isWarmup).toBe(true);
     expect(result[0].exercises[0].sets[0].isPR).toBe(false); // warmup never a PR
-    expect(result[0].exercises[0].sets[1].isPR).toBe(true);  // 800 > 700
+    expect(result[0].exercises[0].sets[1].isPR).toBe(true);  // 100 > 90
   });
 
   it('returns empty array when no sessions match the requested date', async () => {
