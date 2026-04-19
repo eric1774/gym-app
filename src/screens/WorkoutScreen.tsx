@@ -461,6 +461,19 @@ export function WorkoutScreen() {
     };
   }, []);
 
+  const ensureLastSetsFetched = useCallback((exerciseId: number) => {
+    if (!session) { return; }
+    setLastSetsByExercise(prev => {
+      if (prev[exerciseId] !== undefined && prev[exerciseId] !== null) {
+        return prev; // already fetched (or in-flight) — skip
+      }
+      getLastSessionSets(exerciseId, session.id)
+        .then(sets => setLastSetsByExercise(p => ({ ...p, [exerciseId]: sets })))
+        .catch(() => setLastSetsByExercise(p => ({ ...p, [exerciseId]: [] })));
+      return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
+    });
+  }, [session]);
+
   // Post-rest auto-advance: when rest timer ends and last superset exercise triggered it,
   // auto-expand the FIRST exercise in the group for the next round
   const isRunningRef = useRef(isRunning);
@@ -477,11 +490,12 @@ export function WorkoutScreen() {
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setActiveExerciseId(groupExerciseIds[0]);
+        ensureLastSetsFetched(groupExerciseIds[0]);
         // Sync ssCurrentByGroup so the NOW badge moves with the active card.
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: groupExerciseIds[0] }));
       }
     }
-  }, [isRunning]);
+  }, [isRunning, ensureLastSetsFetched]);
 
   // Seed + rehydrate per-exercise set state on session/exercise load
   useEffect(() => {
@@ -639,6 +653,7 @@ export function WorkoutScreen() {
         );
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
         setActiveExerciseId(nextMember);
+        ensureLastSetsFetched(nextMember);
       } else {
         // End-of-cycle (or single-member group): stay put, queue rest, mark round complete.
         setPendingRestExerciseId(exerciseId);
@@ -647,7 +662,7 @@ export function WorkoutScreen() {
     } else {
       setPendingRestExerciseId(exerciseId);
     }
-  }, [session, nextByExercise, exercises, setsByExercise]);
+  }, [session, nextByExercise, exercises, setsByExercise, ensureLastSetsFetched]);
 
   const handleDeleteSet = useCallback(async (exerciseId: number, setId: number) => {
     try {
@@ -689,18 +704,8 @@ export function WorkoutScreen() {
 
   const handleExpandExercise = useCallback((exerciseId: number) => {
     setActiveExerciseId(prev => (prev === exerciseId ? null : exerciseId));
-    if (!session) { return; }
-    setLastSetsByExercise(prev => {
-      if (prev[exerciseId] !== undefined && prev[exerciseId] !== null) {
-        return prev; // already fetched — no change
-      }
-      // Kick off async fetch; resolve/reject updates state independently.
-      getLastSessionSets(exerciseId, session.id)
-        .then(sets => setLastSetsByExercise(p => ({ ...p, [exerciseId]: sets })))
-        .catch(() => setLastSetsByExercise(p => ({ ...p, [exerciseId]: [] })));
-      return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
-    });
-  }, [session]);
+    ensureLastSetsFetched(exerciseId);
+  }, [ensureLastSetsFetched]);
 
   const handleSupersetMemberSelect = useCallback((memberId: number) => {
     const groupId = exerciseSupersetMapRef.current.get(memberId);
