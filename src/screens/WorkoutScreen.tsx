@@ -594,6 +594,8 @@ export function WorkoutScreen() {
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setActiveExerciseId(groupExerciseIds[0]);
+        // Sync ssCurrentByGroup so the NOW badge moves with the active card.
+        setSsCurrentByGroup(prev => ({ ...prev, [groupId]: groupExerciseIds[0] }));
       }
     }
   }, [isRunning]);
@@ -740,24 +742,23 @@ export function WorkoutScreen() {
       [exerciseId]: { w: newSet.weightLbs, r: newSet.reps },
     }));
 
-    // V1 superset model: every log rotates current to next member.
+    // V1 superset model: rotate only for non-last members; stay put on last member.
     const groupId = exerciseSupersetMapRef.current.get(exerciseId);
     if (groupId !== undefined) {
       const members = supersetGroupsRef.current.get(groupId) ?? [];
       const idx = members.indexOf(exerciseId);
-      if (idx >= 0 && members.length > 1) {
-        const nextMember = members[(idx + 1) % members.length];
+      const isLastInCycle = idx === members.length - 1;
+      if (!isLastInCycle && idx >= 0 && members.length > 1) {
+        // Mid-cycle: rotate to next member, no rest.
+        const nextMember = members[idx + 1];
         LayoutAnimation.configureNext(
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
         setActiveExerciseId(nextMember);
-      }
-      // Always queue a rest after a superset log (V1 behavior change).
-      setPendingRestExerciseId(exerciseId);
-      // Only mark "round complete" when the last member of the cycle was logged,
-      // so the post-rest auto-advance effect resets to member 0 for the next round.
-      if (idx === members.length - 1) {
+      } else {
+        // End-of-cycle (or single-member group): stay put, queue rest, mark round complete.
+        setPendingRestExerciseId(exerciseId);
         lastSupersetRestRef.current = { groupId, exerciseId };
       }
     } else {
