@@ -43,6 +43,8 @@ export type CalendarStackParamList = {
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
   ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
+  SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
 };
 
 export type ProgramsStackParamList = {
@@ -182,6 +184,8 @@ function WorkoutStackNavigator() {
     <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkoutStack.Screen name="WorkoutHome" component={WorkoutScreen} />
       <WorkoutStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
+      <WorkoutStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+      <WorkoutStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
     </WorkoutStack.Navigator>
   );
 }

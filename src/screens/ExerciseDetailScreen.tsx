@@ -18,10 +18,18 @@ import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold, weightMedium } from '../theme/typography';
 import { ExerciseProgressPoint, ExerciseHistorySession, ExerciseInsights } from '../types';
 import { SessionTimelineRow } from '../components/SessionTimelineRow';
-import { DashboardStackParamList } from '../navigation/TabNavigator';
+type ExerciseDetailParams = {
+  exerciseId: number;
+  exerciseName: string;
+  measurementType?: 'reps' | 'timed' | 'height_reps';
+  category?: string;
+};
+type RouteParams = RouteProp<{ ExerciseDetail: ExerciseDetailParams }, 'ExerciseDetail'>;
 
-type RouteParams = RouteProp<DashboardStackParamList, 'ExerciseDetail'>;
-type NavProp = NativeStackNavigationProp<DashboardStackParamList>;
+type OnwardNavParamList = {
+  SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
+};
+type NavProp = NativeStackNavigationProp<OnwardNavParamList>;
 
 const TIME_RANGES = ['1M', '3M', '6M', '1Y'] as const;
 type TimeRange = (typeof TIME_RANGES)[number];
