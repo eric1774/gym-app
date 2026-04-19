@@ -96,7 +96,7 @@ export const SetRow = React.memo(function SetRow({
         {type === 'pr' ? <Trophy size={14} color={colors.prGold} /> : null}
       </View>
       {onDelete && (
-        <Animated.View style={[styles.deleteWrapper, { opacity: animOpacity }]} pointerEvents={deleteVisible.current ? 'auto' : 'none'}>
+        <Animated.View style={[styles.deleteWrapper, { opacity: animOpacity }]}>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => {
