@@ -245,7 +245,6 @@ interface SupersetContainerProps {
   onDeleteSet: (id: number, setId: number) => void;
   onEditTarget: (exerciseId: number) => void;
   onStartRest: (exerciseId: number) => void;
-  onViewHistory: (exerciseId: number) => void;
   onRestChange: (exerciseId: number, newRestSeconds: number) => void;
   onSwap: (exerciseId: number) => void;
 }
@@ -271,7 +270,6 @@ function SupersetContainer({
   onDeleteSet,
   onEditTarget,
   onStartRest,
-  onViewHistory,
   onRestChange,
   onSwap,
 }: SupersetContainerProps) {
@@ -1248,7 +1246,6 @@ export function WorkoutScreen() {
                   onDeleteSet={handleDeleteSet}
                   onEditTarget={handleEditTarget}
                   onStartRest={handleStartRest}
-                  onViewHistory={handleViewHistory}
                   onRestChange={handleRestChange}
                   onSwap={(exerciseId) => {
                     const ex = exercises.find(e => e.id === exerciseId);
