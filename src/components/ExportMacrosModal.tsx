@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { macrosDb } from '../db';
 import { saveFileToDevice } from '../native/FileSaver';
 import { colors } from '../theme/colors';
@@ -62,6 +63,8 @@ export function ExportMacrosModal({
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const insets = useSafeAreaInsets();
+  const sheetPaddingBottom = Math.max(insets.bottom + spacing.sm, spacing.xl);
 
   const isInvalid = fromDate.getTime() > toDate.getTime();
 
@@ -113,7 +116,7 @@ export function ExportMacrosModal({
         behavior="padding"
         style={styles.keyboardAvoid}>
         <Pressable style={styles.overlay} onPress={onClose} />
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: sheetPaddingBottom }]}>
           <Text style={styles.title}>Export Macros</Text>
           <Text style={styles.subtitle}>Choose a date range</Text>
 
@@ -195,7 +198,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: spacing.base,
-    paddingBottom: spacing.xl,
   },
   title: {
     color: colors.primary,

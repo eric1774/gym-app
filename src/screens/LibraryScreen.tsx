@@ -263,6 +263,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
   searchInputWrapper: {
