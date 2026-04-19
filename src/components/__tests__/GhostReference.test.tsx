@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { GhostReference } from '../GhostReference';
 import { WorkoutSet } from '../../types';
 
@@ -28,13 +28,17 @@ describe('GhostReference', () => {
 
   it('renders horizontal layout for 1-3 sets', () => {
     const sets = [makeSet({ setNumber: 1 }), makeSet({ id: 2, setNumber: 2 })];
-    const { getByText } = render(<GhostReference sets={sets} />);
-    expect(getByText(/Set 1: 135lb/)).toBeTruthy();
+    const { getByText, getAllByText } = render(<GhostReference sets={sets} />);
+    fireEvent.press(getByText(/Last session/));
+    expect(getByText('Set 1')).toBeTruthy();
+    expect(getAllByText('135lb × 10').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders timed format when isTimed=true', () => {
     const sets = [makeSet({ reps: 90 })];
     const { getByText } = render(<GhostReference sets={sets} isTimed={true} />);
-    expect(getByText(/Set 1: 01:30/)).toBeTruthy();
+    fireEvent.press(getByText(/Last session/));
+    expect(getByText('Set 1')).toBeTruthy();
+    expect(getByText('01:30')).toBeTruthy();
   });
 });
