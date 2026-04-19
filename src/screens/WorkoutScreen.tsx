@@ -1116,6 +1116,22 @@ export function WorkoutScreen() {
     setShowSummary(true);
   }, [session, isRunning, stopTimer, endSession, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
 
+  // Build sections + letter map BEFORE early returns so hook order stays stable
+  const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
+
+  // Map each superset groupId to a position-based letter (first superset = A, second = B, …)
+  const supersetLetterByGroupId = useMemo(() => {
+    const map = new Map<number, string>();
+    let letterIdx = 0;
+    for (const section of workoutSections) {
+      if (section.type === 'superset') {
+        map.set(section.groupId, String.fromCharCode(65 + (letterIdx % 26)));
+        letterIdx++;
+      }
+    }
+    return map;
+  }, [workoutSections]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.centered} edges={['top']}>
@@ -1157,22 +1173,6 @@ export function WorkoutScreen() {
       </SafeAreaView>
     );
   }
-
-  // Build superset-aware grouped sections for rendering
-  const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
-
-  // Map each superset groupId to a position-based letter (first superset = A, second = B, …)
-  const supersetLetterByGroupId = useMemo(() => {
-    const map = new Map<number, string>();
-    let letterIdx = 0;
-    for (const section of workoutSections) {
-      if (section.type === 'superset') {
-        map.set(section.groupId, String.fromCharCode(65 + (letterIdx % 26)));
-        letterIdx++;
-      }
-    }
-    return map;
-  }, [workoutSections]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
