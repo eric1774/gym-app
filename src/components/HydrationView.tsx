@@ -183,7 +183,7 @@ export function HydrationView() {
 
           {/* Quick-add buttons */}
           <View style={styles.quickAddRow}>
-            {([8, 16, 24] as const).map(oz => (
+            {([8, 32, 40] as const).map(oz => (
               <TouchableOpacity
                 key={oz}
                 style={styles.quickAddButton}
