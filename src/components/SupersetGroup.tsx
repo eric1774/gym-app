@@ -34,6 +34,7 @@ interface SupersetGroupProps {
   onDeleteSet: (id: number, setId: number) => void;
   onSwap: (id: number) => void;
   onEditTarget: (id: number) => void;
+  onViewHistory: (id: number) => void;
   onMemberSelect: (memberId: number) => void;  // manual override of current
   pendingRestByExercise: Record<number, boolean>;
   onStartRest: (id: number) => void;
@@ -61,6 +62,7 @@ export function SupersetGroup({
   onDeleteSet,
   onSwap,
   onEditTarget,
+  onViewHistory,
   onMemberSelect,
   pendingRestByExercise,
   onStartRest,
@@ -142,6 +144,7 @@ export function SupersetGroup({
                 onDeleteSet={(setId) => onDeleteSet(m.id, setId)}
                 onSwap={() => onSwap(m.id)}
                 onEditTarget={() => onEditTarget(m.id)}
+                onViewHistory={() => onViewHistory(m.id)}
                 pendingRest={pendingRestByExercise[m.id] ?? false}
                 onStartRest={() => onStartRest(m.id)}
                 onRestChange={(newRestSeconds) => onRestChange(m.id, newRestSeconds)}

@@ -12,10 +12,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import HapticFeedback from 'react-native-haptic-feedback';
-import { WorkoutStackParamList } from '../navigation/TabNavigator';
+import { WorkoutStackParamList, TabParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
@@ -712,6 +712,22 @@ export function WorkoutScreen() {
     setEditingExerciseId(exerciseId);
   }, []);
 
+  const handleViewHistory = useCallback((exerciseId: number) => {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (!exercise) { return; }
+    const parent = navigation.getParent<NavigationProp<TabParamList>>();
+    if (!parent) { return; }
+    (parent as any).navigate('DashboardTab', {
+      screen: 'ExerciseDetail',
+      params: {
+        exerciseId,
+        exerciseName: exercise.name,
+        measurementType: exercise.measurementType,
+        category: exercise.category,
+      },
+    });
+  }, [exercises, navigation]);
+
   const handleSaveTargets = useCallback(async (pdeId: number, sets: number, reps: number, weight: number) => {
     if (editingExerciseId === null) { return; }
     // Optimistic local update
@@ -1015,6 +1031,7 @@ export function WorkoutScreen() {
                     setSwapTarget(ex ?? null);
                   }}
                   onEditTarget={handleEditTarget}
+                  onViewHistory={handleViewHistory}
                   onMemberSelect={handleSupersetMemberSelect}
                 />
               );
@@ -1053,6 +1070,7 @@ export function WorkoutScreen() {
                         onOpenPad={(field) => handleOpenPad(se.exerciseId, field)}
                         onDeleteSet={(setId) => handleDeleteSet(se.exerciseId, setId)}
                         onEditTarget={() => handleEditTarget(se.exerciseId)}
+                        onViewHistory={() => handleViewHistory(se.exerciseId)}
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
                         onSwap={() => setSwapTarget(exercise ?? null)}

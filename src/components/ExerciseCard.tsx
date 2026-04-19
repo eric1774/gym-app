@@ -51,6 +51,7 @@ export interface ExerciseCardProps {
   onDeleteSet: (setId: number) => void;
   onSwap: () => void;              // REQUIRED — wires into More menu
   onEditTarget: () => void;        // REQUIRED — wires into More menu
+  onViewHistory: () => void;       // REQUIRED — wires into More menu
   onStartRest: () => void;         // PRESERVED — pendingRest button
   onRestChange: (newRestSeconds: number) => void;  // PRESERVED — rest stepper
 }
@@ -82,6 +83,7 @@ export function ExerciseCard({
   onDeleteSet,
   onSwap,
   onEditTarget,
+  onViewHistory,
   onStartRest,
   onRestChange,
 }: ExerciseCardProps) {
@@ -295,6 +297,7 @@ export function ExerciseCard({
         exerciseName={exercise.name}
         onSwap={onSwap}
         onEditTarget={onEditTarget}
+        onViewHistory={onViewHistory}
         onClose={() => setMoreSheetVisible(false)}
       />
     </View>

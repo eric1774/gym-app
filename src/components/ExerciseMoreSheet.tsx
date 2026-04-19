@@ -10,13 +10,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { Swap, Chevron } from './icons';
+import { Swap, Chevron, History } from './icons';
 
 interface ExerciseMoreSheetProps {
   visible: boolean;
   exerciseName: string;
   onSwap: () => void;
   onEditTarget: () => void;
+  onViewHistory: () => void;
   onClose: () => void;
 }
 
@@ -27,6 +28,7 @@ export function ExerciseMoreSheet({
   exerciseName,
   onSwap,
   onEditTarget,
+  onViewHistory,
   onClose,
 }: ExerciseMoreSheetProps) {
   const insets = useSafeAreaInsets();
@@ -118,6 +120,16 @@ export function ExerciseMoreSheet({
             accessibilityLabel="Edit target">
             <Text style={styles.editGlyph}>{'\u270E'}</Text>
             <Text style={styles.rowLabel}>Edit target</Text>
+            <Chevron size={16} color={colors.secondaryDim} dir="right" />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            onPress={() => dismiss(onViewHistory)}
+            accessibilityRole="button"
+            accessibilityLabel="View exercise history">
+            <History size={20} color={colors.accent} />
+            <Text style={styles.rowLabel}>History</Text>
             <Chevron size={16} color={colors.secondaryDim} dir="right" />
           </Pressable>
         </Animated.View>
