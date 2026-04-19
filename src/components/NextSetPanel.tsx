@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { colors } from '../theme/colors';
-import { Plus, Minus, Check } from './icons';
+import { Plus, Minus, Check, Timer } from './icons';
 import { ExerciseMeasurementType } from '../types';
 
 interface StepperRowProps {
@@ -75,6 +75,8 @@ function formatDuration(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+type TimerState = 'idle' | 'running' | 'stopped';
+
 export function NextSetPanel({
   setNumber,
   measurementType,
@@ -91,10 +93,106 @@ export function NextSetPanel({
   const weightStep = isHeightReps ? 2 : 5;
   const weightUnit = isHeightReps ? 'in' : 'lb';
 
-  const handleLog = () => {
-    if (isLoggingDisabled) { return; }
-    onLog();
+  // Timer state — hooks called unconditionally to comply with Rules of Hooks.
+  // In non-timed mode these stay at their initial values and are never mutated.
+  const [timerState, setTimerState] = useState<TimerState>('idle');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAtRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerState === 'running') {
+      intervalRef.current = setInterval(() => {
+        if (startedAtRef.current !== null) {
+          setElapsedSeconds(Math.round((Date.now() - startedAtRef.current) / 1000));
+        }
+      }, 1000);
+      return () => {
+        if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+      };
+    }
+    return;
+  }, [timerState]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    };
+  }, []);
+
+  const handleStartTimer = () => {
+    startedAtRef.current = Date.now();
+    setElapsedSeconds(0);
+    setTimerState('running');
     HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
+  };
+
+  const handleStopTimer = () => {
+    const captured = startedAtRef.current
+      ? Math.round((Date.now() - startedAtRef.current) / 1000)
+      : 0;
+    setElapsedSeconds(captured);
+    onNextChange('r', captured);
+    setTimerState('stopped');
+    HapticFeedback.trigger('notificationWarning', { enableVibrateFallback: true });
+  };
+
+  const handleResetTimer = () => {
+    startedAtRef.current = null;
+    setElapsedSeconds(0);
+    setTimerState('idle');
+    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
+  };
+
+  const renderBottomButton = () => {
+    if (isTimed && timerState === 'idle') {
+      return (
+        <TouchableOpacity
+          style={[styles.logButton, { backgroundColor: colors.accent }]}
+          onPress={handleStartTimer}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Start timer">
+          <Timer size={18} color={colors.onAccent} />
+          <Text style={styles.logButtonText}>START TIMER</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (isTimed && timerState === 'running') {
+      return (
+        <TouchableOpacity
+          style={[styles.logButton, { backgroundColor: colors.danger }]}
+          onPress={handleStopTimer}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Stop timer">
+          <View style={styles.stopIcon} />
+          <Text style={[styles.logButtonText, { color: '#FFFFFF' }]}>STOP</Text>
+        </TouchableOpacity>
+      );
+    }
+    // Non-timed OR timed-stopped: LOG SET button
+    return (
+      <TouchableOpacity
+        style={[styles.logButton, isLoggingDisabled && styles.logButtonDisabled]}
+        onPress={() => {
+          if (isLoggingDisabled) { return; }
+          onLog();
+          HapticFeedback.trigger('impactMedium', { enableVibrateFallback: true });
+          if (isTimed) {
+            // Reset local state so next set starts fresh.
+            startedAtRef.current = null;
+            setElapsedSeconds(0);
+            setTimerState('idle');
+          }
+        }}
+        disabled={isLoggingDisabled}
+        activeOpacity={0.85}>
+        <Check size={18} color={colors.onAccent} />
+        <Text style={styles.logButtonText}>LOG SET {setNumber}</Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -107,8 +205,23 @@ export function NextSetPanel({
       </View>
       {isTimed ? (
         <View style={styles.timedDisplay}>
-          {timedStopwatchDisplay ?? (
-            <Text style={styles.timedValue}>{formatDuration(nextR)}</Text>
+          <Text
+            style={[
+              styles.timedValue,
+              timerState === 'running' ? styles.timedValueRunning : null,
+              timerState === 'stopped' ? styles.timedValueStopped : null,
+            ]}
+            accessibilityLiveRegion={timerState === 'running' ? 'polite' : 'none'}>
+            {formatDuration(timerState === 'idle' ? 0 : elapsedSeconds)}
+          </Text>
+          {timerState === 'stopped' && (
+            <TouchableOpacity
+              onPress={handleResetTimer}
+              accessibilityRole="button"
+              accessibilityLabel="Reset timer"
+              style={styles.resetPill}>
+              <Text style={styles.resetText}>{'\u21BA  Reset'}</Text>
+            </TouchableOpacity>
           )}
         </View>
       ) : (
@@ -131,14 +244,7 @@ export function NextSetPanel({
           />
         </View>
       )}
-      <TouchableOpacity
-        style={[styles.logButton, isLoggingDisabled && styles.logButtonDisabled]}
-        onPress={handleLog}
-        disabled={isLoggingDisabled}
-        activeOpacity={0.85}>
-        <Check size={18} color={colors.onAccent} />
-        <Text style={styles.logButtonText}>LOG SET {setNumber}</Text>
-      </TouchableOpacity>
+      {renderBottomButton()}
     </View>
   );
 }
@@ -240,10 +346,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   timedValue: {
-    fontSize: 28,
+    fontSize: 48,
     fontWeight: '700',
-    color: colors.timerActive,
     fontVariant: ['tabular-nums'],
+    letterSpacing: 1.5,
+    color: colors.secondary,
+    textAlign: 'center',
+  },
+  timedValueRunning: {
+    color: colors.accent,
+  },
+  timedValueStopped: {
+    color: colors.primary,
+  },
+  resetPill: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginTop: 4,
+  },
+  resetText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.secondary,
   },
   logButton: {
     marginTop: 10,
@@ -263,5 +388,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.onAccent,
     letterSpacing: 0.3,
+  },
+  stopIcon: {
+    width: 14,
+    height: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
   },
 });
