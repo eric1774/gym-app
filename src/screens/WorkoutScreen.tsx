@@ -49,6 +49,7 @@ import { getHRZone, computeMaxHR } from '../utils/hrZones';
 import { WarmupSection } from '../components/WarmupSection';
 import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { SupersetGroup } from '../components/SupersetGroup';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
@@ -222,159 +223,6 @@ const categoryHeaderStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.secondaryDim,
     fontVariant: ['tabular-nums'],
-  },
-});
-
-interface SupersetContainerProps {
-  groupId: number;
-  exerciseIds: number[];
-  supersetLetter: string;
-  sessionExercises: ExerciseSession[];
-  exercises: Exercise[];
-  activeExerciseId: number | null;
-  setCountsByExercise: Record<number, number>;
-  pendingRestExerciseId: number | null;
-  programTargetsMap: Map<number, ProgramTarget>;
-  restOverrides: Record<number, number>;
-  sets: Record<number, SetState[]>;
-  lastSets: Record<number, WorkoutSet[] | null>;
-  next: Record<number, { w: number; r: number }>;
-  onPressExercise: (exerciseId: number, isActive: boolean) => void;
-  onToggleComplete: (exerciseId: number) => void;
-  onLog: (id: number) => void;
-  onNextChange: (id: number, field: 'w' | 'r', value: number) => void;
-  onOpenPad: (id: number, field: 'w' | 'r') => void;
-  onDeleteSet: (id: number, setId: number) => void;
-  onEditTarget: (exerciseId: number) => void;
-  onStartRest: (exerciseId: number) => void;
-  onRestChange: (exerciseId: number, newRestSeconds: number) => void;
-  onSwap: (exerciseId: number) => void;
-}
-
-function SupersetContainer({
-  groupId,
-  exerciseIds,
-  supersetLetter,
-  sessionExercises,
-  exercises,
-  activeExerciseId,
-  setCountsByExercise,
-  pendingRestExerciseId,
-  programTargetsMap,
-  restOverrides,
-  sets,
-  lastSets,
-  next,
-  onPressExercise,
-  onToggleComplete,
-  onLog,
-  onNextChange,
-  onOpenPad,
-  onDeleteSet,
-  onEditTarget,
-  onStartRest,
-  onRestChange,
-  onSwap,
-}: SupersetContainerProps) {
-  // Round = min completed sets across all exercises + 1
-  const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
-  const total = Math.max(...exerciseIds.map(id => programTargetsMap.get(id)?.targetSets ?? 3));
-
-  return (
-    <View style={supersetStyles.container}>
-      {/* Mint accent bar on the left */}
-      <View style={supersetStyles.accentBar} />
-
-      {/* SUPERSET header label */}
-      <View style={supersetStyles.header}>
-        <Text style={supersetStyles.headerText}>
-          {'SUPERSET \u00B7 Round '}{round}/{total}
-        </Text>
-      </View>
-
-      {/* Exercise cards */}
-      {exerciseIds.map((exerciseId, index) => {
-        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
-        if (!se) { return null; }
-        const exercise = exercises.find(ex => ex.id === exerciseId);
-        if (!exercise) { return null; }
-        const isActive = activeExerciseId === exerciseId;
-        const supersetBadge = {
-          label: supersetLetter,
-          index,
-          isCurrent: isActive,
-          color: colors.supersetPurple,
-        };
-
-        return (
-          <View key={exerciseId}>
-            {index > 0 && <View style={supersetStyles.divider} />}
-            <ExerciseCard
-              exerciseSession={se}
-              exercise={exercise}
-              isActive={isActive}
-              pendingRest={pendingRestExerciseId === exerciseId}
-              programTarget={programTargetsMap.get(exerciseId) ?? null}
-              measurementType={exercise.measurementType ?? 'reps'}
-              restSeconds={restOverrides[exerciseId] ?? se.restSeconds}
-              insideSuperset={true}
-              sets={sets[exerciseId] ?? []}
-              lastSets={lastSets[exerciseId] ?? null}
-              next={next[exerciseId] ?? { w: 0, r: 0 }}
-              onExpand={() => onPressExercise(exerciseId, isActive)}
-              onToggleComplete={() => onToggleComplete(exerciseId)}
-              onLog={() => onLog(exerciseId)}
-              onNextChange={(field, value) => onNextChange(exerciseId, field, value)}
-              onOpenPad={(field) => onOpenPad(exerciseId, field)}
-              onDeleteSet={(setId) => onDeleteSet(exerciseId, setId)}
-              onEditTarget={() => onEditTarget(exerciseId)}
-              onStartRest={() => onStartRest(exerciseId)}
-              onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
-              onSwap={() => onSwap(exerciseId)}
-              supersetBadge={supersetBadge}
-            />
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-const supersetStyles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-    overflow: 'hidden',
-  },
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: colors.accent,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
-  },
-  header: {
-    paddingLeft: spacing.base + 8,
-    paddingRight: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  headerText: {
-    fontSize: 11,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.5,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: spacing.base + 8,
   },
 });
 
@@ -572,10 +420,29 @@ export function WorkoutScreen() {
   const [programDayName, setProgramDayName] = useState<string | null>(null);
   // Superset group maps: groupId -> ordered exerciseIds, exerciseId -> groupId
   const [supersetGroups, setSupersetGroups] = useState<Map<number, number[]>>(new Map());
+  const [ssCurrentByGroup, setSsCurrentByGroup] = useState<Record<number, number>>({});
   const [exerciseSupersetMap, setExerciseSupersetMap] = useState<Map<number, number>>(new Map());
   // Refs for accessing superset maps inside callbacks without stale closures
   const supersetGroupsRef = useRef<Map<number, number[]>>(new Map());
   const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
+
+  // Seed initial current-member pointer (first member of each group). Preserves
+  // any existing user-chosen pointers when groups change.
+  useEffect(() => {
+    if (supersetGroups.size === 0) {
+      setSsCurrentByGroup({});
+      return;
+    }
+    setSsCurrentByGroup(prev => {
+      const next: Record<number, number> = {};
+      supersetGroups.forEach((members, gid) => {
+        if (members.length > 0) {
+          next[gid] = prev[gid] ?? members[0];
+        }
+      });
+      return next;
+    });
+  }, [supersetGroups]);
 
   // ─── Heart Rate Integration ────────────────────────────────────────────────
   const { deviceState, currentBpm, attemptAutoReconnect, flushHRSamples } = useHeartRate();
@@ -873,24 +740,22 @@ export function WorkoutScreen() {
       [exerciseId]: { w: newSet.weightLbs, r: newSet.reps },
     }));
 
-    // Superset rotation — preserves existing behavior
+    // V1 superset model: every log rotates current to next member.
     const groupId = exerciseSupersetMapRef.current.get(exerciseId);
     if (groupId !== undefined) {
-      const groupExerciseIds = supersetGroupsRef.current.get(groupId) ?? [];
-      const currentIndex = groupExerciseIds.indexOf(exerciseId);
-      const isLastInGroup = currentIndex === groupExerciseIds.length - 1;
-
-      if (!isLastInGroup) {
-        const nextExerciseId = groupExerciseIds[currentIndex + 1];
+      const members = supersetGroupsRef.current.get(groupId) ?? [];
+      const idx = members.indexOf(exerciseId);
+      if (idx >= 0 && members.length > 1) {
+        const nextMember = members[(idx + 1) % members.length];
         LayoutAnimation.configureNext(
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
-        setActiveExerciseId(nextExerciseId);
-        // Do NOT set pendingRest — rest suppressed for non-last superset member
-      } else {
-        setPendingRestExerciseId(exerciseId);
-        lastSupersetRestRef.current = { groupId, exerciseId };
+        setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
+        setActiveExerciseId(nextMember);
       }
+      // Always start a rest after a superset log (V1 behavior change).
+      setPendingRestExerciseId(exerciseId);
+      lastSupersetRestRef.current = { groupId, exerciseId };
     } else {
       setPendingRestExerciseId(exerciseId);
     }
@@ -948,6 +813,12 @@ export function WorkoutScreen() {
       return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
     });
   }, [session]);
+
+  const handleSupersetMemberSelect = useCallback((memberId: number) => {
+    const groupId = exerciseSupersetMapRef.current.get(memberId);
+    if (groupId === undefined) { return; }
+    setSsCurrentByGroup(prev => ({ ...prev, [groupId]: memberId }));
+  }, []);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
@@ -1014,15 +885,28 @@ export function WorkoutScreen() {
 
   const handleStartRest = useCallback(
     (exerciseId: number) => {
-      // Prefer local override, fall back to session rest, then exercise default, then 90
-      const override = restOverrides[exerciseId];
-      if (override !== undefined) {
-        startTimer(override);
+      // Compute the rest duration. For superset members, use min(member rest values).
+      const groupId = exerciseSupersetMapRef.current.get(exerciseId);
+      let duration: number;
+      if (groupId !== undefined) {
+        const members = supersetGroupsRef.current.get(groupId) ?? [];
+        const memberRests = members.map(id => {
+          const over = restOverrides[id];
+          if (typeof over === 'number') { return over; }
+          const se = sessionExercises.find(s => s.exerciseId === id);
+          return se?.restSeconds ?? exercises.find(ex => ex.id === id)?.defaultRestSeconds ?? 90;
+        });
+        duration = memberRests.length > 0 ? Math.max(0, Math.min(...memberRests)) : 90;
       } else {
-        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
-        const duration = se?.restSeconds ?? exercises.find(ex => ex.id === exerciseId)?.defaultRestSeconds ?? 90;
-        startTimer(duration);
+        const override = restOverrides[exerciseId];
+        if (override !== undefined) {
+          duration = override;
+        } else {
+          const se = sessionExercises.find(s => s.exerciseId === exerciseId);
+          duration = se?.restSeconds ?? exercises.find(ex => ex.id === exerciseId)?.defaultRestSeconds ?? 90;
+        }
       }
+      startTimer(duration);
       setPendingRestExerciseId(null);
     },
     [restOverrides, sessionExercises, exercises, startTimer],
@@ -1115,6 +999,19 @@ export function WorkoutScreen() {
     await endSession();
     setShowSummary(true);
   }, [session, isRunning, stopTimer, endSession, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
+
+  // Helper maps for SupersetGroup — hoisted above early-return wall
+  const exerciseMap = useMemo(() => {
+    const m = new Map<number, Exercise>();
+    for (const ex of exercises) { m.set(ex.id, ex); }
+    return m;
+  }, [exercises]);
+
+  const sessionExerciseMap = useMemo(() => {
+    const m = new Map<number, ExerciseSession>();
+    for (const se of sessionExercises) { m.set(se.exerciseId, se); }
+    return m;
+  }, [sessionExercises]);
 
   // Build sections + letter map BEFORE early returns so hook order stays stable
   const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
@@ -1223,36 +1120,35 @@ export function WorkoutScreen() {
           {workoutSections.map((section, sectionIdx) => {
             if (section.type === 'superset') {
               return (
-                <SupersetContainer
+                <SupersetGroup
                   key={`superset-${section.groupId}`}
                   groupId={section.groupId}
-                  exerciseIds={section.exerciseIds}
-                  supersetLetter={supersetLetterByGroupId.get(section.groupId) ?? 'A'}
-                  sessionExercises={sessionExercises}
-                  exercises={exercises}
-                  activeExerciseId={activeExerciseId}
-                  setCountsByExercise={setCountsByExercise}
-                  pendingRestExerciseId={pendingRestExerciseId}
+                  label={supersetLetterByGroupId.get(section.groupId) ?? 'A'}
+                  memberIds={section.exerciseIds}
+                  exerciseMap={exerciseMap}
+                  sessionMap={sessionExerciseMap}
                   programTargetsMap={programTargetsMap}
                   restOverrides={restOverrides}
-                  sets={setsByExercise}
-                  lastSets={lastSetsByExercise}
-                  next={nextByExercise}
-                  onPressExercise={(exerciseId, isActive) =>
-                    handleExpandExercise(exerciseId)
-                  }
+                  setsByExercise={setsByExercise}
+                  nextByExercise={nextByExercise}
+                  lastSetsByExercise={lastSetsByExercise}
+                  pendingRestByExercise={pendingRestExerciseId !== null ? { [pendingRestExerciseId]: true } : {}}
+                  currentMemberId={ssCurrentByGroup[section.groupId] ?? section.exerciseIds[0]}
+                  activeExerciseId={activeExerciseId}
+                  onExpand={handleExpandExercise}
                   onToggleComplete={handleToggleComplete}
                   onLog={handleLog}
                   onNextChange={handleNextChange}
                   onOpenPad={handleOpenPad}
                   onDeleteSet={handleDeleteSet}
-                  onEditTarget={handleEditTarget}
                   onStartRest={handleStartRest}
                   onRestChange={handleRestChange}
-                  onSwap={(exerciseId) => {
-                    const ex = exercises.find(e => e.id === exerciseId);
+                  onSwap={(id) => {
+                    const ex = exercises.find(e => e.id === id);
                     setSwapTarget(ex ?? null);
                   }}
+                  onEditTarget={handleEditTarget}
+                  onMemberSelect={handleSupersetMemberSelect}
                 />
               );
             }
@@ -1519,7 +1415,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     overflow: 'hidden',
   },
-  // Card inside a SupersetContainer — no individual border/radius/margin
+  // Card inside a SupersetGroup — no individual border/radius/margin
   cardInSuperset: {
     overflow: 'hidden',
   },
