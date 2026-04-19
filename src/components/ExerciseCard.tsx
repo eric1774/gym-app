@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import {
-  ActionSheetIOS,
-  Alert,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -24,6 +21,7 @@ import { GhostReference } from './GhostReference';
 import { NextSetPanel } from './NextSetPanel';
 import { Check, Trophy, More } from './icons';
 import { SetState, ProgramTarget } from './exerciseCardState';
+import { ExerciseMoreSheet } from './ExerciseMoreSheet';
 
 export interface SupersetBadge {
   label: string;               // "A", "B"
@@ -57,28 +55,6 @@ export interface ExerciseCardProps {
   onRestChange: (newRestSeconds: number) => void;  // PRESERVED — rest stepper
 }
 
-function presentMoreMenu(options: {
-  onSwap: () => void;
-  onEditTarget: () => void;
-}) {
-  const items = ['Swap exercise', 'Edit target', 'Cancel'];
-  if (Platform.OS === 'ios') {
-    ActionSheetIOS.showActionSheetWithOptions(
-      { options: items, cancelButtonIndex: 2 },
-      i => {
-        if (i === 0) { options.onSwap(); }
-        else if (i === 1) { options.onEditTarget(); }
-      },
-    );
-  } else {
-    Alert.alert('', undefined, [
-      { text: 'Swap exercise', onPress: options.onSwap },
-      { text: 'Edit target', onPress: options.onEditTarget },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
-}
-
 function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -110,6 +86,7 @@ export function ExerciseCard({
   onRestChange,
 }: ExerciseCardProps) {
   const [restStepperVisible, setRestStepperVisible] = useState(false);
+  const [moreSheetVisible, setMoreSheetVisible] = useState(false);
 
   const target = programTarget;
   const completed = sets.length;
@@ -196,7 +173,7 @@ export function ExerciseCard({
         </View>
 
         <TouchableOpacity
-          onPress={() => presentMoreMenu({ onSwap, onEditTarget })}
+          onPress={() => setMoreSheetVisible(true)}
           style={styles.moreButton}
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
           <More size={20} color={colors.secondary} />
@@ -312,6 +289,13 @@ export function ExerciseCard({
           )}
         </View>
       )}
+      <ExerciseMoreSheet
+        visible={moreSheetVisible}
+        exerciseName={exercise.name}
+        onSwap={onSwap}
+        onEditTarget={onEditTarget}
+        onClose={() => setMoreSheetVisible(false)}
+      />
     </View>
   );
 }
