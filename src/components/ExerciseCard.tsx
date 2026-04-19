@@ -99,13 +99,14 @@ export function ExerciseCard({
 
   const lastLoggedWeight = sets.length > 0 ? sets[sets.length - 1].w : 0;
   const liveWeight = next.w > 0 ? next.w : (lastLoggedWeight > 0 ? lastLoggedWeight : (target?.targetWeightLbs ?? 0));
-  const reps = target?.targetReps ?? next.r;
+  const lastLoggedReps = sets.length > 0 ? sets[sets.length - 1].r : 0;
+  const liveReps = next.r > 0 ? next.r : (lastLoggedReps > 0 ? lastLoggedReps : (target?.targetReps ?? 0));
 
   let targetLabel = '';
   if (isTimed) {
-    targetLabel = reps > 0 ? `${reps}s target` : '';
-  } else if (liveWeight > 0 && reps > 0) {
-    targetLabel = `${reps} × ${isHeightReps ? `${liveWeight} in` : `${liveWeight} lb`}`;
+    targetLabel = liveReps > 0 ? `${liveReps}s target` : '';
+  } else if (liveWeight > 0 && liveReps > 0) {
+    targetLabel = `${liveReps} × ${isHeightReps ? `${liveWeight} in` : `${liveWeight} lb`}`;
   }
 
   const prCount = sets.filter(s => s.isPR).length;
