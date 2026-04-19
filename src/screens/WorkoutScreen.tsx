@@ -1004,6 +1004,14 @@ export function WorkoutScreen() {
             onDismiss={dismissWarmup}
             onSkipAll={skipAllWarmupItems}
           />
+          {(warmupState === 'none' || warmupState === 'dismissed') && (
+            <TouchableOpacity
+              style={styles.addWarmupButton}
+              onPress={() => setShowWarmupPicker(true)}
+            >
+              <Text style={styles.addWarmupText}>🔥 Add Warmup</Text>
+            </TouchableOpacity>
+          )}
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
@@ -1088,14 +1096,6 @@ export function WorkoutScreen() {
               </View>
             );
           })}
-          {(warmupState === 'none' || warmupState === 'dismissed') && (
-            <TouchableOpacity
-              style={styles.addWarmupButton}
-              onPress={() => setShowWarmupPicker(true)}
-            >
-              <Text style={styles.addWarmupText}>🔥 Add Warmup</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
