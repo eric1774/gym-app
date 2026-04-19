@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { Backspace } from './icons';
 
@@ -24,6 +25,7 @@ interface NumberPadProps {
 const KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'] as const;
 
 export function NumberPad({ visible, field, initialValue, label, onCommit, onCancel }: NumberPadProps) {
+  const insets = useSafeAreaInsets();
   const [buf, setBuf] = useState<string>(String(initialValue ?? ''));
   const slideY = useRef(new Animated.Value(400)).current;
   const caretOpacity = useRef(new Animated.Value(1)).current;
@@ -80,7 +82,7 @@ export function NumberPad({ visible, field, initialValue, label, onCommit, onCan
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable onPress={onCancel} style={styles.backdrop} />
-      <Animated.View style={[styles.sheet, { transform: [{ translateY: slideY }] }]}>
+      <Animated.View style={[styles.sheet, { transform: [{ translateY: slideY }], paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <View style={styles.handle} />
         <View style={styles.topRow}>
           <View style={styles.titleColumn}>
@@ -141,7 +143,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 22,
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 16,
   },
   handle: {
     width: 40,
