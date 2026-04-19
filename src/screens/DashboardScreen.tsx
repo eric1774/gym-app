@@ -79,7 +79,6 @@ export function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      setCategories([]); // clear stale data immediately
       (async () => {
         try {
           const [nextDay, snap] = await Promise.all([
