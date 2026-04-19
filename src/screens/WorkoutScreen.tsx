@@ -1056,18 +1056,20 @@ export function WorkoutScreen() {
     }));
   }, []);
 
-  const handleExpandExercise = useCallback(async (exerciseId: number) => {
+  const handleExpandExercise = useCallback((exerciseId: number) => {
     setActiveExerciseId(prev => (prev === exerciseId ? null : exerciseId));
     if (!session) { return; }
-    if (lastSetsByExercise[exerciseId] === undefined || lastSetsByExercise[exerciseId] === null) {
-      try {
-        const sets = await getLastSessionSets(exerciseId, session.id);
-        setLastSetsByExercise(prev => ({ ...prev, [exerciseId]: sets }));
-      } catch {
-        setLastSetsByExercise(prev => ({ ...prev, [exerciseId]: [] }));
+    setLastSetsByExercise(prev => {
+      if (prev[exerciseId] !== undefined && prev[exerciseId] !== null) {
+        return prev; // already fetched — no change
       }
-    }
-  }, [session, lastSetsByExercise]);
+      // Kick off async fetch; resolve/reject updates state independently.
+      getLastSessionSets(exerciseId, session.id)
+        .then(sets => setLastSetsByExercise(p => ({ ...p, [exerciseId]: sets })))
+        .catch(() => setLastSetsByExercise(p => ({ ...p, [exerciseId]: [] })));
+      return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
+    });
+  }, [session]);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
