@@ -24,10 +24,11 @@ interface PRItem {
   exerciseName: string;
   reps: number;
   weightLbs: number;
+  unit: string;
 }
 
 export interface PRToastHandle {
-  showPR: (exerciseName: string, reps: number, weightLbs: number) => void;
+  showPR: (exerciseName: string, reps: number, weightLbs: number, unit?: string) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -106,8 +107,8 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
   }, [currentToast, translateY, slideOut]);
 
   useImperativeHandle(ref, () => ({
-    showPR(exerciseName: string, reps: number, weightLbs: number) {
-      queueRef.current.push({ exerciseName, reps, weightLbs });
+    showPR(exerciseName: string, reps: number, weightLbs: number, unit: string = 'lbs') {
+      queueRef.current.push({ exerciseName, reps, weightLbs, unit });
 
       if (!isActiveRef.current) {
         dequeueAndShow();
@@ -138,7 +139,7 @@ export const PRToast = forwardRef<PRToastHandle>((_, ref) => {
           {currentToast.exerciseName}
         </Text>
         <Text style={styles.prDetail}>
-          {'New ' + currentToast.reps + '-rep PR! ' + currentToast.weightLbs + ' lbs'}
+          {'New ' + currentToast.reps + '-rep PR! ' + currentToast.weightLbs + ' ' + currentToast.unit}
         </Text>
       </Animated.View>
     </View>

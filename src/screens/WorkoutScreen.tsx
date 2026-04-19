@@ -14,31 +14,39 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Svg, { Path } from 'react-native-svg';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { WorkoutStackParamList } from '../navigation/TabNavigator';
 import { useSession } from '../context/SessionContext';
 import { useTimer } from '../context/TimerContext';
 import { ExercisePickerSheet } from './ExercisePickerSheet';
-import { SetLoggingPanel, ProgramTarget } from '../components/SetLoggingPanel';
+import { SwapSheet } from '../components/SwapSheet';
+import { getSetsForExerciseInSession } from '../db';
+import { NumberPad } from '../components/NumberPad';
+import { SetState, PadTarget, ProgramTarget } from '../components/exerciseCardState';
+import { logSet, getLastSessionSets, deleteSet, checkForPR } from '../db/sets';
 import { RestTimerBanner } from '../components/RestTimerBanner';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
 import { getProgramDayExercises, updateExerciseTargets } from '../db/programs';
 import { EditTargetsModal } from '../components/EditTargetsModal';
-import { getExerciseHistory } from '../db/dashboard';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
-import { checkForPR } from '../db/sets';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
 import { useHeartRate } from '../context/HeartRateContext';
-import { HRConnectionIndicator } from '../components/HRConnectionIndicator';
 import { DeviceScanSheet } from './DeviceScanSheet';
+import { WorkoutHeader } from '../components/WorkoutHeader';
+import { HrZone } from '../components/HrPill';
 import { getHRSettings } from '../services/HRSettingsService';
 import { HRSettings } from '../types';
 import { getHRZone, computeMaxHR } from '../utils/hrZones';
+import { WarmupSection } from '../components/WarmupSection';
+import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
+import { ExerciseCard } from '../components/ExerciseCard';
+import { SupersetGroup } from '../components/SupersetGroup';
+import { ConfirmSheet } from '../components/ConfirmSheet';
+import { WorkoutSummary } from '../components/WorkoutSummary';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -105,19 +113,6 @@ function groupForWorkout(
   return sections;
 }
 
-/** Format elapsed seconds as MM:SS (or H:MM:SS for sessions >= 1 hour) */
-function formatElapsed(seconds: number): string {
-  if (seconds >= 3600) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 function useElapsedSeconds(startedAt: string | null): number {
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -151,390 +146,55 @@ function useElapsedSeconds(startedAt: string | null): number {
   return elapsed;
 }
 
-const HISTORY_ICON_SIZE = 18;
+interface CategoryHeaderProps {
+  category: ExerciseCategory;
+  done: number;
+  total: number;
+}
 
-function HistoryIcon({ color }: { color: string }) {
+function CategoryHeader({ category, done, total }: CategoryHeaderProps) {
   return (
-    <Svg width={HISTORY_ICON_SIZE} height={HISTORY_ICON_SIZE} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 8V12L15 15" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M3.05 11A9 9 0 1 1 3.05 13" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M3 4V11H10" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-const CHECK_CIRCLE_SIZE = 28;
-
-interface ExerciseCardProps {
-  exerciseSession: ExerciseSession;
-  exerciseName: string;
-  isActive: boolean;
-  setCount: number;
-  sessionId: number;
-  pendingRest: boolean;
-  programTarget: ProgramTarget | null;
-  measurementType: ExerciseMeasurementType;
-  restSeconds: number;
-  insideSuperset?: boolean;
-  isLastInSuperset?: boolean;
-  onPress: () => void;
-  onToggleComplete: () => void;
-  onSetLogged: (set: WorkoutSet) => void;
-  onSetDeleted: (set: WorkoutSet) => void;
-  onEditTarget?: () => void;
-  onStartRest: () => void;
-  onViewHistory: () => void;
-  onRestChange: (newRestSeconds: number) => void;
-}
-
-function ExerciseCard({
-  exerciseSession,
-  exerciseName,
-  isActive,
-  setCount,
-  sessionId,
-  pendingRest,
-  programTarget,
-  measurementType,
-  restSeconds,
-  insideSuperset = false,
-  onPress,
-  onToggleComplete,
-  onSetLogged,
-  onSetDeleted,
-  onEditTarget,
-  onStartRest,
-  onViewHistory,
-  onRestChange,
-}: ExerciseCardProps) {
-  const isComplete = exerciseSession.isComplete;
-  const [restStepperVisible, setRestStepperVisible] = useState(false);
-
-  return (
-    <TouchableOpacity
-      style={[
-        insideSuperset ? styles.cardInSuperset : styles.card,
-        isActive ? styles.cardActive : styles.cardInactive,
-        isComplete && styles.cardComplete,
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}>
-      <View style={[styles.cardHeader, insideSuperset && styles.cardHeaderInSuperset]}>
-        <View style={styles.cardNameContainer}>
-          <Text style={[styles.cardName, isComplete && styles.cardNameComplete]}>
-            {exerciseName}
-          </Text>
-          {!isActive && setCount > 0 && (
-            <Text style={styles.setCountLabel}>
-              {setCount} set{setCount !== 1 ? 's' : ''} logged
-            </Text>
-          )}
-        </View>
-        <View style={styles.cardHeaderRight}>
-          <TouchableOpacity
-            onPress={onViewHistory}
-            style={styles.historyButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}>
-            <HistoryIcon color={colors.secondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onToggleComplete}
-            style={[
-              styles.checkCircle,
-              isComplete ? styles.checkCircleDone : styles.checkCirclePending,
-            ]}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            {isComplete && (
-              <Text style={styles.checkIcon}>{'\u2713'}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {isActive && (
-        <View style={[styles.cardExpanded, insideSuperset && styles.cardExpandedInSuperset]}>
-          {/* Rest duration label + stepper */}
-          <TouchableOpacity
-            style={styles.restLabelRow}
-            onPress={() => setRestStepperVisible(v => !v)}
-            activeOpacity={0.7}>
-            <Text style={styles.restLabelText}>Rest: {restSeconds}s</Text>
-          </TouchableOpacity>
-          {restStepperVisible && (
-            <View style={styles.restStepperRow}>
-              <TouchableOpacity
-                style={[styles.restStepperButton, restSeconds <= 30 && styles.restStepperButtonDisabled]}
-                onPress={() => {
-                  if (restSeconds > 30) {
-                    onRestChange(restSeconds - 15);
-                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
-                  }
-                }}
-                disabled={restSeconds <= 30}
-                activeOpacity={0.7}>
-                <Text style={[styles.restStepperText, restSeconds <= 30 && styles.restStepperTextDisabled]}>-15</Text>
-              </TouchableOpacity>
-              <Text style={styles.restStepperValue}>{restSeconds}s</Text>
-              <TouchableOpacity
-                style={[styles.restStepperButton, restSeconds >= 180 && styles.restStepperButtonDisabled]}
-                onPress={() => {
-                  if (restSeconds < 180) {
-                    onRestChange(restSeconds + 15);
-                    HapticFeedback.trigger('impactLight', { enableVibrateFallback: true });
-                  }
-                }}
-                disabled={restSeconds >= 180}
-                activeOpacity={0.7}>
-                <Text style={[styles.restStepperText, restSeconds >= 180 && styles.restStepperTextDisabled]}>+15</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          <SetLoggingPanel
-            sessionId={sessionId}
-            exerciseId={exerciseSession.exerciseId}
-            onSetLogged={onSetLogged}
-            onSetDeleted={onSetDeleted}
-            onEditTarget={onEditTarget}
-            programTarget={programTarget}
-            measurementType={measurementType}
-          />
-          {pendingRest && (
-            <TouchableOpacity
-              style={styles.startRestButton}
-              onPress={onStartRest}
-              activeOpacity={0.85}>
-              <Text style={styles.startRestText}>Start Rest Timer</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-interface SupersetContainerProps {
-  groupId: number;
-  exerciseIds: number[];
-  sessionExercises: ExerciseSession[];
-  exercises: Exercise[];
-  activeExerciseId: number | null;
-  setCountsByExercise: Record<number, number>;
-  pendingRestExerciseId: number | null;
-  programTargetsMap: Map<number, ProgramTarget>;
-  restOverrides: Record<number, number>;
-  sessionId: number;
-  onPressExercise: (exerciseId: number, isActive: boolean) => void;
-  onToggleComplete: (exerciseId: number) => void;
-  onSetLogged: (exerciseId: number, set: WorkoutSet) => void;
-  onSetDeleted: (exerciseId: number, set: WorkoutSet) => void;
-  onEditTarget: (exerciseId: number) => void;
-  onStartRest: (exerciseId: number) => void;
-  onViewHistory: (exerciseId: number) => void;
-  onRestChange: (exerciseId: number, newRestSeconds: number) => void;
-}
-
-function SupersetContainer({
-  groupId,
-  exerciseIds,
-  sessionExercises,
-  exercises,
-  activeExerciseId,
-  setCountsByExercise,
-  pendingRestExerciseId,
-  programTargetsMap,
-  restOverrides,
-  sessionId,
-  onPressExercise,
-  onToggleComplete,
-  onSetLogged,
-  onSetDeleted,
-  onEditTarget,
-  onStartRest,
-  onViewHistory,
-  onRestChange,
-}: SupersetContainerProps) {
-  // Round = min completed sets across all exercises + 1
-  const round = Math.min(...exerciseIds.map(id => setCountsByExercise[id] ?? 0)) + 1;
-  const total = Math.max(...exerciseIds.map(id => programTargetsMap.get(id)?.targetSets ?? 3));
-
-  return (
-    <View style={supersetStyles.container}>
-      {/* Mint accent bar on the left */}
-      <View style={supersetStyles.accentBar} />
-
-      {/* SUPERSET header label */}
-      <View style={supersetStyles.header}>
-        <Text style={supersetStyles.headerText}>
-          {'SUPERSET \u00B7 Round '}{round}/{total}
-        </Text>
-      </View>
-
-      {/* Exercise cards */}
-      {exerciseIds.map((exerciseId, index) => {
-        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
-        if (!se) { return null; }
-        const exercise = exercises.find(ex => ex.id === exerciseId);
-        const name = exercise?.name ?? `Exercise ${exerciseId}`;
-        const isActive = activeExerciseId === exerciseId;
-        const setCount = setCountsByExercise[exerciseId] ?? 0;
-        const isLast = index === exerciseIds.length - 1;
-
-        return (
-          <View key={exerciseId}>
-            {index > 0 && <View style={supersetStyles.divider} />}
-            <ExerciseCard
-              exerciseSession={se}
-              exerciseName={name}
-              isActive={isActive}
-              setCount={setCount}
-              sessionId={sessionId}
-              pendingRest={pendingRestExerciseId === exerciseId}
-              programTarget={programTargetsMap.get(exerciseId) ?? null}
-              measurementType={exercise?.measurementType ?? 'reps'}
-              restSeconds={restOverrides[exerciseId] ?? se.restSeconds}
-              insideSuperset={true}
-              isLastInSuperset={isLast}
-              onPress={() => onPressExercise(exerciseId, isActive)}
-              onToggleComplete={() => onToggleComplete(exerciseId)}
-              onSetLogged={(set) => onSetLogged(exerciseId, set)}
-              onSetDeleted={(set) => onSetDeleted(exerciseId, set)}
-              onEditTarget={() => onEditTarget(exerciseId)}
-              onStartRest={() => onStartRest(exerciseId)}
-              onViewHistory={() => onViewHistory(exerciseId)}
-              onRestChange={(newRest) => onRestChange(exerciseId, newRest)}
-            />
-          </View>
-        );
-      })}
+    <View style={categoryHeaderStyles.row}>
+      <View style={[categoryHeaderStyles.dot, { backgroundColor: getCategoryColor(category) }]} />
+      <Text style={categoryHeaderStyles.label}>{category}</Text>
+      <View style={categoryHeaderStyles.divider} />
+      <Text style={categoryHeaderStyles.counter}>{done}/{total}</Text>
     </View>
   );
 }
 
-const supersetStyles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-    overflow: 'hidden',
+const categoryHeaderStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: colors.accent,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  header: {
-    paddingLeft: spacing.base + 8,
-    paddingRight: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  headerText: {
+  label: {
     fontSize: 11,
-    fontWeight: weightBold,
+    fontWeight: '800',
     color: colors.secondary,
-    letterSpacing: 1.5,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
+    flex: 1,
+    height: 1,
     backgroundColor: colors.border,
-    marginLeft: spacing.base + 8,
+  },
+  counter: {
+    fontSize: 11,
+    color: colors.secondaryDim,
+    fontVariant: ['tabular-nums'],
   },
 });
-
-interface WorkoutSummaryProps {
-  duration: number;
-  totalSets: number;
-  totalVolume: number;
-  exercisesCompleted: number;
-  exercisesTotal: number;
-  prCount: number;
-  avgHr?: number | null;
-  peakHr?: number | null;
-  onDismiss: () => void;
-}
-
-function WorkoutSummary({
-  duration,
-  totalSets,
-  totalVolume,
-  exercisesCompleted,
-  exercisesTotal,
-  prCount,
-  avgHr,
-  peakHr,
-  onDismiss,
-}: WorkoutSummaryProps) {
-  return (
-    <SafeAreaView style={summaryStyles.container} edges={['top', 'bottom']}>
-      <View style={summaryStyles.card}>
-        {/* Heading */}
-        <Text style={summaryStyles.heading}>Workout Complete</Text>
-
-        {/* Stats table */}
-        <View style={summaryStyles.statsContainer}>
-          <View style={summaryStyles.statRow}>
-            <Text style={summaryStyles.statLabel}>Duration</Text>
-            <Text style={summaryStyles.statValue}>{formatElapsed(duration)}</Text>
-          </View>
-
-          <View style={summaryStyles.statRow}>
-            <Text style={summaryStyles.statLabel}>Total Sets</Text>
-            <Text style={summaryStyles.statValue}>{totalSets}</Text>
-          </View>
-
-          <View style={summaryStyles.statRow}>
-            <Text style={summaryStyles.statLabel}>Volume</Text>
-            <Text style={summaryStyles.statValue}>
-              {totalVolume > 0 ? `${totalVolume.toLocaleString()} lbs` : '0 lbs'}
-            </Text>
-          </View>
-
-          <View style={summaryStyles.statRow}>
-            <Text style={summaryStyles.statLabel}>Exercises</Text>
-            <Text style={summaryStyles.statValue}>{exercisesCompleted}/{exercisesTotal}</Text>
-          </View>
-
-          {prCount > 0 && (
-            <View style={summaryStyles.statRow}>
-              <Text style={summaryStyles.prLabel}>{'\uD83C\uDFC6'} PRs</Text>
-              <Text style={summaryStyles.prValue}>{prCount}</Text>
-            </View>
-          )}
-
-          {avgHr != null && (
-            <View style={summaryStyles.statRow}>
-              <Text style={summaryStyles.statLabel}>Avg HR</Text>
-              <Text style={summaryStyles.statValue}>{avgHr} bpm</Text>
-            </View>
-          )}
-
-          {peakHr != null && (
-            <View style={summaryStyles.statRow}>
-              <Text style={summaryStyles.statLabel}>Peak HR</Text>
-              <Text style={summaryStyles.statValue}>{peakHr} bpm</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Done button */}
-        <TouchableOpacity
-          style={summaryStyles.doneButton}
-          onPress={onDismiss}
-          activeOpacity={0.85}>
-          <Text style={summaryStyles.doneButtonText}>Done</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
 
 export function WorkoutScreen() {
   const insets = useSafeAreaInsets();
@@ -549,19 +209,30 @@ export function WorkoutScreen() {
     endSession,
     addExercise,
     toggleExerciseComplete,
+    swapExercise: swapExerciseInSession,
+    warmupItems,
+    warmupState,
+    loadWarmupTemplate,
+    toggleWarmupItemComplete,
+    dismissWarmup,
+    collapseWarmup,
+    expandWarmup,
+    skipAllWarmupItems,
   } = useSession();
-  const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer } = useTimer();
+  const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer, addTime } = useTimer();
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
+  const [swapTarget, setSwapTarget] = useState<Exercise | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [setCountsByExercise, setSetCountsByExercise] = useState<Record<number, number>>({});
+  const [showWarmupPicker, setShowWarmupPicker] = useState(false);
+  const [showWarmupStartPrompt, setShowWarmupStartPrompt] = useState(false);
   const [pendingRestExerciseId, setPendingRestExerciseId] = useState<number | null>(null);
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
-  const [volumeTotal, setVolumeTotal] = useState(0);
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
-  const [prCount, setPrCount] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
+  const [endWorkoutSheetVisible, setEndWorkoutSheetVisible] = useState(false);
+  const [discardSheetVisible, setDiscardSheetVisible] = useState(false);
   const [summaryData, setSummaryData] = useState<{
     duration: number;
     totalSets: number;
@@ -577,23 +248,93 @@ export function WorkoutScreen() {
   // Track the last superset exercise that triggered a rest timer (for post-rest auto-advance)
   const lastSupersetRestRef = useRef<{ groupId: number; exerciseId: number } | null>(null);
 
+  // ─── Phase 7: hoisted per-exercise set state ────────────────────────────
+  const [setsByExercise, setSetsByExercise] = useState<Record<number, SetState[]>>({});
+  const [nextByExercise, setNextByExercise] = useState<Record<number, { w: number; r: number }>>({});
+  const [lastSetsByExercise, setLastSetsByExercise] = useState<Record<number, WorkoutSet[] | null>>({});
+  const [pad, setPad] = useState<PadTarget | null>(null);
+
+  // Derived aggregates — match old handleSetLogged exclusions
+  const volumeTotal = useMemo(() => {
+    let total = 0;
+    for (const exIdStr in setsByExercise) {
+      const exId = Number(exIdStr);
+      const ex = exercises.find(e => e.id === exId);
+      if (!ex) { continue; }
+      if (ex.measurementType === 'timed' || ex.measurementType === 'height_reps') { continue; }
+      for (const s of setsByExercise[exId]) {
+        if (s.isWarmup) { continue; }
+        total += s.w * s.r;
+      }
+    }
+    return total;
+  }, [setsByExercise, exercises]);
+
+  const setCountsByExercise = useMemo<Record<number, number>>(() => {
+    const counts: Record<number, number> = {};
+    for (const exIdStr in setsByExercise) {
+      counts[Number(exIdStr)] = setsByExercise[Number(exIdStr)].length;
+    }
+    return counts;
+  }, [setsByExercise]);
+
+  const prCount = useMemo(() => {
+    let c = 0;
+    for (const exIdStr in setsByExercise) {
+      for (const s of setsByExercise[Number(exIdStr)]) { if (s.isPR) { c += 1; } }
+    }
+    return c;
+  }, [setsByExercise]);
+
+  // Stable reference for SwapSheet — avoids useEffect re-fire on every render
+  const excludeIdsForSwap = useMemo(
+    () => sessionExercises.map(se => se.exerciseId),
+    [sessionExercises],
+  );
+
   // Inline target editing state
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
+  // TODO(workout-v1): wire setProgramDayName from a getProgramDay(programDayId)
+  // DB call so WorkoutHeader can show the real day name (e.g. 'PUSH DAY') instead
+  // of the 'WORKOUT' fallback. Pre-existing state; never populated before V1.
   const [programDayName, setProgramDayName] = useState<string | null>(null);
   // Superset group maps: groupId -> ordered exerciseIds, exerciseId -> groupId
   const [supersetGroups, setSupersetGroups] = useState<Map<number, number[]>>(new Map());
+  const [ssCurrentByGroup, setSsCurrentByGroup] = useState<Record<number, number>>({});
   const [exerciseSupersetMap, setExerciseSupersetMap] = useState<Map<number, number>>(new Map());
   // Refs for accessing superset maps inside callbacks without stale closures
   const supersetGroupsRef = useRef<Map<number, number[]>>(new Map());
   const exerciseSupersetMapRef = useRef<Map<number, number>>(new Map());
 
+  // Seed initial current-member pointer (first member of each group). Preserves
+  // any existing user-chosen pointers when groups change.
+  useEffect(() => {
+    if (supersetGroups.size === 0) {
+      setSsCurrentByGroup({});
+      return;
+    }
+    setSsCurrentByGroup(prev => {
+      const next: Record<number, number> = {};
+      supersetGroups.forEach((members, gid) => {
+        if (members.length > 0) {
+          next[gid] = prev[gid] ?? members[0];
+        }
+      });
+      return next;
+    });
+  }, [supersetGroups]);
+
   // ─── Heart Rate Integration ────────────────────────────────────────────────
   const { deviceState, currentBpm, attemptAutoReconnect, flushHRSamples } = useHeartRate();
   const [hasPairedDevice, setHasPairedDevice] = useState(false);
   const [hrSettings, setHrSettings] = useState<HRSettings | null>(null);
+  // TODO(workout-v1): wire HrPill onPress (when disconnected) to
+  // setScanSheetVisible(true). Task 3.2 removed the inline pair button; users
+  // currently have no in-workout path to pair an HR monitor. Pairing via
+  // Settings still works. See code-quality review of commit 22fe968.
   const [scanSheetVisible, setScanSheetVisible] = useState(false);
   const prevDeviceStateRef = useRef(deviceState);
 
@@ -720,6 +461,29 @@ export function WorkoutScreen() {
     };
   }, []);
 
+  const ensureLastSetsFetched = useCallback((exerciseId: number) => {
+    if (!session) { return; }
+    setLastSetsByExercise(prev => {
+      if (prev[exerciseId] !== undefined) {
+        return prev; // already fetched (or in-flight) — skip
+      }
+      getLastSessionSets(exerciseId, session.id)
+        .then(sets => setLastSetsByExercise(p => ({ ...p, [exerciseId]: sets })))
+        .catch(() => setLastSetsByExercise(p => ({ ...p, [exerciseId]: [] })));
+      return { ...prev, [exerciseId]: null }; // sentinel to prevent double-fetch
+    });
+  }, [session]);
+
+  // Whenever a card becomes active, ensure its last-session data is fetched.
+  // Centralizes the lazy-load so every path that sets activeExerciseId
+  // (manual tap, initial session load, post-rest auto-advance, superset
+  // rotation, handleAddExercise) hydrates the GhostReference peek.
+  useEffect(() => {
+    if (activeExerciseId !== null) {
+      ensureLastSetsFetched(activeExerciseId);
+    }
+  }, [activeExerciseId, ensureLastSetsFetched]);
+
   // Post-rest auto-advance: when rest timer ends and last superset exercise triggered it,
   // auto-expand the FIRST exercise in the group for the next round
   const isRunningRef = useRef(isRunning);
@@ -736,9 +500,66 @@ export function WorkoutScreen() {
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
         setActiveExerciseId(groupExerciseIds[0]);
+        // Sync ssCurrentByGroup so the NOW badge moves with the active card.
+        setSsCurrentByGroup(prev => ({ ...prev, [groupId]: groupExerciseIds[0] }));
       }
     }
   }, [isRunning]);
+
+  // Seed + rehydrate per-exercise set state on session/exercise load
+  useEffect(() => {
+    if (!session) {
+      setSetsByExercise({});
+      setNextByExercise({});
+      setLastSetsByExercise({});
+      return;
+    }
+    let cancelled = false;
+
+    (async () => {
+      const seededNext: Record<number, { w: number; r: number }> = {};
+      const rehydratedSets: Record<number, SetState[]> = {};
+      for (const se of sessionExercises) {
+        const tgt = programTargetsMap.get(se.exerciseId);
+        seededNext[se.exerciseId] = {
+          w: tgt?.targetWeightLbs ?? 0,
+          r: tgt?.targetReps ?? 0,
+        };
+        const existing = await getSetsForExerciseInSession(session.id, se.exerciseId);
+        rehydratedSets[se.exerciseId] = existing.map(s => ({
+          id: s.id,
+          setNumber: s.setNumber,
+          w: s.weightLbs,
+          r: s.reps,
+          isWarmup: s.isWarmup,
+          // isPR intentionally undefined — ephemeral
+        }));
+        // Prefer last existing set over program target for next seeded values
+        if (existing.length > 0) {
+          const last = existing[existing.length - 1];
+          seededNext[se.exerciseId] = { w: last.weightLbs, r: last.reps };
+        }
+      }
+      if (!cancelled) {
+        setNextByExercise(seededNext);
+        setSetsByExercise(rehydratedSets);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [session, sessionExercises, programTargetsMap]);
+
+  const handleWarmupTemplateSelect = useCallback(async (templateId: number) => {
+    await loadWarmupTemplate(templateId);
+    setShowWarmupPicker(false);
+    setShowWarmupStartPrompt(false);
+  }, [loadWarmupTemplate]);
+
+  useEffect(() => {
+    if (session && warmupState === 'none' && warmupItems.length === 0) {
+      setShowWarmupStartPrompt(true);
+    }
+  }, [session?.id]);
 
   const handleAddExercise = useCallback(
     async (exercise: Exercise) => {
@@ -756,68 +577,163 @@ export function WorkoutScreen() {
     [toggleExerciseComplete],
   );
 
-  const handleSetLogged = useCallback((exerciseId: number, set: WorkoutSet) => {
-    setSetCountsByExercise(prev => ({
+  const handleLog = useCallback(async (exerciseId: number) => {
+    if (!session) { return; }
+    const next = nextByExercise[exerciseId];
+    if (!next) { return; }
+
+    const exercise = exercises.find(e => e.id === exerciseId);
+    const isTimed = exercise?.measurementType === 'timed';
+    const isHeightReps = exercise?.measurementType === 'height_reps';
+
+    // Timed sets read duration from nextR directly (stopwatch path is deferred to Task 7.x timed support)
+    const w = isTimed ? 0 : next.w;
+    const r = next.r;
+    if (r <= 0) { return; }
+    if (!isTimed && w < 0) { return; }
+
+    let newSet: WorkoutSet;
+    try {
+      newSet = await logSet(session.id, exerciseId, w, r);
+    } catch {
+      return;
+    }
+
+    // PR check — only for reps-based, non-warmup sets.
+    // Also exclude when an in-session set at the same rep count already
+    // matched or exceeded this weight (otherwise checkForPR would still
+    // fire because it ignores the current session in its DB query).
+    let isPR = false;
+    if (!isTimed && !newSet.isWarmup) {
+      const inSessionMaxAtSameReps = (setsByExercise[exerciseId] ?? [])
+        .filter(s => !s.isWarmup && s.r === r)
+        .reduce((max, s) => Math.max(max, s.w), 0);
+      if (w > inSessionMaxAtSameReps) {
+        try {
+          isPR = await checkForPR(exerciseId, w, r, session.id);
+        } catch {
+          isPR = false;
+        }
+      }
+    }
+
+    setSetsByExercise(prev => ({
       ...prev,
-      [exerciseId]: (prev[exerciseId] ?? 0) + 1,
+      [exerciseId]: [
+        ...(prev[exerciseId] ?? []),
+        {
+          id: newSet.id,
+          setNumber: newSet.setNumber,
+          w: newSet.weightLbs,
+          r: newSet.reps,
+          isWarmup: newSet.isWarmup,
+          isPR,
+        },
+      ],
     }));
 
-    // Superset auto-advance: check if this exercise is in a superset group
+    if (isPR) {
+      const name = exercise?.name ?? 'Exercise';
+      const unit = isHeightReps ? 'in' : 'lbs';
+      prToastRef.current?.showPR(name, newSet.reps, newSet.weightLbs, unit);
+      HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+      setTimeout(() => {
+        HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+      }, 400);
+    }
+
+    // Pre-fill next set with just-logged values
+    setNextByExercise(prev => ({
+      ...prev,
+      [exerciseId]: { w: newSet.weightLbs, r: newSet.reps },
+    }));
+
+    // V1 superset model: rotate only for non-last members; stay put on last member.
     const groupId = exerciseSupersetMapRef.current.get(exerciseId);
     if (groupId !== undefined) {
-      const groupExerciseIds = supersetGroupsRef.current.get(groupId) ?? [];
-      const currentIndex = groupExerciseIds.indexOf(exerciseId);
-      const isLastInGroup = currentIndex === groupExerciseIds.length - 1;
-
-      if (!isLastInGroup) {
-        // Not the last exercise — auto-advance to next, suppress rest timer
-        const nextExerciseId = groupExerciseIds[currentIndex + 1];
+      const members = supersetGroupsRef.current.get(groupId) ?? [];
+      const idx = members.indexOf(exerciseId);
+      const isLastInCycle = idx === members.length - 1;
+      if (!isLastInCycle && idx >= 0 && members.length > 1) {
+        // Mid-cycle: rotate to next member, no rest.
+        const nextMember = members[idx + 1];
         LayoutAnimation.configureNext(
           LayoutAnimation.create(250, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
         );
-        setActiveExerciseId(nextExerciseId);
-        // Do NOT set pendingRestExerciseId — rest is suppressed for non-last exercises
+        setSsCurrentByGroup(prev => ({ ...prev, [groupId]: nextMember }));
+        setActiveExerciseId(nextMember);
       } else {
-        // Last exercise in group — show rest timer as normal, track for post-rest advance
+        // End-of-cycle (or single-member group): stay put, queue rest, mark round complete.
         setPendingRestExerciseId(exerciseId);
         lastSupersetRestRef.current = { groupId, exerciseId };
       }
     } else {
-      // Not in a superset — normal behavior
       setPendingRestExerciseId(exerciseId);
     }
+  }, [session, nextByExercise, exercises, setsByExercise]);
 
-    const exercise = exercises.find(ex => ex.id === exerciseId);
-    if (set.isWarmup === false && exercise?.measurementType !== 'timed') {
-      setVolumeTotal(prev => prev + set.weightLbs * set.reps);
-
-      checkForPR(exerciseId, set.weightLbs, set.reps, session!.id).then(isPR => {
-        if (isPR) {
-          setPrCount(prev => prev + 1);
-          const name = exercises.find(ex => ex.id === exerciseId)?.name ?? 'Exercise';
-          prToastRef.current?.showPR(name, set.reps, set.weightLbs);
-          HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-          setTimeout(() => {
-            HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-          }, 400);
-        }
-      }).catch(() => {});
+  const handleDeleteSet = useCallback(async (exerciseId: number, setId: number) => {
+    try {
+      await deleteSet(setId);
+    } catch {
+      return;
     }
-  }, [exercises, session]);
-
-  const handleSetDeleted = useCallback((exerciseId: number, set: WorkoutSet) => {
-    setSetCountsByExercise(prev => ({
+    setSetsByExercise(prev => ({
       ...prev,
-      [exerciseId]: Math.max((prev[exerciseId] ?? 0) - 1, 0),
+      [exerciseId]: (prev[exerciseId] ?? []).filter(s => s.id !== setId),
     }));
-    if (!set.isWarmup) {
-      setVolumeTotal(prev => Math.max(prev - set.weightLbs * set.reps, 0));
-    }
+  }, []);
+
+  const handleOpenPad = useCallback((exerciseId: number, field: 'w' | 'r') => {
+    const next = nextByExercise[exerciseId];
+    const exercise = exercises.find(e => e.id === exerciseId);
+    const name = exercise?.name ?? '';
+    const isHeightReps = exercise?.measurementType === 'height_reps';
+    const numberPadField: 'weight' | 'reps' | 'height' =
+      field === 'r' ? 'reps' : (isHeightReps ? 'height' : 'weight');
+    setPad({
+      exerciseId,
+      field,
+      numberPadField,
+      initialValue: next ? (field === 'w' ? next.w : next.r) : 0,
+      label: name,
+    });
+  }, [nextByExercise, exercises]);
+
+  const handleNextChange = useCallback((exerciseId: number, field: 'w' | 'r', value: number) => {
+    setNextByExercise(prev => ({
+      ...prev,
+      [exerciseId]: {
+        w: field === 'w' ? value : prev[exerciseId]?.w ?? 0,
+        r: field === 'r' ? value : prev[exerciseId]?.r ?? 0,
+      },
+    }));
+  }, []);
+
+  const handleExpandExercise = useCallback((exerciseId: number) => {
+    setActiveExerciseId(prev => (prev === exerciseId ? null : exerciseId));
+  }, []);
+
+  const handleSupersetMemberSelect = useCallback((memberId: number) => {
+    const groupId = exerciseSupersetMapRef.current.get(memberId);
+    if (groupId === undefined) { return; }
+    setSsCurrentByGroup(prev => ({ ...prev, [groupId]: memberId }));
   }, []);
 
   const handleEditTarget = useCallback((exerciseId: number) => {
     setEditingExerciseId(exerciseId);
   }, []);
+
+  const handleViewHistory = useCallback((exerciseId: number) => {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (!exercise) { return; }
+    navigation.navigate('ExerciseDetail', {
+      exerciseId,
+      exerciseName: exercise.name,
+      measurementType: exercise.measurementType,
+      category: exercise.category,
+    });
+  }, [exercises, navigation]);
 
   const handleSaveTargets = useCallback(async (pdeId: number, sets: number, reps: number, weight: number) => {
     if (editingExerciseId === null) { return; }
@@ -880,39 +796,31 @@ export function WorkoutScreen() {
 
   const handleStartRest = useCallback(
     (exerciseId: number) => {
-      // Prefer local override, fall back to session rest, then exercise default, then 90
-      const override = restOverrides[exerciseId];
-      if (override !== undefined) {
-        startTimer(override);
+      // Compute the rest duration. For superset members, use min(member rest values).
+      const groupId = exerciseSupersetMapRef.current.get(exerciseId);
+      let duration: number;
+      if (groupId !== undefined) {
+        const members = supersetGroupsRef.current.get(groupId) ?? [];
+        const memberRests = members.map(id => {
+          const over = restOverrides[id];
+          if (typeof over === 'number') { return over; }
+          const se = sessionExercises.find(s => s.exerciseId === id);
+          return se?.restSeconds ?? exercises.find(ex => ex.id === id)?.defaultRestSeconds ?? 90;
+        });
+        duration = memberRests.length > 0 ? Math.max(0, Math.min(...memberRests)) : 90;
       } else {
-        const se = sessionExercises.find(s => s.exerciseId === exerciseId);
-        const duration = se?.restSeconds ?? exercises.find(ex => ex.id === exerciseId)?.defaultRestSeconds ?? 90;
-        startTimer(duration);
+        const override = restOverrides[exerciseId];
+        if (override !== undefined) {
+          duration = override;
+        } else {
+          const se = sessionExercises.find(s => s.exerciseId === exerciseId);
+          duration = se?.restSeconds ?? exercises.find(ex => ex.id === exerciseId)?.defaultRestSeconds ?? 90;
+        }
       }
+      startTimer(duration);
       setPendingRestExerciseId(null);
     },
     [restOverrides, sessionExercises, exercises, startTimer],
-  );
-
-  const handleViewHistory = useCallback(
-    async (exerciseId: number) => {
-      const exercise = exercises.find(ex => ex.id === exerciseId);
-      if (!exercise) { return; }
-
-      const history = await getExerciseHistory(exerciseId);
-      if (history.length === 0) {
-        Alert.alert('No History', 'No History for this Exercise Exists');
-        return;
-      }
-
-      navigation.navigate('ExerciseProgress', {
-        exerciseId,
-        exerciseName: exercise.name,
-        measurementType: exercise.measurementType,
-        category: exercise.category,
-      });
-    },
-    [exercises, navigation],
   );
 
   const showCompletionMessage = useCallback((message: string) => {
@@ -930,80 +838,86 @@ export function WorkoutScreen() {
     setShowSummary(false);
     setSummaryData(null);
     setActiveExerciseId(null);
-    setSetCountsByExercise({});
     setPendingRestExerciseId(null);
-    setVolumeTotal(0);
     setRestOverrides({});
-    setPrCount(0);
     (navigation as any).navigate('DashboardTab');
   }, [navigation]);
 
   const handleEndWorkout = useCallback(async () => {
     if (!session) { return; }
     const hadActivity = await hasSessionActivity(session.id);
-
     if (!hadActivity) {
-      Alert.alert(
-        'No Exercises Logged',
-        'No exercises were logged or completed. Discard this workout?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: async () => {
-              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-              const wasProgramWorkout = !!programDayId;
-              if (isRunning) { stopTimer(); }
-              await endSession();
-              setActiveExerciseId(null);
-              setSetCountsByExercise({});
-              setPendingRestExerciseId(null);
-              setVolumeTotal(0);
-              setRestOverrides({});
-              setPrCount(0);
-              if (wasProgramWorkout) {
-                (navigation as any).navigate('ProgramsTab');
-              }
-            },
-          },
-        ],
-      );
+      setDiscardSheetVisible(true);
     } else {
-      Alert.alert(
-        'End Workout?',
-        'This marks your session complete.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'End Workout',
-            style: 'destructive',
-            onPress: async () => {
-              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-              const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
-              const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
-              const exercisesTotal = sessionExercises.length;
-              // Flush HR samples before completing the session (D-06)
-              const { avgHr, peakHr } = await flushHRSamples(session.id);
-              setSummaryData({
-                duration: elapsed,
-                totalSets,
-                totalVolume: volumeTotal,
-                exercisesCompleted,
-                exercisesTotal,
-                prCount,
-                avgHr,
-                peakHr,
-              });
-              if (isRunning) { stopTimer(); }
-              await endSession();
-              setShowSummary(true);
-            },
-          },
-        ],
-      );
+      setEndWorkoutSheetVisible(true);
     }
-  }, [session, endSession, isRunning, stopTimer, programDayId, navigation, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
+  }, [session]);
+
+  const confirmDiscard = useCallback(async () => {
+    if (!session) { return; }
+    HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+    const wasProgramWorkout = !!programDayId;
+    if (isRunning) { stopTimer(); }
+    await endSession();
+    setActiveExerciseId(null);
+    setPendingRestExerciseId(null);
+    setRestOverrides({});
+    if (wasProgramWorkout) {
+      (navigation as any).navigate('ProgramsTab');
+    }
+  }, [session, programDayId, isRunning, stopTimer, endSession, navigation]);
+
+  const confirmEndWorkout = useCallback(async () => {
+    if (!session) { return; }
+    HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+    const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
+    const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
+    const exercisesTotal = sessionExercises.length;
+    // Flush HR samples before completing the session (D-06)
+    const { avgHr, peakHr } = await flushHRSamples(session.id);
+    setSummaryData({
+      duration: elapsed,
+      totalSets,
+      totalVolume: volumeTotal,
+      exercisesCompleted,
+      exercisesTotal,
+      prCount,
+      avgHr,
+      peakHr,
+    });
+    if (isRunning) { stopTimer(); }
+    await endSession();
+    setShowSummary(true);
+  }, [session, isRunning, stopTimer, endSession, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
+
+  // Helper maps for SupersetGroup — hoisted above early-return wall
+  const exerciseMap = useMemo(() => {
+    const m = new Map<number, Exercise>();
+    for (const ex of exercises) { m.set(ex.id, ex); }
+    return m;
+  }, [exercises]);
+
+  const sessionExerciseMap = useMemo(() => {
+    const m = new Map<number, ExerciseSession>();
+    for (const se of sessionExercises) { m.set(se.exerciseId, se); }
+    return m;
+  }, [sessionExercises]);
+
+  // Build sections + letter map BEFORE early returns so hook order stays stable
+  const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
+
+  // Map each superset groupId to a position-based letter (first superset = A, second = B, …)
+  const supersetLetterByGroupId = useMemo(() => {
+    const map = new Map<number, string>();
+    let letterIdx = 0;
+    for (const section of workoutSections) {
+      if (section.type === 'superset') {
+        map.set(section.groupId, String.fromCharCode(65 + (letterIdx % 26)));
+        letterIdx++;
+      }
+    }
+    return map;
+  }, [workoutSections]);
 
   if (isLoading) {
     return (
@@ -1047,82 +961,20 @@ export function WorkoutScreen() {
     );
   }
 
-  // Build a session title from exercise categories (used for banner only)
-  const allCategories = groupByCategory(sessionExercises, exercises);
-  const sessionTitle = programDayId
-    ? allCategories.map(g => g.category.toUpperCase()).join(' & ')
-    : null;
-
-  // Build superset-aware grouped sections for rendering
-  const workoutSections = groupForWorkout(sessionExercises, exercises, exerciseSupersetMap, supersetGroups);
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Session header */}
-      <View style={styles.header}>
-        {/* Row 1: Timer, Volume, End Workout — always fits */}
-        <View style={styles.headerTopRow}>
-          <Text style={styles.timerText}>{formatElapsed(elapsed)}</Text>
-          <Text style={styles.volumeText}>
-            {volumeTotal > 0 ? `${volumeTotal.toLocaleString()} lbs` : ''}
-          </Text>
-
-          {/* Pair HR monitor button — visible when no device is paired */}
-          {!hasPairedDevice && (
-            <TouchableOpacity
-              onPress={() => setScanSheetVisible(true)}
-              style={styles.hrPairButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill={colors.accent}>
-                <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </Svg>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            onPress={handleEndWorkout}
-            style={styles.endButtonTouchable}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.endButton}>End Workout</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Row 2: HR info — only rendered when device is paired */}
-        {hasPairedDevice && (
-          <View style={styles.headerHRRow}>
-            <HRConnectionIndicator
-              deviceState={deviceState}
-              visible={hasPairedDevice}
-            />
-            {/* Always-rendered BPM display — swaps content without mount/unmount */}
-            <View style={styles.bpmBlock}>
-              <Text
-                style={[
-                  styles.bpmValue,
-                  { color: bpmZone ? bpmZone.color : colors.primary },
-                ]}>
-                {deviceState === 'connected' && currentBpm !== null
-                  ? String(currentBpm)
-                  : '--'}
-              </Text>
-              {bpmZone && (
-                <Text style={styles.bpmZoneLabel}>
-                  {`Zone ${bpmZone.zone} — ${bpmZone.name}`}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Session title banner for program workouts */}
-      {sessionTitle && sessionExercises.length > 0 && (
-        <View style={styles.sessionBanner}>
-          <Text style={styles.sessionBannerText} numberOfLines={2}>
-            ACTIVE WORKOUT SESSION: {sessionTitle}
-          </Text>
-        </View>
-      )}
+      <WorkoutHeader
+        title={programDayName ?? 'WORKOUT'}
+        elapsed={elapsed}
+        volume={volumeTotal}
+        setCount={Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0)}
+        prCount={prCount}
+        hr={{
+          bpm: deviceState === 'connected' ? currentBpm : null,
+          zone: (bpmZone?.zone ?? null) as HrZone | null,
+        }}
+        onFinish={handleEndWorkout}
+      />
 
       {/* Rest timer banner */}
       {isRunning && (
@@ -1130,6 +982,7 @@ export function WorkoutScreen() {
           remainingSeconds={remainingSeconds ?? 0}
           totalSeconds={totalSeconds ?? 0}
           onStop={stopTimer}
+          onAdd={() => addTime(15)}
         />
       )}
 
@@ -1142,34 +995,51 @@ export function WorkoutScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
+          <WarmupSection
+            items={warmupItems}
+            state={warmupState}
+            onToggleItem={toggleWarmupItemComplete}
+            onCollapse={collapseWarmup}
+            onExpand={expandWarmup}
+            onDismiss={dismissWarmup}
+            onSkipAll={skipAllWarmupItems}
+          />
           {sessionExercises.length === 0 && (
             <Text style={styles.emptyState}>Tap + to add exercises</Text>
           )}
           {workoutSections.map((section, sectionIdx) => {
             if (section.type === 'superset') {
               return (
-                <SupersetContainer
+                <SupersetGroup
                   key={`superset-${section.groupId}`}
                   groupId={section.groupId}
-                  exerciseIds={section.exerciseIds}
-                  sessionExercises={sessionExercises}
-                  exercises={exercises}
-                  activeExerciseId={activeExerciseId}
-                  setCountsByExercise={setCountsByExercise}
-                  pendingRestExerciseId={pendingRestExerciseId}
+                  label={supersetLetterByGroupId.get(section.groupId) ?? 'A'}
+                  memberIds={section.exerciseIds}
+                  exerciseMap={exerciseMap}
+                  sessionMap={sessionExerciseMap}
                   programTargetsMap={programTargetsMap}
                   restOverrides={restOverrides}
-                  sessionId={session.id}
-                  onPressExercise={(exerciseId, isActive) =>
-                    setActiveExerciseId(isActive ? null : exerciseId)
-                  }
+                  setsByExercise={setsByExercise}
+                  nextByExercise={nextByExercise}
+                  lastSetsByExercise={lastSetsByExercise}
+                  pendingRestByExercise={pendingRestExerciseId !== null ? { [pendingRestExerciseId]: true } : {}}
+                  currentMemberId={ssCurrentByGroup[section.groupId] ?? section.exerciseIds[0]}
+                  activeExerciseId={activeExerciseId}
+                  onExpand={handleExpandExercise}
                   onToggleComplete={handleToggleComplete}
-                  onSetLogged={handleSetLogged}
-                  onSetDeleted={handleSetDeleted}
-                  onEditTarget={handleEditTarget}
+                  onLog={handleLog}
+                  onNextChange={handleNextChange}
+                  onOpenPad={handleOpenPad}
+                  onDeleteSet={handleDeleteSet}
                   onStartRest={handleStartRest}
-                  onViewHistory={handleViewHistory}
                   onRestChange={handleRestChange}
+                  onSwap={(id) => {
+                    const ex = exercises.find(e => e.id === id);
+                    setSwapTarget(ex ?? null);
+                  }}
+                  onEditTarget={handleEditTarget}
+                  onViewHistory={handleViewHistory}
+                  onMemberSelect={handleSupersetMemberSelect}
                 />
               );
             }
@@ -1177,36 +1047,40 @@ export function WorkoutScreen() {
             // Category section
             return (
               <View key={section.category}>
-                <View style={[styles.categoryHeader, (sectionIdx > 0) && styles.categoryHeaderSpaced]}>
-                  <Text style={styles.categoryLabel}>{section.category.toUpperCase()}</Text>
-                  <View style={styles.categoryLine} />
-                </View>
+                <CategoryHeader
+                  category={section.category}
+                  done={section.items.filter(i => i.isComplete).length}
+                  total={section.items.length}
+                />
                 <View style={styles.categoryContainer}>
                   {section.items.map((se) => {
                     const exercise = exercises.find(ex => ex.id === se.exerciseId);
-                    const name = exercise?.name ?? `Exercise ${se.exerciseId}`;
+                    if (!exercise) { return null; }
                     const isActive = activeExerciseId === se.exerciseId;
-                    const setCount = setCountsByExercise[se.exerciseId] ?? 0;
                     return (
                       <ExerciseCard
                         key={se.exerciseId}
                         exerciseSession={se}
-                        exerciseName={name}
+                        exercise={exercise}
                         isActive={isActive}
-                        setCount={setCount}
-                        sessionId={session.id}
                         pendingRest={pendingRestExerciseId === se.exerciseId}
                         programTarget={programTargetsMap.get(se.exerciseId) ?? null}
-                        measurementType={exercise?.measurementType ?? 'reps'}
+                        measurementType={exercise.measurementType ?? 'reps'}
                         restSeconds={restOverrides[se.exerciseId] ?? se.restSeconds}
-                        onPress={() => setActiveExerciseId(isActive ? null : se.exerciseId)}
+                        sets={setsByExercise[se.exerciseId] ?? []}
+                        lastSets={lastSetsByExercise[se.exerciseId] ?? null}
+                        next={nextByExercise[se.exerciseId] ?? { w: 0, r: 0 }}
+                        onExpand={() => handleExpandExercise(se.exerciseId)}
                         onToggleComplete={() => handleToggleComplete(se.exerciseId)}
-                        onSetLogged={(set) => handleSetLogged(se.exerciseId, set)}
-                        onSetDeleted={(set) => handleSetDeleted(se.exerciseId, set)}
+                        onLog={() => handleLog(se.exerciseId)}
+                        onNextChange={(field, value) => handleNextChange(se.exerciseId, field, value)}
+                        onOpenPad={(field) => handleOpenPad(se.exerciseId, field)}
+                        onDeleteSet={(setId) => handleDeleteSet(se.exerciseId, setId)}
                         onEditTarget={() => handleEditTarget(se.exerciseId)}
-                        onStartRest={() => handleStartRest(se.exerciseId)}
                         onViewHistory={() => handleViewHistory(se.exerciseId)}
+                        onStartRest={() => handleStartRest(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
+                        onSwap={() => setSwapTarget(exercise ?? null)}
                       />
                     );
                   })}
@@ -1214,6 +1088,14 @@ export function WorkoutScreen() {
               </View>
             );
           })}
+          {(warmupState === 'none' || warmupState === 'dismissed') && (
+            <TouchableOpacity
+              style={styles.addWarmupButton}
+              onPress={() => setShowWarmupPicker(true)}
+            >
+              <Text style={styles.addWarmupText}>🔥 Add Warmup</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1245,6 +1127,93 @@ export function WorkoutScreen() {
         exerciseName={editingExerciseName}
         dayExercise={editingDayExercise}
         onSave={handleSaveTargets}
+      />
+
+      <SwapSheet
+        visible={swapTarget !== null}
+        exercise={swapTarget}
+        excludeExerciseIds={excludeIdsForSwap}
+        onSelect={async (newExercise) => {
+          if (!swapTarget || !session) return;
+          const sets = await getSetsForExerciseInSession(session.id, swapTarget.id);
+          const setsCount = sets.length;
+          if (setsCount > 0) {
+            Alert.alert(
+              `You've logged ${setsCount} set${setsCount !== 1 ? 's' : ''} on ${swapTarget.name}`,
+              'What would you like to do?',
+              [
+                {
+                  text: 'Keep sets & add new',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, true);
+                    setSwapTarget(null);
+                  },
+                },
+                {
+                  text: 'Discard & replace',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await swapExerciseInSession(swapTarget.id, newExercise, false);
+                    setSwapTarget(null);
+                  },
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            );
+          } else {
+            await swapExerciseInSession(swapTarget.id, newExercise, false);
+            setSwapTarget(null);
+          }
+        }}
+        onClose={() => setSwapTarget(null)}
+      />
+
+      <NumberPad
+        visible={pad !== null}
+        field={pad?.numberPadField ?? 'weight'}
+        initialValue={pad?.initialValue ?? 0}
+        label={pad?.label}
+        onCancel={() => setPad(null)}
+        onCommit={(v) => {
+          if (pad) {
+            handleNextChange(pad.exerciseId, pad.field, v);
+          }
+          setPad(null);
+        }}
+      />
+
+      <WarmupTemplatePicker
+        visible={showWarmupPicker}
+        onClose={() => setShowWarmupPicker(false)}
+        onSelect={handleWarmupTemplateSelect}
+        title="Select Warmup Template"
+      />
+      <WarmupTemplatePicker
+        visible={showWarmupStartPrompt}
+        onClose={() => setShowWarmupStartPrompt(false)}
+        onSelect={handleWarmupTemplateSelect}
+        showSkip
+        onSkip={() => setShowWarmupStartPrompt(false)}
+        title="Add a warmup?"
+      />
+
+      <ConfirmSheet
+        visible={discardSheetVisible}
+        title="No Exercises Logged"
+        message="No exercises were logged or completed. Discard this workout?"
+        confirmLabel="Discard"
+        destructive
+        onConfirm={confirmDiscard}
+        onClose={() => setDiscardSheetVisible(false)}
+      />
+      <ConfirmSheet
+        visible={endWorkoutSheetVisible}
+        title="End Workout?"
+        message="This marks your session complete."
+        confirmLabel="End Workout"
+        destructive
+        onConfirm={confirmEndWorkout}
+        onClose={() => setEndWorkoutSheetVisible(false)}
       />
     </SafeAreaView>
   );
@@ -1293,74 +1262,6 @@ const styles = StyleSheet.create({
     fontWeight: weightBold,
     color: colors.onAccent,
   },
-  header: {
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  headerTopRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-  },
-  headerHRRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    marginTop: spacing.xs,
-    gap: spacing.sm,
-  },
-  timerText: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-    letterSpacing: 2,
-  },
-  volumeText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.secondary,
-    letterSpacing: 0.5,
-    minWidth: 80,
-    textAlign: 'center',
-  },
-  endButtonTouchable: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 8,
-    minHeight: 40,
-    justifyContent: 'center' as const,
-  },
-  endButton: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.danger,
-  },
-  bpmBlock: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: spacing.xs,
-  },
-  bpmValue: {
-    fontSize: fontSize.base,    // Reduced from fontSize.lg (20) to fontSize.base (15) — compact in HR row
-    fontWeight: weightBold,
-  },
-  bpmZoneLabel: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
-  },
-  hrPairButton: {
-    padding: spacing.xs,
-  },
-  sessionBanner: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
-  },
-  sessionBannerText: {
-    fontSize: fontSize.xs,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.2,
-  },
   scroll: {
     flex: 1,
   },
@@ -1375,173 +1276,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     marginTop: spacing.xxl,
   },
-  categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    paddingLeft: spacing.xs,
-  },
-  categoryHeaderSpaced: {
-    marginTop: spacing.lg,
-  },
-  categoryLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.5,
-  },
-  categoryLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: spacing.sm,
-  },
   categoryContainer: {
     // Groups exercise cards within a category
-  },
-  card: {
-    borderRadius: 14,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  // Card inside a SupersetContainer — no individual border/radius/margin
-  cardInSuperset: {
-    overflow: 'hidden',
-  },
-  cardActive: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: 'rgba(141, 194, 138, 0.2)',
-  },
-  cardInactive: {
-    backgroundColor: colors.surface,
-  },
-  cardComplete: {
-    backgroundColor: colors.accentDim,
-    borderColor: 'rgba(141, 194, 138, 0.15)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  // Offset header content from the accent bar on the left
-  cardHeaderInSuperset: {
-    paddingLeft: spacing.base + 8,
-  },
-  cardNameContainer: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  cardName: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.primary,
-  },
-  cardNameComplete: {
-    color: colors.secondary,
-  },
-  setCountLabel: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
-    marginTop: 2,
-  },
-  cardHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  checkCircle: {
-    width: CHECK_CIRCLE_SIZE,
-    height: CHECK_CIRCLE_SIZE,
-    borderRadius: CHECK_CIRCLE_SIZE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-  },
-  checkCirclePending: {
-    borderColor: colors.secondary,
-    backgroundColor: 'transparent',
-  },
-  checkCircleDone: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent,
-  },
-  checkIcon: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.onAccent,
-    lineHeight: fontSize.sm + 2,
-  },
-  historyButton: {
-    padding: spacing.xs,
-  },
-  cardExpanded: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.base,
-  },
-  // Offset expanded content from the accent bar
-  cardExpandedInSuperset: {
-    paddingLeft: spacing.base + 8,
-  },
-  restLabelRow: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  restLabelText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.secondary,
-  },
-  restStepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  restStepperButton: {
-    width: 56,
-    height: 48,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  restStepperButtonDisabled: {
-    opacity: 0.3,
-  },
-  restStepperText: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  restStepperTextDisabled: {
-    color: colors.secondary,
-  },
-  restStepperValue: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-    minWidth: 60,
-    textAlign: 'center',
-  },
-  startRestButton: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.timerActive,
-    borderRadius: 10,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  startRestText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.onAccent,
   },
   fab: {
     position: 'absolute',
@@ -1559,75 +1295,21 @@ const styles = StyleSheet.create({
     color: colors.onAccent,
     lineHeight: fontSize.xl + 4,
   },
+  addWarmupButton: {
+    backgroundColor: 'rgba(141,194,138,0.1)',
+    borderRadius: 10,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.base,
+    alignItems: 'center',
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.2)',
+  },
+  addWarmupText: {
+    color: colors.accent,
+    fontSize: fontSize.sm,
+    fontWeight: '600' as const,
+  },
 });
 
-const summaryStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl,
-    width: '100%',
-    maxWidth: 360,
-  },
-  heading: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  statsContainer: {
-    marginBottom: spacing.xl,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  statLabel: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.secondary,
-  },
-  statValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  prLabel: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.prGold,
-  },
-  prValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.prGold,
-  },
-  doneButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: spacing.base,
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  doneButtonText: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.onAccent,
-  },
-});

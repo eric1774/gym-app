@@ -83,6 +83,17 @@ export const CREATE_PROGRAM_DAY_EXERCISES_TABLE = `
   )
 `;
 
+export const CREATE_PROGRAM_WEEKS_TABLE = `
+  CREATE TABLE IF NOT EXISTS program_weeks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+    week_number INTEGER NOT NULL,
+    name TEXT,
+    details TEXT,
+    UNIQUE(program_id, week_number)
+  )
+`;
+
 // ── Heart Rate tables (Phase 24) ──────────────────────────────────
 
 export const CREATE_HEART_RATE_SAMPLES_TABLE = `
@@ -149,9 +160,76 @@ export const CREATE_USER_LEVEL_TABLE = `
     current_level INTEGER NOT NULL DEFAULT 1,
     title TEXT NOT NULL DEFAULT 'Beginner',
     consistency_score REAL NOT NULL DEFAULT 0,
-    volume_score REAL NOT NULL DEFAULT 0,
+    fitness_score REAL NOT NULL DEFAULT 0,
     nutrition_score REAL NOT NULL DEFAULT 0,
     variety_score REAL NOT NULL DEFAULT 0,
     last_calculated TEXT NOT NULL
+  )
+`;
+
+// ── Muscle Group tables ──────────────────────────────────────────────
+
+export const CREATE_MUSCLE_GROUPS_TABLE = `
+  CREATE TABLE IF NOT EXISTS muscle_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    parent_category TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_EXERCISE_MUSCLE_GROUPS_TABLE = `
+  CREATE TABLE IF NOT EXISTS exercise_muscle_groups (
+    exercise_id INTEGER NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    muscle_group_id INTEGER NOT NULL REFERENCES muscle_groups(id),
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (exercise_id, muscle_group_id)
+  )
+`;
+
+// ── Warmup tables ──────────────────────────────────────────────────
+
+export const CREATE_WARMUP_EXERCISES_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    tracking_type TEXT NOT NULL,
+    default_value INTEGER,
+    is_custom INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_WARMUP_TEMPLATES_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )
+`;
+
+export const CREATE_WARMUP_TEMPLATE_ITEMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_template_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES warmup_templates(id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(id),
+    warmup_exercise_id INTEGER REFERENCES warmup_exercises(id),
+    tracking_type TEXT NOT NULL,
+    target_value INTEGER,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  )
+`;
+
+export const CREATE_WARMUP_SESSION_ITEMS_TABLE = `
+  CREATE TABLE IF NOT EXISTS warmup_session_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(id),
+    warmup_exercise_id INTEGER REFERENCES warmup_exercises(id),
+    display_name TEXT NOT NULL,
+    tracking_type TEXT NOT NULL,
+    target_value INTEGER,
+    is_complete INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0
   )
 `;

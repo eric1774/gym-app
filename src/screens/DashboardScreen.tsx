@@ -1,8 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Animated,
-  LayoutChangeEvent,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,24 +9,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { getCategorySummaries, getCategoryVolumeSummaries, getNextWorkoutDay } from '../db/dashboard';
+import { getNextWorkoutDay } from '../db/dashboard';
 import { getProgramDayExercises } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
+import { fontSize, weightBold } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
-import { CategorySummary, NextWorkoutInfo, Exercise } from '../types';
+import { NextWorkoutInfo, Exercise } from '../types';
+import type { WeeklySnapshot } from '../types';
 import { useSession } from '../context/SessionContext';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
-import { CategorySummaryCard } from '../components/CategorySummaryCard';
+import { WeeklySnapshotCard } from '../components/WeeklySnapshotCard';
+import { NutritionRingsCard } from '../components/NutritionRingsCard';
+import { getWeeklySnapshot } from '../db/progress';
 import { useGamification } from '../context/GamificationContext';
 import { LevelBar } from '../components/LevelBar';
-import { RecentBadges } from '../components/RecentBadges';
 import { CelebrationModal } from '../components/CelebrationModal';
 import { HighlightReelModal } from '../components/HighlightReelModal';
-import { getEarnedBadges } from '../db/badges';
-import type { UserBadgeRow } from '../types';
 
 type Nav = NativeStackNavigationProp<DashboardStackParamList, 'DashboardHome'>;
 
@@ -63,15 +60,10 @@ function formatElapsed(s: number): string {
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { session, startSessionFromProgramDay } = useSession();
-  const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
   const [activeElapsed, setActiveElapsed] = useState(0);
-  const [viewMode, setViewMode] = useState<'strength' | 'volume'>('strength');
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const cardOpacity = useRef(new Animated.Value(1)).current;
-  const [toggleWidth, setToggleWidth] = useState(0);
+  const [snapshot, setSnapshot] = useState<WeeklySnapshot>({ sessionsThisWeek: 0, prsThisWeek: 0, volumeChangePercent: null });
   const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
-  const [recentBadges, setRecentBadges] = useState<UserBadgeRow[]>([]);
 
   // Elapsed timer for active session state
   useEffect(() => {
@@ -87,41 +79,22 @@ export function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      // Fade out current cards before fetching new data
-      Animated.timing(cardOpacity, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }).start(() => {
-        (async () => {
-          try {
-            const [result, nextDay] = await Promise.all([
-              viewMode === 'volume' ? getCategoryVolumeSummaries() : getCategorySummaries(),
-              getNextWorkoutDay(),
-            ]);
-            if (!cancelled) {
-              setCategories(result);
-              setNextWorkout(nextDay);
-              // Load recent badges for gamification display
-              const earned = await getEarnedBadges();
-              if (!cancelled) { setRecentBadges(earned.slice(0, 10)); }
-              // Fade in new cards
-              Animated.timing(cardOpacity, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true,
-              }).start();
-            }
-          } catch (err) {
-            console.warn('Dashboard data fetch failed:', err);
-            if (!cancelled) {
-              cardOpacity.setValue(1);
-            }
+      (async () => {
+        try {
+          const [nextDay, snap] = await Promise.all([
+            getNextWorkoutDay(),
+            getWeeklySnapshot(),
+          ]);
+          if (!cancelled) {
+            setNextWorkout(nextDay);
+            setSnapshot(snap);
           }
-        })();
-      });
+        } catch (err) {
+          console.warn('Dashboard data fetch failed:', err);
+        }
+      })();
       return () => { cancelled = true; };
-    }, [viewMode]),
+    }, []),
   );
 
   const handleQuickStart = useCallback(async () => {
@@ -172,112 +145,48 @@ export function DashboardScreen() {
         title={levelState.title}
         progressToNext={levelState.progressToNext}
       />
-      <RecentBadges badges={recentBadges} />
-
-      {/* Strength / Volume toggle */}
-      <View style={styles.toggleRowOuter}>
-        <View
-          style={styles.togglePill}
-          onLayout={(e: LayoutChangeEvent) => setToggleWidth(e.nativeEvent.layout.width)}
-        >
-          {toggleWidth > 0 && (
-            <Animated.View
-              style={[
-                styles.toggleIndicator,
-                {
-                  width: (toggleWidth - 6) / 2,
-                  transform: [{ translateX: slideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, (toggleWidth - 6) / 2],
-                  }) }],
-                },
-              ]}
-            />
-          )}
-          {(['strength', 'volume'] as const).map(mode => (
-            <TouchableOpacity
-              key={mode}
-              style={styles.toggleButton}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (mode === viewMode) return;
-                Animated.spring(slideAnim, {
-                  toValue: mode === 'volume' ? 1 : 0,
-                  tension: 300,
-                  friction: 20,
-                  useNativeDriver: true,
-                }).start();
-                setViewMode(mode);
-              }}>
-              <Text style={[styles.toggleText, viewMode === mode && styles.toggleTextActive]}>
-                {mode === 'strength' ? 'Strength' : 'Volume'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
 
       {/* Next Workout Card — only shown when an activated program exists */}
-      {nextWorkout !== null && (
-        <View style={styles.nextWorkoutCard}>
-          {session ? (
-            /* Active state */
-            <>
-              <View style={styles.nextWorkoutActiveHeader}>
-                <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
-                <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.nextWorkoutButton}
-                activeOpacity={0.7}
-                onPress={handleQuickStart}>
-                <Text style={styles.nextWorkoutButtonText}>Continue</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            /* Idle state */
-            <>
-              <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
-              <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
-              <Text style={styles.nextWorkoutMeta}>
-                {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
-              </Text>
-              <TouchableOpacity
-                style={styles.nextWorkoutButton}
-                activeOpacity={0.7}
-                onPress={handleQuickStart}>
-                <Text style={styles.nextWorkoutButtonText}>Start</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
-
-      <Animated.View style={{ flex: 1, opacity: cardOpacity }}>
-        {categories.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              No exercises trained yet. Start a workout to see your progress here.
-            </Text>
-          </View>
-        ) : (
-          <ScrollView contentContainerStyle={styles.list}>
-            {categories.map(summary => {
-              const isStale = Date.now() - new Date(summary.lastTrainedAt).getTime() > 30 * 24 * 60 * 60 * 1000;
-              return (
-                <View key={summary.category} style={{ marginBottom: spacing.sm }}>
-                  <CategorySummaryCard
-                    summary={summary}
-                    isStale={isStale}
-                    viewMode={viewMode}
-                    onPress={() => navigation.navigate('CategoryProgress', { category: summary.category, viewMode })}
-                  />
+        {nextWorkout !== null && (
+          <View style={styles.nextWorkoutCard}>
+            {session ? (
+              /* Active state */
+              <>
+                <View style={styles.nextWorkoutActiveHeader}>
+                  <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
+                  <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
                 </View>
-              );
-            })}
-          </ScrollView>
+                <TouchableOpacity
+                  style={styles.nextWorkoutButton}
+                  activeOpacity={0.7}
+                  onPress={handleQuickStart}>
+                  <Text style={styles.nextWorkoutButtonText}>Continue</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              /* Idle state */
+              <>
+                <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
+                <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
+                <Text style={styles.nextWorkoutMeta}>
+                  {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
+                </Text>
+                <TouchableOpacity
+                  style={styles.nextWorkoutButton}
+                  activeOpacity={0.7}
+                  onPress={handleQuickStart}>
+                  <Text style={styles.nextWorkoutButtonText}>Start</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         )}
-      </Animated.View>
+
+      <WeeklySnapshotCard
+        snapshot={snapshot}
+        onPress={() => navigation.navigate('ProgressHub')}
+      />
+      <NutritionRingsCard />
       <HighlightReelModal
         badges={backfilledBadges}
         onDismiss={clearBackfill}
@@ -308,60 +217,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: weightBold,
   },
-  list: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.xxl,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
-  emptyText: {
-    color: colors.secondary,
-    fontSize: fontSize.base,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-
-  /* ── Strength / Volume Toggle ───────────────────────────────────── */
-  toggleRowOuter: {
-    paddingHorizontal: spacing.base,
-    marginBottom: spacing.md,
-  },
-  togglePill: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 3,
-    position: 'relative',
-  },
-  toggleIndicator: {
-    position: 'absolute',
-    top: 3,
-    left: 3,
-    bottom: 3,
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  toggleText: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
-  },
-  toggleTextActive: {
-    color: colors.background,
-    fontWeight: weightSemiBold,
-  },
-
   /* ── Next Workout Card ───────────────────────────────────────────── */
   nextWorkoutCard: {
     backgroundColor: colors.surface,

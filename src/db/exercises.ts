@@ -1,5 +1,6 @@
 import { db, executeSql } from './database';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType } from '../types';
+import { setExerciseMuscleGroups } from './muscleGroups';
 
 /** Map a raw SQLite result row to the Exercise domain type. */
 export function rowToExercise(row: {
@@ -57,6 +58,7 @@ export async function addExercise(
   category: ExerciseCategory,
   defaultRestSeconds: number = 90,
   measurementType: ExerciseMeasurementType = 'reps',
+  muscleGroupMappings?: Array<{ muscleGroupId: number; isPrimary: boolean }>,
 ): Promise<Exercise> {
   const database = await db;
   const createdAt = new Date().toISOString();
@@ -66,6 +68,9 @@ export async function addExercise(
     [name, category, defaultRestSeconds, measurementType, createdAt],
   );
   const insertedId = result.insertId;
+  if (muscleGroupMappings && muscleGroupMappings.length > 0) {
+    await setExerciseMuscleGroups(insertedId, muscleGroupMappings);
+  }
   const row = await executeSql(database, 'SELECT * FROM exercises WHERE id = ?', [insertedId]);
   return rowToExercise(row.rows.item(0));
 }
@@ -84,6 +89,7 @@ export async function updateExercise(
   name: string,
   category: ExerciseCategory,
   measurementType: ExerciseMeasurementType,
+  muscleGroupMappings?: Array<{ muscleGroupId: number; isPrimary: boolean }>,
 ): Promise<Exercise> {
   const database = await db;
   await executeSql(
@@ -91,6 +97,9 @@ export async function updateExercise(
     'UPDATE exercises SET name = ?, category = ?, measurement_type = ? WHERE id = ?',
     [name, category, measurementType, id],
   );
+  if (muscleGroupMappings && muscleGroupMappings.length > 0) {
+    await setExerciseMuscleGroups(id, muscleGroupMappings);
+  }
   const row = await executeSql(database, 'SELECT * FROM exercises WHERE id = ?', [id]);
   return rowToExercise(row.rows.item(0));
 }

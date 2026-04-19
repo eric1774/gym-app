@@ -621,3 +621,104 @@ describe('deleteLibraryMeal', () => {
     );
   });
 });
+
+// ── Macros Export ─────────────────────────────────────────────────────
+
+describe('getMacrosExportData', () => {
+  it('returns wrapped envelope with metadata, range, goals, and days', async () => {
+    // First call: getDailyMacroTotals
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { local_date: '2026-03-01', protein: 120, carbs: 180, fat: 50 },
+        { local_date: '2026-03-02', protein: 100, carbs: 160, fat: 45 },
+      ]),
+    );
+    // Second call: getMacroGoals
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([macroSettingsRow]));
+
+    const { getMacrosExportData } = require('../macros');
+    const result = await getMacrosExportData('2026-03-01', '2026-03-02');
+
+    expect(result.range).toEqual({ start: '2026-03-01', end: '2026-03-02' });
+    expect(result.days).toHaveLength(2);
+    expect(result.days[0]).toMatchObject({
+      date: '2026-03-01',
+      protein: 120,
+      carbs: 180,
+      fat: 50,
+      calories: 120 * 4 + 180 * 4 + 50 * 9, // 1650
+    });
+    expect(typeof result.exportedAt).toBe('string');
+    expect(() => new Date(result.exportedAt)).not.toThrow();
+    expect(typeof result.appVersion).toBe('string');
+    expect(result.appVersion.length).toBeGreaterThan(0);
+  });
+
+  it('returns days: [] when no meals in range', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));         // getDailyMacroTotals
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([macroSettingsRow])); // getMacroGoals
+
+    const { getMacrosExportData } = require('../macros');
+    const result = await getMacrosExportData('2026-03-01', '2026-03-02');
+
+    expect(result.days).toEqual([]);
+  });
+
+  it('derives calories goal as 4P + 4C + 9F when all three macro goals are set', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // getDailyMacroTotals
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{
+        id: 1,
+        protein_goal: 150,
+        carb_goal: 200,
+        fat_goal: 70,
+        created_at: '2026-01-01T00:00:00',
+        updated_at: '2026-01-01T00:00:00',
+      }]),
+    );
+
+    const { getMacrosExportData } = require('../macros');
+    const result = await getMacrosExportData('2026-03-01', '2026-03-02');
+
+    expect(result.goals).toEqual({
+      protein: 150,
+      carbs: 200,
+      fat: 70,
+      calories: 4 * 150 + 4 * 200 + 9 * 70, // 2030
+    });
+  });
+
+  it('returns goals.calories === null when any macro goal is unset', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // getDailyMacroTotals
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{
+        id: 1,
+        protein_goal: 150,
+        carb_goal: 200,
+        fat_goal: null,            // unset
+        created_at: '2026-01-01T00:00:00',
+        updated_at: '2026-01-01T00:00:00',
+      }]),
+    );
+
+    const { getMacrosExportData } = require('../macros');
+    const result = await getMacrosExportData('2026-03-01', '2026-03-02');
+
+    expect(result.goals).toEqual({
+      protein: 150,
+      carbs: 200,
+      fat: null,
+      calories: null,
+    });
+  });
+
+  it('returns goals === null when getMacroGoals returns null (no settings row)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // getDailyMacroTotals
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // getMacroGoals → empty → null
+
+    const { getMacrosExportData } = require('../macros');
+    const result = await getMacrosExportData('2026-03-01', '2026-03-02');
+
+    expect(result.goals).toBeNull();
+  });
+});

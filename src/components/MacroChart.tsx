@@ -9,8 +9,9 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart } from 'react-native-chart-kit';
 import { macrosDb } from '../db';
+import { ExportMacrosModal } from './ExportMacrosModal';
 import { getLocalDateString } from '../utils/dates';
-import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS } from '../types';
+import { MacroChartPoint, MacroSettings, MacroType, MACRO_COLORS, ChartTab, CALORIES_COLOR, CALORIES_PER_GRAM } from '../types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightRegular } from '../theme/typography';
@@ -21,11 +22,18 @@ type TimeRange = (typeof TIME_RANGES)[number];
 const CHART_WIDTH = Dimensions.get('window').width - spacing.base * 2 - 2;
 const MAX_POINTS = 50;
 
-const TAB_BG: Record<MacroType, string> = {
+const TAB_BG: Record<ChartTab, string> = {
   protein: 'rgba(141,194,138,0.15)',
   carbs: 'rgba(91,155,240,0.15)',
   fat: 'rgba(232,132,92,0.15)',
+  calories: 'rgba(240,199,91,0.15)',
 };
+
+const CHART_TABS: ChartTab[] = ['protein', 'carbs', 'fat', 'calories'];
+
+function getColorForTab(tab: ChartTab): string {
+  return tab === 'calories' ? CALORIES_COLOR : MACRO_COLORS[tab];
+}
 
 interface MacroChartProps {
   goals: MacroSettings;
@@ -67,18 +75,32 @@ function downsample(data: MacroChartPoint[]): MacroChartPoint[] {
   return result;
 }
 
-function getGoalForMacro(goals: MacroSettings, macro: MacroType): number | null {
-  switch (macro) {
+function getGoalForTab(goals: MacroSettings, tab: ChartTab): number | null {
+  switch (tab) {
     case 'protein': return goals.proteinGoal;
-    case 'carbs': return goals.carbGoal;
-    case 'fat': return goals.fatGoal;
+    case 'carbs':   return goals.carbGoal;
+    case 'fat':     return goals.fatGoal;
+    case 'calories':
+      if (
+        goals.proteinGoal === null ||
+        goals.carbGoal === null ||
+        goals.fatGoal === null
+      ) {
+        return null;
+      }
+      return (
+        goals.proteinGoal * CALORIES_PER_GRAM.protein +
+        goals.carbGoal   * CALORIES_PER_GRAM.carbs +
+        goals.fatGoal    * CALORIES_PER_GRAM.fat
+      );
   }
 }
 
 export function MacroChart({ goals, refreshKey }: MacroChartProps) {
-  const [activeTab, setActiveTab] = useState<MacroType>('protein');
+  const [activeTab, setActiveTab] = useState<ChartTab>('protein');
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1W');
   const [data, setData] = useState<MacroChartPoint[]>([]);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -105,7 +127,8 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
     setSelectedRange(range);
   }, []);
 
-  const activeGoal = getGoalForMacro(goals, activeTab);
+  const activeGoal = getGoalForTab(goals, activeTab);
+  const yAxisUnit = activeTab === 'calories' ? '' : 'g';
 
   const chartData = useMemo(() => {
     if (data.length === 0) {
@@ -130,7 +153,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
     }[] = [
       {
         data: sampled.map(p => p[activeTab]),
-        color: () => MACRO_COLORS[activeTab],
+        color: () => getColorForTab(activeTab),
         strokeWidth: 2,
       },
     ];
@@ -149,13 +172,22 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.sectionHeader}>MACRO INTAKE HISTORY</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionHeader}>MACRO INTAKE HISTORY</Text>
+        <TouchableOpacity
+          style={styles.exportPill}
+          onPress={() => setExportModalVisible(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.exportPillText}>↓ EXPORT</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Tab selector */}
       <View style={styles.tabRow}>
-        {(['protein', 'carbs', 'fat'] as MacroType[]).map(tab => {
+        {CHART_TABS.map(tab => {
           const isActive = activeTab === tab;
           const tabLabel = tab.charAt(0).toUpperCase() + tab.slice(1);
+          const tabColor = getColorForTab(tab);
           return (
             <TouchableOpacity
               key={tab}
@@ -165,7 +197,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
                   ? {
                       backgroundColor: TAB_BG[tab],
                       borderWidth: 1,
-                      borderColor: MACRO_COLORS[tab],
+                      borderColor: tabColor,
                     }
                   : styles.tabInactive,
               ]}
@@ -175,7 +207,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
                 style={[
                   styles.tabText,
                   isActive
-                    ? { color: MACRO_COLORS[tab] }
+                    ? { color: tabColor }
                     : styles.tabTextInactive,
                 ]}>
                 {tabLabel}
@@ -190,13 +222,15 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
         {/* Legend row */}
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendLine, { backgroundColor: MACRO_COLORS[activeTab] }]} />
+            <View style={[styles.legendLine, { backgroundColor: getColorForTab(activeTab) }]} />
             <Text style={styles.legendText}>DAILY INTAKE</Text>
           </View>
           {activeGoal !== null && (
             <View style={styles.legendItem}>
               <View style={styles.legendDot} />
-              <Text style={styles.legendText}>{activeGoal}g GOAL</Text>
+              <Text style={styles.legendText}>
+                {activeGoal}{yAxisUnit} GOAL
+              </Text>
             </View>
           )}
         </View>
@@ -211,7 +245,7 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
             data={chartData}
             width={CHART_WIDTH}
             height={180}
-            yAxisSuffix="g"
+            yAxisSuffix={yAxisUnit}
             withDots={data.length <= 10}
             withInnerLines={false}
             withOuterLines={false}
@@ -220,12 +254,12 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
               backgroundGradientFrom: colors.surface,
               backgroundGradientTo: colors.surface,
               decimalPlaces: 0,
-              color: () => MACRO_COLORS[activeTab],
+              color: () => getColorForTab(activeTab),
               labelColor: () => colors.secondary,
               propsForDots: {
                 r: '4',
                 strokeWidth: '0',
-                fill: MACRO_COLORS[activeTab],
+                fill: getColorForTab(activeTab),
               },
             }}
             bezier
@@ -255,6 +289,10 @@ export function MacroChart({ goals, refreshKey }: MacroChartProps) {
           </TouchableOpacity>
         ))}
       </View>
+      <ExportMacrosModal
+        visible={exportModalVisible}
+        onClose={() => setExportModalVisible(false)}
+      />
     </View>
   );
 }
@@ -264,12 +302,30 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingHorizontal: spacing.base,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
   sectionHeader: {
     fontSize: fontSize.sm,
     fontWeight: weightBold,
     color: colors.secondary,
     letterSpacing: 1.2,
-    marginBottom: spacing.sm,
+  },
+  exportPill: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  exportPillText: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: weightBold,
+    letterSpacing: 0.5,
   },
   tabRow: {
     flexDirection: 'row',

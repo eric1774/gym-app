@@ -74,6 +74,7 @@ interface TimerContextValue {
   isRunning: boolean;
   startTimer: (durationSeconds: number) => void;
   stopTimer: () => void;
+  addTime: (deltaSeconds: number) => void;
 }
 
 const TimerContext = createContext<TimerContextValue | null>(null);
@@ -170,6 +171,19 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     await cancelTimerNotification();
   }, [clearExistingInterval]);
 
+  const addTime = useCallback((deltaSeconds: number) => {
+    const current = remainingRef.current;
+    if (current === null || !isRunning) { return; }
+    const nextRemaining = Math.max(0, current + deltaSeconds);
+    remainingRef.current = nextRemaining;
+    setRemainingSeconds(nextRemaining);
+    setTotalSeconds(prev => (prev === null ? null : prev + deltaSeconds));
+    // Refresh the ongoing notification so the shown time matches
+    showTimerNotification(nextRemaining).catch(() => {
+      // non-fatal
+    });
+  }, [isRunning]);
+
   useEffect(() => {
     return () => {
       clearExistingInterval();
@@ -179,7 +193,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <TimerContext.Provider
-      value={{ remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer }}>
+      value={{ remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer, addTime }}>
       {children}
     </TimerContext.Provider>
   );

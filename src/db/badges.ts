@@ -182,7 +182,7 @@ export async function getUserLevel(): Promise<UserLevelRow> {
       current_level: 1,
       title: 'Beginner',
       consistency_score: 0,
-      volume_score: 0,
+      fitness_score: 0,
       nutrition_score: 0,
       variety_score: 0,
       last_calculated: new Date().toISOString(),
@@ -194,14 +194,14 @@ export async function getUserLevel(): Promise<UserLevelRow> {
 export async function updateUserLevel(
   level: number,
   title: string,
-  scores: { consistency: number; volume: number; nutrition: number; variety: number },
+  scores: { consistency: number; fitness: number; nutrition: number; variety: number },
 ): Promise<void> {
   const database = await db;
   await executeSql(
     database,
     `UPDATE user_level SET current_level = ?, title = ?,
-     consistency_score = ?, volume_score = ?, nutrition_score = ?, variety_score = ?,
+     consistency_score = ?, fitness_score = ?, nutrition_score = ?, variety_score = ?,
      last_calculated = datetime('now') WHERE id = 1`,
-    [level, title, scores.consistency, scores.volume, scores.nutrition, scores.variety],
+    [level, title, scores.consistency, scores.fitness, scores.nutrition, scores.variety],
   );
 }

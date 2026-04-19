@@ -19,8 +19,16 @@ import {
   deleteSession,
 } from '../db/sessions';
 import { getExercises } from '../db/exercises';
-import { Exercise, ExerciseSession, WorkoutSession } from '../types';
+import { db as dbPromise, executeSql } from '../db/database';
+import { Exercise, ExerciseSession, WorkoutSession, WarmupSessionItem } from '../types';
 import { emitAppEvent } from './GamificationContext';
+import {
+  loadWarmupIntoSession,
+  getWarmupSessionItems,
+  toggleWarmupSessionItemComplete as dbToggleWarmupItem,
+  clearWarmupSessionItems,
+} from '../db/warmups';
+import { getWarmupTemplateIdForDay } from '../db/programs';
 
 interface SessionContextValue {
   session: WorkoutSession | null;
@@ -38,6 +46,16 @@ interface SessionContextValue {
   markExerciseComplete: (exerciseId: number) => Promise<void>;
   toggleExerciseComplete: (exerciseId: number) => Promise<void>;
   refreshSession: () => Promise<void>;
+  swapExercise: (oldExerciseId: number, newExercise: Exercise, keepSets: boolean) => Promise<void>;
+  removeExerciseFromSession: (exerciseId: number) => Promise<void>;
+  warmupItems: WarmupSessionItem[];
+  warmupState: 'none' | 'expanded' | 'collapsed' | 'dismissed';
+  loadWarmupTemplate: (templateId: number) => Promise<void>;
+  toggleWarmupItemComplete: (itemId: number) => Promise<void>;
+  skipAllWarmupItems: () => Promise<void>;
+  dismissWarmup: () => void;
+  collapseWarmup: () => void;
+  expandWarmup: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | undefined>(undefined);
@@ -59,6 +77,8 @@ export function SessionProvider({ children }: Props) {
   const [sessionExercises, setSessionExercises] = useState<ExerciseSession[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [warmupItems, setWarmupItems] = useState<WarmupSessionItem[]>([]);
+  const [warmupState, setWarmupState] = useState<'none' | 'expanded' | 'collapsed' | 'dismissed'>('none');
 
   /** Cache of all exercises by id — populated once and reused */
   const allExercisesRef = useRef<Map<number, Exercise>>(new Map());
@@ -85,6 +105,51 @@ export function SessionProvider({ children }: Props) {
     return resolved;
   }, []);
 
+  const loadWarmupTemplate = useCallback(async (templateId: number) => {
+    if (!session) return;
+    await loadWarmupIntoSession(session.id, templateId);
+    const items = await getWarmupSessionItems(session.id);
+    setWarmupItems(items);
+    setWarmupState('expanded');
+  }, [session]);
+
+  const toggleWarmupItemComplete = useCallback(async (itemId: number) => {
+    await dbToggleWarmupItem(itemId);
+    setWarmupItems(prev => {
+      const updated = prev.map(item =>
+        item.id === itemId ? { ...item, isComplete: !item.isComplete } : item,
+      );
+      if (updated.every(item => item.isComplete)) {
+        setWarmupState('collapsed');
+      }
+      return updated;
+    });
+  }, []);
+
+  const skipAllWarmupItems = useCallback(async () => {
+    // Mark every incomplete item as complete by invoking the DB toggle.
+    const incomplete = warmupItems.filter(i => !i.isComplete);
+    for (const item of incomplete) {
+      await dbToggleWarmupItem(item.id);
+    }
+    if (incomplete.length > 0) {
+      setWarmupItems(prev => prev.map(i => ({ ...i, isComplete: true })));
+      setWarmupState('collapsed');
+    }
+  }, [warmupItems]);
+
+  const dismissWarmup = useCallback(() => {
+    setWarmupState('dismissed');
+  }, []);
+
+  const collapseWarmup = useCallback(() => {
+    setWarmupState('collapsed');
+  }, []);
+
+  const expandWarmup = useCallback(() => {
+    setWarmupState('expanded');
+  }, []);
+
   const refreshSession = useCallback(async () => {
     const active = await getActiveSession();
     setSession(active);
@@ -104,14 +169,25 @@ export function SessionProvider({ children }: Props) {
     (async () => {
       await loadAllExercises();
       if (!cancelled) {
-        await refreshSession();
+        const activeSession = await getActiveSession();
+        setSession(activeSession);
+        if (activeSession) {
+          const sExs = await getSessionExercises(activeSession.id);
+          setSessionExercises(sExs);
+          setExercises(resolveExercises(sExs));
+          const wItems = await getWarmupSessionItems(activeSession.id);
+          setWarmupItems(wItems);
+          if (wItems.length > 0) {
+            setWarmupState(wItems.every(item => item.isComplete) ? 'collapsed' : 'expanded');
+          }
+        }
         setIsLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [loadAllExercises, refreshSession]);
+  }, [loadAllExercises, resolveExercises]);
 
   const startSession = useCallback(async () => {
     await createSession();
@@ -125,6 +201,13 @@ export function SessionProvider({ children }: Props) {
         await addExerciseToSession(newSession.id, ex.id, ex.defaultRestSeconds);
         // Update cache in case this is a new custom exercise
         allExercisesRef.current.set(ex.id, ex);
+      }
+      const warmupTemplateId = await getWarmupTemplateIdForDay(pdId);
+      if (warmupTemplateId) {
+        await loadWarmupIntoSession(newSession.id, warmupTemplateId);
+        const wItems = await getWarmupSessionItems(newSession.id);
+        setWarmupItems(wItems);
+        setWarmupState('expanded');
       }
       await refreshSession();
     },
@@ -145,6 +228,8 @@ export function SessionProvider({ children }: Props) {
     setSession(null);
     setSessionExercises([]);
     setExercises([]);
+    setWarmupItems([]);
+    setWarmupState('none');
     return hadActivity;
   }, [session]);
 
@@ -200,6 +285,44 @@ export function SessionProvider({ children }: Props) {
     [session, resolveExercises],
   );
 
+  const removeExerciseFromSession = async (exerciseId: number) => {
+    if (!session) return;
+    const database = await dbPromise;
+    await executeSql(
+      database,
+      'DELETE FROM workout_sets WHERE session_id = ? AND exercise_id = ?',
+      [session.id, exerciseId],
+    );
+    await executeSql(
+      database,
+      'DELETE FROM exercise_sessions WHERE session_id = ? AND exercise_id = ?',
+      [session.id, exerciseId],
+    );
+    await refreshSession();
+  };
+
+  const swapExercise = async (oldExerciseId: number, newExercise: Exercise, keepSets: boolean) => {
+    if (!session) return;
+    if (!keepSets) {
+      await removeExerciseFromSession(oldExerciseId);
+    } else {
+      const database = await dbPromise;
+      await executeSql(
+        database,
+        'UPDATE exercise_sessions SET is_complete = 1 WHERE session_id = ? AND exercise_id = ?',
+        [session.id, oldExerciseId],
+      );
+    }
+    const database = await dbPromise;
+    await executeSql(
+      database,
+      'INSERT OR IGNORE INTO exercise_sessions (exercise_id, session_id, is_complete, rest_seconds) VALUES (?, ?, 0, ?)',
+      [newExercise.id, session.id, newExercise.defaultRestSeconds],
+    );
+    await loadAllExercises();
+    await refreshSession();
+  };
+
   const programDayId = session?.programDayId ?? null;
 
   const value = useMemo<SessionContextValue>(
@@ -216,6 +339,16 @@ export function SessionProvider({ children }: Props) {
       markExerciseComplete,
       toggleExerciseComplete,
       refreshSession,
+      swapExercise,
+      removeExerciseFromSession,
+      warmupItems,
+      warmupState,
+      loadWarmupTemplate,
+      toggleWarmupItemComplete,
+      skipAllWarmupItems,
+      dismissWarmup,
+      collapseWarmup,
+      expandWarmup,
     }),
     [
       session,
@@ -230,6 +363,16 @@ export function SessionProvider({ children }: Props) {
       markExerciseComplete,
       toggleExerciseComplete,
       refreshSession,
+      swapExercise,
+      removeExerciseFromSession,
+      warmupItems,
+      warmupState,
+      loadWarmupTemplate,
+      toggleWarmupItemComplete,
+      skipAllWarmupItems,
+      dismissWarmup,
+      collapseWarmup,
+      expandWarmup,
     ],
   );
 

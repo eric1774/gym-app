@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Rect, Line } from 'react-native-svg';
 import { colors } from '../theme/colors';
-import { LibraryScreen } from '../screens/LibraryScreen';
+import { LibraryStackNavigator } from './LibraryStackNavigator';
 import { ProgramsScreen } from '../screens/ProgramsScreen';
 import { ProgramDetailScreen } from '../screens/ProgramDetailScreen';
 import { DayDetailScreen } from '../screens/DayDetailScreen';
@@ -21,6 +21,10 @@ import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
 import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
+import { ProgressHubScreen } from '../screens/ProgressHubScreen';
+import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
+import { SessionBreakdownScreen } from '../screens/SessionBreakdownScreen';
+import { SessionDayProgressScreen } from '../screens/SessionDayProgressScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -38,7 +42,9 @@ export type CalendarStackParamList = {
 
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
+  SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
 };
 
 export type ProgramsStackParamList = {
@@ -49,14 +55,18 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed'; category?: string; viewMode?: 'strength' | 'volume' };
+  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
   Settings: undefined;
   CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
   Achievements: undefined;
+  ProgressHub: undefined;
+  ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
+  SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
+  SessionDayProgress: { programDayId: number; dayName: string };
 };
 
 export type ProteinStackParamList = {
-  ProteinHome: undefined;
+  ProteinHome: { initialTab?: number } | undefined;
   MealLibrary: undefined;
   MealBuilder: {
     mode: 'normal' | 'edit' | 'library';
@@ -174,6 +184,8 @@ function WorkoutStackNavigator() {
     <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkoutStack.Screen name="WorkoutHome" component={WorkoutScreen} />
       <WorkoutStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
+      <WorkoutStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+      <WorkoutStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
     </WorkoutStack.Navigator>
   );
 }
@@ -186,6 +198,10 @@ function DashboardStackNavigator() {
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
       <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressScreen} />
       <DashboardStack.Screen name="Achievements" component={AchievementsScreen} />
+      <DashboardStack.Screen name="ProgressHub" component={ProgressHubScreen} />
+      <DashboardStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
+      <DashboardStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
+      <DashboardStack.Screen name="SessionDayProgress" component={SessionDayProgressScreen} />
     </DashboardStack.Navigator>
   );
 }
@@ -242,7 +258,7 @@ export function TabNavigator() {
       />
       <Tab.Screen
         name="LibraryTab"
-        component={LibraryScreen}
+        component={LibraryStackNavigator}
         options={{
           tabBarLabel: 'Library',
           tabBarIcon: ({ color }) => <BookIcon color={color} />,

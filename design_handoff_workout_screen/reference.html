@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>V1 Stacked Cards — Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0b0c0d; min-height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: #fff; overflow-x: hidden; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes slideDown { from { transform: translateY(-6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="v1-stacked-cards.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function WorkoutApp() {
+  const [elapsed, setElapsed] = useState(1847);
+  const [restSeconds, setRestSeconds] = useState(0);
+  const [restTotal, setRestTotal] = useState(0);
+  const [volume, setVolume] = useState(4320);
+  const [setCount, setSetCount] = useState(6);
+  const [prCount, setPrCount] = useState(1);
+  const [pad, setPad] = useState(null);
+  const [hr, setHr] = useState(142);
+
+  useEffect(() => { const t = setInterval(() => setElapsed(e => e + 1), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setHr(prev => {
+        const target = restSeconds > 0 ? 118 : 148;
+        const drift = (target - prev) * 0.15;
+        const jitter = (Math.random() - 0.5) * 6;
+        return Math.round(Math.max(95, Math.min(178, prev + drift + jitter)));
+      });
+    }, 900);
+    return () => clearInterval(t);
+  }, [restSeconds]);
+  useEffect(() => {
+    if (restSeconds <= 0) return;
+    const t = setInterval(() => setRestSeconds(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, [restSeconds]);
+
+  const openPad = (field, value, onCommit, label) => setPad({ field, value, onCommit, label });
+  const triggerRest = (secs) => {
+    setRestSeconds(secs); setRestTotal(secs);
+    setSetCount(c => c + 1); setVolume(v => v + 200);
+  };
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%', background: GYM.bg, overflow: 'hidden' }}>
+      <WorkoutHeader elapsed={elapsed} volume={volume} prCount={prCount} setCount={setCount}
+        hr={hr} hrZone={hr < 114 ? 1 : hr < 133 ? 2 : hr < 152 ? 3 : hr < 171 ? 4 : 5} hrConnected={true}
+        onEnd={() => {}} />
+      <RestBar seconds={restSeconds} total={restTotal}
+        onSkip={() => setRestSeconds(0)}
+        onAdd={() => { setRestSeconds(s => s + 15); setRestTotal(t => t + 15); }} />
+      <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+        <V1StackedCards openPad={openPad} triggerRest={triggerRest} />
+      </div>
+      <NumberPad visible={!!pad} field={pad?.field} value={pad?.value} label={pad?.label}
+        onCancel={() => setPad(null)}
+        onCommit={(v) => { pad.onCommit(v); setPad(null); }} />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
+      <AndroidDevice width={400} height={860} dark={true}>
+        <WorkoutApp />
+      </AndroidDevice>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

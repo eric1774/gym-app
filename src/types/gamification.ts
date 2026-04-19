@@ -96,7 +96,7 @@ export interface UserLevelRow {
   current_level: number;
   title: string;
   consistency_score: number;
-  volume_score: number;
+  fitness_score: number;
   nutrition_score: number;
   variety_score: number;
   last_calculated: string;
@@ -115,7 +115,7 @@ export interface LevelState {
   level: number;
   title: string;
   consistencyScore: number;
-  volumeScore: number;
+  fitnessScore: number;
   nutritionScore: number;
   varietyScore: number;
   progressToNext: number;

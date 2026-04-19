@@ -1,5 +1,5 @@
 import { db, executeSql, runTransaction } from './database';
-import { Program, ProgramDay, ProgramDayExercise } from '../types';
+import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
@@ -10,6 +10,7 @@ export function rowToProgram(row: {
   start_date: string | null;
   current_week: number;
   created_at: string;
+  archived_at: string | null;
 }): Program {
   return {
     id: row.id,
@@ -18,6 +19,7 @@ export function rowToProgram(row: {
     startDate: row.start_date ?? null,
     currentWeek: row.current_week,
     createdAt: row.created_at,
+    archivedAt: row.archived_at ?? null,
   };
 }
 
@@ -56,6 +58,22 @@ export function rowToProgramDayExercise(row: {
     targetWeightLbs: row.target_weight_kg,
     sortOrder: row.sort_order,
     supersetGroupId: row.superset_group_id ?? null,
+  };
+}
+
+export function rowToProgramWeek(row: {
+  id: number;
+  program_id: number;
+  week_number: number;
+  name: string | null;
+  details: string | null;
+}): ProgramWeek {
+  return {
+    id: row.id,
+    programId: row.program_id,
+    weekNumber: row.week_number,
+    name: row.name ?? null,
+    details: row.details ?? null,
   };
 }
 
@@ -379,5 +397,155 @@ export async function removeSupersetGroup(
     database,
     'UPDATE program_day_exercises SET superset_group_id = NULL WHERE program_day_id = ? AND superset_group_id = ?',
     [dayId, groupId],
+  );
+}
+
+// ── Program Week Data ──────────────────────────────────────────────
+
+/** Return the week name/details for a specific week, or null if not set. */
+export async function getWeekData(
+  programId: number,
+  weekNumber: number,
+): Promise<ProgramWeek | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT * FROM program_weeks WHERE program_id = ? AND week_number = ?',
+    [programId, weekNumber],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return rowToProgramWeek(result.rows.item(0));
+}
+
+/** Insert or update week name/details. Deletes row if both are empty. */
+export async function upsertWeekData(
+  programId: number,
+  weekNumber: number,
+  name: string | null,
+  details: string | null,
+): Promise<void> {
+  const database = await db;
+  const trimmedName = name?.trim() || null;
+  const trimmedDetails = details?.trim() || null;
+
+  if (trimmedName === null && trimmedDetails === null) {
+    await executeSql(
+      database,
+      'DELETE FROM program_weeks WHERE program_id = ? AND week_number = ?',
+      [programId, weekNumber],
+    );
+    return;
+  }
+
+  await executeSql(
+    database,
+    `INSERT INTO program_weeks (program_id, week_number, name, details)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(program_id, week_number)
+     DO UPDATE SET name = excluded.name, details = excluded.details`,
+    [programId, weekNumber, trimmedName, trimmedDetails],
+  );
+}
+
+/** Return all week data for a program, ordered by week_number. */
+export async function getAllWeekData(programId: number): Promise<ProgramWeek[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT * FROM program_weeks WHERE program_id = ? ORDER BY week_number',
+    [programId],
+  );
+  const weeks: ProgramWeek[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    weeks.push(rowToProgramWeek(result.rows.item(i)));
+  }
+  return weeks;
+}
+
+export async function archiveProgram(programId: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE programs SET archived_at = ? WHERE id = ?',
+    [new Date().toISOString(), programId],
+  );
+}
+
+export async function unarchiveProgram(programId: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE programs SET archived_at = NULL WHERE id = ?',
+    [programId],
+  );
+}
+
+export async function getProgramsWithSessionData(): Promise<ProgramSelectorItem[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT DISTINCT p.id, p.name, p.archived_at
+     FROM programs p
+     INNER JOIN program_days pd ON pd.program_id = p.id
+     INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
+     WHERE ws.completed_at IS NOT NULL
+     ORDER BY
+       CASE WHEN p.archived_at IS NULL THEN 0 ELSE 1 END,
+       p.created_at DESC`,
+    [],
+  );
+
+  const items: ProgramSelectorItem[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    items.push({
+      id: row.id,
+      name: row.name,
+      isArchived: row.archived_at !== null,
+      archivedAt: row.archived_at ?? null,
+    });
+  }
+  return items;
+}
+
+// ── Warmup Template ID for Program Days ────────────────────────────
+
+export async function getWarmupTemplateIdForDay(
+  dayId: number,
+): Promise<number | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    'SELECT warmup_template_id FROM program_days WHERE id = ?',
+    [dayId],
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  return result.rows.item(0).warmup_template_id ?? null;
+}
+
+export async function setWarmupTemplateIdForDay(
+  dayId: number,
+  templateId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_days SET warmup_template_id = ? WHERE id = ?',
+    [templateId, dayId],
+  );
+}
+
+export async function clearWarmupTemplateIdForDay(
+  dayId: number,
+): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_days SET warmup_template_id = NULL WHERE id = ?',
+    [dayId],
   );
 }
