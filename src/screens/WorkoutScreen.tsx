@@ -49,6 +49,7 @@ import { getHRZone, computeMaxHR } from '../utils/hrZones';
 import { WarmupSection } from '../components/WarmupSection';
 import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { ConfirmSheet } from '../components/ConfirmSheet';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
 function groupByCategory(
@@ -499,6 +500,8 @@ export function WorkoutScreen() {
   const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
   const [showSummary, setShowSummary] = useState(false);
+  const [endWorkoutSheetVisible, setEndWorkoutSheetVisible] = useState(false);
+  const [discardSheetVisible, setDiscardSheetVisible] = useState(false);
   const [summaryData, setSummaryData] = useState<{
     duration: number;
     totalSets: number;
@@ -1069,66 +1072,49 @@ export function WorkoutScreen() {
   const handleEndWorkout = useCallback(async () => {
     if (!session) { return; }
     const hadActivity = await hasSessionActivity(session.id);
-
     if (!hadActivity) {
-      Alert.alert(
-        'No Exercises Logged',
-        'No exercises were logged or completed. Discard this workout?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Discard',
-            style: 'destructive',
-            onPress: async () => {
-              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-              const wasProgramWorkout = !!programDayId;
-              if (isRunning) { stopTimer(); }
-              await endSession();
-              setActiveExerciseId(null);
-              setPendingRestExerciseId(null);
-              setRestOverrides({});
-              if (wasProgramWorkout) {
-                (navigation as any).navigate('ProgramsTab');
-              }
-            },
-          },
-        ],
-      );
+      setDiscardSheetVisible(true);
     } else {
-      Alert.alert(
-        'End Workout?',
-        'This marks your session complete.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'End Workout',
-            style: 'destructive',
-            onPress: async () => {
-              HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
-              const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
-              const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
-              const exercisesTotal = sessionExercises.length;
-              // Flush HR samples before completing the session (D-06)
-              const { avgHr, peakHr } = await flushHRSamples(session.id);
-              setSummaryData({
-                duration: elapsed,
-                totalSets,
-                totalVolume: volumeTotal,
-                exercisesCompleted,
-                exercisesTotal,
-                prCount,
-                avgHr,
-                peakHr,
-              });
-              if (isRunning) { stopTimer(); }
-              await endSession();
-              setShowSummary(true);
-            },
-          },
-        ],
-      );
+      setEndWorkoutSheetVisible(true);
     }
-  }, [session, endSession, isRunning, stopTimer, programDayId, navigation, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
+  }, [session]);
+
+  const confirmDiscard = useCallback(async () => {
+    if (!session) { return; }
+    HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+    const wasProgramWorkout = !!programDayId;
+    if (isRunning) { stopTimer(); }
+    await endSession();
+    setActiveExerciseId(null);
+    setPendingRestExerciseId(null);
+    setRestOverrides({});
+    if (wasProgramWorkout) {
+      (navigation as any).navigate('ProgramsTab');
+    }
+  }, [session, programDayId, isRunning, stopTimer, endSession, navigation]);
+
+  const confirmEndWorkout = useCallback(async () => {
+    if (!session) { return; }
+    HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
+    const totalSets = Object.values(setCountsByExercise).reduce((sum, c) => sum + c, 0);
+    const exercisesCompleted = sessionExercises.filter(se => se.isComplete).length;
+    const exercisesTotal = sessionExercises.length;
+    // Flush HR samples before completing the session (D-06)
+    const { avgHr, peakHr } = await flushHRSamples(session.id);
+    setSummaryData({
+      duration: elapsed,
+      totalSets,
+      totalVolume: volumeTotal,
+      exercisesCompleted,
+      exercisesTotal,
+      prCount,
+      avgHr,
+      peakHr,
+    });
+    if (isRunning) { stopTimer(); }
+    await endSession();
+    setShowSummary(true);
+  }, [session, isRunning, stopTimer, endSession, elapsed, setCountsByExercise, sessionExercises, volumeTotal, prCount, flushHRSamples]);
 
   if (isLoading) {
     return (
@@ -1421,6 +1407,25 @@ export function WorkoutScreen() {
         showSkip
         onSkip={() => setShowWarmupStartPrompt(false)}
         title="Add a warmup?"
+      />
+
+      <ConfirmSheet
+        visible={discardSheetVisible}
+        title="No Exercises Logged"
+        message="No exercises were logged or completed. Discard this workout?"
+        confirmLabel="Discard"
+        destructive
+        onConfirm={confirmDiscard}
+        onClose={() => setDiscardSheetVisible(false)}
+      />
+      <ConfirmSheet
+        visible={endWorkoutSheetVisible}
+        title="End Workout?"
+        message="This marks your session complete."
+        confirmLabel="End Workout"
+        destructive
+        onConfirm={confirmEndWorkout}
+        onClose={() => setEndWorkoutSheetVisible(false)}
       />
     </SafeAreaView>
   );
