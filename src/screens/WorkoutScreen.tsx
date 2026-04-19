@@ -46,6 +46,7 @@ import { WarmupTemplatePicker } from '../components/WarmupTemplatePicker';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { SupersetGroup } from '../components/SupersetGroup';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { SwapConflictSheet } from '../components/SwapConflictSheet';
 import { WorkoutSummary } from '../components/WorkoutSummary';
 
 /** Group session exercises by their exercise category, preserving first-seen order */
@@ -224,6 +225,7 @@ export function WorkoutScreen() {
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
   const [swapTarget, setSwapTarget] = useState<Exercise | null>(null);
+  const [swapConflict, setSwapConflict] = useState<{ target: Exercise; newExercise: Exercise; setsCount: number } | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showWarmupPicker, setShowWarmupPicker] = useState(false);
   const [showWarmupStartPrompt, setShowWarmupStartPrompt] = useState(false);
@@ -1153,34 +1155,29 @@ export function WorkoutScreen() {
           const sets = await getSetsForExerciseInSession(session.id, swapTarget.id);
           const setsCount = sets.length;
           if (setsCount > 0) {
-            Alert.alert(
-              `You've logged ${setsCount} set${setsCount !== 1 ? 's' : ''} on ${swapTarget.name}`,
-              'What would you like to do?',
-              [
-                {
-                  text: 'Keep sets & add new',
-                  onPress: async () => {
-                    await swapExerciseInSession(swapTarget.id, newExercise, true);
-                    setSwapTarget(null);
-                  },
-                },
-                {
-                  text: 'Discard & replace',
-                  style: 'destructive',
-                  onPress: async () => {
-                    await swapExerciseInSession(swapTarget.id, newExercise, false);
-                    setSwapTarget(null);
-                  },
-                },
-                { text: 'Cancel', style: 'cancel' },
-              ],
-            );
+            setSwapConflict({ target: swapTarget, newExercise, setsCount });
+            setSwapTarget(null);
           } else {
             await swapExerciseInSession(swapTarget.id, newExercise, false);
             setSwapTarget(null);
           }
         }}
         onClose={() => setSwapTarget(null)}
+      />
+
+      <SwapConflictSheet
+        visible={swapConflict !== null}
+        exerciseName={swapConflict?.target.name ?? ''}
+        setsCount={swapConflict?.setsCount ?? 0}
+        onKeep={async () => {
+          if (!swapConflict) { return; }
+          await swapExerciseInSession(swapConflict.target.id, swapConflict.newExercise, true);
+        }}
+        onDiscard={async () => {
+          if (!swapConflict) { return; }
+          await swapExerciseInSession(swapConflict.target.id, swapConflict.newExercise, false);
+        }}
+        onClose={() => setSwapConflict(null)}
       />
 
       <NumberPad
