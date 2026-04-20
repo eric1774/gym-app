@@ -1116,6 +1116,22 @@ export function WorkoutScreen() {
                   onEditTarget={handleEditTarget}
                   onViewHistory={handleViewHistory}
                   onMemberSelect={handleSupersetMemberSelect}
+                  notesByExerciseId={section.exerciseIds.reduce<Record<number, string | null>>((acc, id) => {
+                    acc[id] = sessionNotes[id] ?? programNotesMap[id] ?? null;
+                    return acc;
+                  }, {})}
+                  hintsByExerciseId={section.exerciseIds.reduce<Record<number, string | null>>((acc, id) => {
+                    acc[id] = !sessionNotes[id] && !programNotesMap[id] ? lastHints[id] ?? null : null;
+                    return acc;
+                  }, {})}
+                  onNoteCommit={async (exerciseId, text) => {
+                    if (!session?.id) { return; }
+                    await upsertSessionNote(session.id, exerciseId, text);
+                    setSessionNotes(prev => ({
+                      ...prev,
+                      [exerciseId]: text.trim() === '' ? null : text,
+                    }));
+                  }}
                 />
               );
             }

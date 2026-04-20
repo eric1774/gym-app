@@ -39,6 +39,9 @@ interface SupersetGroupProps {
   pendingRestByExercise: Record<number, boolean>;
   onStartRest: (id: number) => void;
   onRestChange: (id: number, newRestSeconds: number) => void;
+  notesByExerciseId?: Record<number, string | null>;
+  hintsByExerciseId?: Record<number, string | null>;
+  onNoteCommit?: (exerciseId: number, text: string) => void;
 }
 
 export function SupersetGroup({
@@ -67,6 +70,9 @@ export function SupersetGroup({
   pendingRestByExercise,
   onStartRest,
   onRestChange,
+  notesByExerciseId,
+  hintsByExerciseId,
+  onNoteCommit,
 }: SupersetGroupProps) {
   const members = memberIds
     .map(id => ({ id, ex: exerciseMap.get(id), se: sessionMap.get(id) }))
@@ -148,6 +154,9 @@ export function SupersetGroup({
                 pendingRest={pendingRestByExercise[m.id] ?? false}
                 onStartRest={() => onStartRest(m.id)}
                 onRestChange={(newRestSeconds) => onRestChange(m.id, newRestSeconds)}
+                note={notesByExerciseId?.[m.id] ?? null}
+                lastSessionNoteHint={hintsByExerciseId?.[m.id] ?? null}
+                onNoteCommit={onNoteCommit ? (text) => onNoteCommit(m.id, text) : undefined}
               />
             </View>
           );
