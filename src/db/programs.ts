@@ -289,6 +289,20 @@ export async function renameProgram(id: number, name: string): Promise<void> {
   await executeSql(database, 'UPDATE programs SET name = ? WHERE id = ?', [name, id]);
 }
 
+/**
+ * Update a program's total weeks. If shrinking (newWeeks < oldWeeks), cleans up
+ * any per-week override rows that would be orphaned (week_number > newWeeks).
+ */
+export async function updateProgramWeeks(programId: number, newWeeks: number): Promise<void> {
+  const database = await db;
+  const cur = await executeSql(database, 'SELECT weeks FROM programs WHERE id = ?', [programId]);
+  const old = cur.rows.length ? (cur.rows.item(0).weeks as number) : null;
+  await executeSql(database, 'UPDATE programs SET weeks = ? WHERE id = ?', [newWeeks, programId]);
+  if (old !== null && newWeeks < old) {
+    await deleteOverridesBeyondWeek(programId, newWeeks);
+  }
+}
+
 // ── Program Day Exercise CRUD ───────────────────────────────────────
 
 /** Return all exercises for a program day, ordered by sort_order. */

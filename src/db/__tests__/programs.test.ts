@@ -16,6 +16,7 @@ import {
   deleteProgramDay,
   renameProgramDay,
   renameProgram,
+  updateProgramWeeks,
   getProgramDayExercises,
   addExerciseToProgramDay,
   removeExerciseFromProgramDay,
@@ -732,5 +733,27 @@ describe('deleteOverridesBeyondWeek', () => {
     expect(sql).toMatch(/DELETE FROM program_week_day_exercise_overrides/);
     expect(sql).toMatch(/week_number > \?/);
     expect(params).toEqual([4, 42]);
+  });
+});
+
+describe('updateProgramWeeks', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+
+  it('calls deleteOverridesBeyondWeek when shrinking', async () => {
+    mockExecuteSql
+      .mockResolvedValueOnce(mockResultSet([{ weeks: 6 }])) // SELECT current weeks
+      .mockResolvedValueOnce(mockResultSet([]))             // UPDATE programs
+      .mockResolvedValueOnce(mockResultSet([]));            // DELETE overrides beyond week
+    await updateProgramWeeks(42, 4);
+    const calls = mockExecuteSql.mock.calls.map(c => c[1]).join('\n').toLowerCase();
+    expect(calls).toMatch(/delete from program_week_day_exercise_overrides/);
+  });
+
+  it('does not delete overrides when growing', async () => {
+    mockExecuteSql
+      .mockResolvedValueOnce(mockResultSet([{ weeks: 4 }]))
+      .mockResolvedValueOnce(mockResultSet([]));
+    await updateProgramWeeks(42, 6);
+    expect(mockExecuteSql).toHaveBeenCalledTimes(2);
   });
 });
