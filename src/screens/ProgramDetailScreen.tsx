@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   activateProgram,
   deleteProgram,
@@ -135,7 +136,7 @@ function findSwapTarget(
 }
 
 export function ProgramDetailScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ProgramsStackParamList, 'ProgramDetail'>>();
   const route = useRoute<DetailRoute>();
   const { programId } = route.params;
 
@@ -549,6 +550,13 @@ export function ProgramDetailScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          )}
+          {isActivated && (
+            <TouchableOpacity
+              style={styles.customizeWeeksButton}
+              onPress={() => navigation.navigate('CustomizeWeeks', { programId })}>
+              <Text style={styles.customizeWeeksText}>Customize Weeks</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -965,6 +973,21 @@ const styles = StyleSheet.create({
   manageWeeksText: {
     fontSize: fontSize.xs,
     fontWeight: weightSemiBold,
+    color: colors.accent,
+  },
+  customizeWeeksButton: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  customizeWeeksText: {
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
     color: colors.accent,
   },
   weekRow: {
