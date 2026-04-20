@@ -25,6 +25,8 @@ import {
   createSupersetGroup,
   removeSupersetGroup,
   getExercisesForWeekDay,
+  upsertOverride,
+  revertOverrideField,
 } from '../programs';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -616,5 +618,76 @@ describe('getExercisesForWeekDay', () => {
     expect(rows[0].setsOverridden).toBe(true);
     expect(rows[0].repsOverridden).toBe(false);
     expect(rows[0].overrideRowExists).toBe(true);
+  });
+});
+
+describe('upsertOverride', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+
+  it('writes UPSERT with COALESCE-preserving fields for a single-field edit', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await upsertOverride({
+      programDayExerciseId: 10,
+      weekNumber: 3,
+      field: 'sets',
+      value: 5,
+    });
+    const [, sql, params] = mockExecuteSql.mock.calls[0];
+    expect(sql).toMatch(/INSERT INTO program_week_day_exercise_overrides/);
+    expect(sql).toMatch(/ON CONFLICT\(program_day_exercise_id, week_number\)/);
+    expect(params[0]).toBe(10);
+    expect(params[1]).toBe(3);
+    expect(params).toContain(5);
+  });
+
+  it('writes notes when field is notes', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await upsertOverride({
+      programDayExerciseId: 10,
+      weekNumber: 3,
+      field: 'notes',
+      value: '85-90% of Best',
+    });
+    const [, , params] = mockExecuteSql.mock.calls[0];
+    expect(params).toContain('85-90% of Best');
+  });
+});
+
+describe('revertOverrideField', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+
+  it('sets the field to NULL and deletes row when all fields are NULL after update', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { override_sets: null, override_reps: null, override_weight_kg: null, notes: null },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    await revertOverrideField({
+      programDayExerciseId: 10,
+      weekNumber: 3,
+      field: 'reps',
+    });
+
+    expect(mockExecuteSql).toHaveBeenCalledTimes(3);
+    expect(mockExecuteSql.mock.calls[0][1]).toMatch(/UPDATE program_week_day_exercise_overrides/);
+    expect(mockExecuteSql.mock.calls[0][1]).toMatch(/override_reps = NULL/);
+    expect(mockExecuteSql.mock.calls[2][1]).toMatch(/DELETE FROM program_week_day_exercise_overrides/);
+  });
+
+  it('leaves the row in place when any field remains non-null', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { override_sets: 5, override_reps: null, override_weight_kg: null, notes: null },
+    ]));
+
+    await revertOverrideField({
+      programDayExerciseId: 10,
+      weekNumber: 3,
+      field: 'reps',
+    });
+
+    expect(mockExecuteSql).toHaveBeenCalledTimes(2);
+    expect(mockExecuteSql.mock.calls[1][1]).toMatch(/SELECT override_sets/);
   });
 });

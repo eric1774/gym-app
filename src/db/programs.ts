@@ -603,3 +603,76 @@ export async function clearWarmupTemplateIdForDay(
     [dayId],
   );
 }
+
+// ── Per-week Exercise Overrides ────────────────────────────────────
+
+type OverrideField = 'sets' | 'reps' | 'weight' | 'notes';
+
+const OVERRIDE_COLUMN: Record<OverrideField, string> = {
+  sets: 'override_sets',
+  reps: 'override_reps',
+  weight: 'override_weight_kg',
+  notes: 'notes',
+};
+
+export async function upsertOverride(args: {
+  programDayExerciseId: number;
+  weekNumber: number;
+  field: OverrideField;
+  value: number | string | null;
+}): Promise<void> {
+  const { programDayExerciseId, weekNumber, field, value } = args;
+  const col = OVERRIDE_COLUMN[field];
+  const now = new Date().toISOString();
+  const database = await db;
+  await executeSql(
+    database,
+    `INSERT INTO program_week_day_exercise_overrides
+       (program_day_exercise_id, week_number, ${col}, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(program_day_exercise_id, week_number)
+     DO UPDATE SET ${col} = excluded.${col}, updated_at = excluded.updated_at`,
+    [programDayExerciseId, weekNumber, value, now, now],
+  );
+}
+
+export async function revertOverrideField(args: {
+  programDayExerciseId: number;
+  weekNumber: number;
+  field: OverrideField;
+}): Promise<void> {
+  const { programDayExerciseId, weekNumber, field } = args;
+  const col = OVERRIDE_COLUMN[field];
+  const now = new Date().toISOString();
+  const database = await db;
+
+  await executeSql(
+    database,
+    `UPDATE program_week_day_exercise_overrides
+       SET ${col} = NULL, updated_at = ?
+     WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [now, programDayExerciseId, weekNumber],
+  );
+
+  const check = await executeSql(
+    database,
+    `SELECT override_sets, override_reps, override_weight_kg, notes
+       FROM program_week_day_exercise_overrides
+      WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [programDayExerciseId, weekNumber],
+  );
+  if (check.rows.length === 0) { return; }
+  const row = check.rows.item(0);
+  const allNull = row.override_sets == null
+    && row.override_reps == null
+    && row.override_weight_kg == null
+    && (row.notes == null || row.notes === '');
+  if (!allNull) { return; }
+
+  await executeSql(
+    database,
+    `DELETE FROM program_week_day_exercise_overrides
+      WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [programDayExerciseId, weekNumber],
+  );
+}
