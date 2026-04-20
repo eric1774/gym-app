@@ -1181,10 +1181,67 @@ export function WorkoutScreen() {
       {(() => {
         const resolved = editingExerciseId !== null ? resolvedByExerciseId[editingExerciseId] : undefined;
         const base = resolved ? baseExercisesById[resolved.programDayExerciseId] : undefined;
-        // Only render with real base + resolved data. Swapped-in exercises (no program_day_exercises
-        // row) are not week-overridable; skip until a base row exists.
+
+        // Swapped-in exercises have no program_day_exercises row, so the week-override
+        // flow doesn't apply. Fall back to session-local editing: render the modal in
+        // 'base' scope (hides inherit toggles) with values seeded from programTargetsMap
+        // / nextByExercise, and persist edits only to in-memory state. This mirrors the
+        // pre-Task-12 behavior (commit 2f4087a).
+        if (editingExerciseId !== null && (!resolved || !base)) {
+          const target = programTargetsMap.get(editingExerciseId);
+          const next = nextByExercise[editingExerciseId] ?? { w: 0, r: 0 };
+          const seedSets = target?.targetSets ?? 3;
+          const seedReps = target?.targetReps ?? (next.r > 0 ? next.r : 10);
+          const seedWeight = target?.targetWeightLbs ?? next.w;
+          return (
+            <EditTargetsModal
+              visible={true}
+              onClose={() => setEditingExerciseId(null)}
+              exerciseName={editingExerciseName}
+              programDayExerciseId={null}
+              scope="base"
+              baseSets={seedSets}
+              baseReps={seedReps}
+              baseWeightLbs={seedWeight}
+              baseNote={null}
+              initialSets={seedSets}
+              initialReps={seedReps}
+              initialWeightLbs={seedWeight}
+              initialNote={null}
+              setsOverridden={false}
+              repsOverridden={false}
+              weightOverridden={false}
+              notesOverridden={false}
+              onSave={(patch) => {
+                if (editingExerciseId === null) { return; }
+                // In 'base' scope all fields always come back as inherit:false
+                const newSets = patch.sets.inherit ? seedSets : patch.sets.value;
+                const newReps = patch.reps.inherit ? seedReps : patch.reps.value;
+                const newWeight = patch.weight.inherit ? seedWeight : patch.weight.value;
+                // Session-local only — no DB write (no program_day_exercises row to key on).
+                setProgramTargetsMap(prev => {
+                  const nextMap = new Map(prev);
+                  const existing = nextMap.get(editingExerciseId);
+                  nextMap.set(editingExerciseId, {
+                    pdeId: existing?.pdeId ?? -1,
+                    targetSets: newSets,
+                    targetReps: newReps,
+                    targetWeightLbs: newWeight,
+                  });
+                  return nextMap;
+                });
+                setNextByExercise(prev => ({
+                  ...prev,
+                  [editingExerciseId]: { w: newWeight, r: newReps },
+                }));
+                setEditingExerciseId(null);
+              }}
+            />
+          );
+        }
+
         if (editingExerciseId === null || !resolved || !base) {
-          // Fallback: render hidden modal to keep hook order stable
+          // Hidden placeholder to keep hook order stable when nothing is being edited.
           return (
             <EditTargetsModal
               visible={false}
