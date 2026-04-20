@@ -11,7 +11,14 @@ import {
   getWeekData,
 } from '../db/programs';
 import type { Program, ProgramDay } from '../types';
-import { colors } from '../theme/colors';
+import {
+  colors,
+  spacing,
+  fontSize,
+  weightRegular,
+  weightSemiBold,
+  weightBold,
+} from '../theme';
 import type { ProgramsStackParamList } from '../navigation/TabNavigator';
 
 type Route = RouteProp<ProgramsStackParamList, 'CustomizeWeeks'>;
@@ -59,7 +66,7 @@ export function CustomizeWeeksScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionLabel}>Base template</Text>
         {days.map(d => (
           <TouchableOpacity
@@ -80,34 +87,46 @@ export function CustomizeWeeksScreen() {
         ))}
 
         <Text style={styles.sectionLabel}>Weeks</Text>
-        {Array.from({ length: program.weeks }, (_, i) => i + 1).map(wk => (
-          <View key={`wk-${wk}`}>
-            <Text style={styles.weekHeader}>
-              W{wk} {weekNames[wk] ?? ''} {wk === program.currentWeek ? '★' : ''}
-              {'  '}
-              <Text style={styles.weekSub}>
-                {counts[wk] ? `${counts[wk]} overrides` : 'inherits base'}
-              </Text>
-            </Text>
-            {days.map(d => (
-              <TouchableOpacity
-                key={`wk-${wk}-${d.id}`}
-                style={styles.row}
-                onPress={() =>
-                  nav.navigate('WeekDayEditor', {
-                    programId,
-                    scope: { week: wk },
-                    dayId: d.id,
-                    dayName: d.name,
-                  })
-                }
-              >
-                <Text style={styles.rowTitle}>{d.name}</Text>
-                <Text style={styles.rowChev}>›</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ))}
+        {Array.from({ length: program.weeks }, (_, i) => i + 1).map(wk => {
+          const isCurrent = wk === program.currentWeek;
+          const overrideCount = counts[wk] ?? 0;
+          const weekLabel = weekNames[wk];
+          return (
+            <View key={`wk-${wk}`} style={styles.weekGroup}>
+              <View style={styles.weekHeaderRow}>
+                <Text style={styles.weekHeaderText}>
+                  <Text style={styles.weekNumber}>W{wk}</Text>
+                  {weekLabel ? <Text style={styles.weekName}>{'  '}{weekLabel}</Text> : null}
+                  {isCurrent ? <Text style={styles.currentStar}>  ★</Text> : null}
+                </Text>
+                {overrideCount > 0 ? (
+                  <View style={styles.overridePill}>
+                    <Text style={styles.overridePillText}>{overrideCount} overrides</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.inheritsMeta}>inherits base</Text>
+                )}
+              </View>
+              {days.map(d => (
+                <TouchableOpacity
+                  key={`wk-${wk}-${d.id}`}
+                  style={[styles.row, isCurrent && styles.rowCurrent]}
+                  onPress={() =>
+                    nav.navigate('WeekDayEditor', {
+                      programId,
+                      scope: { week: wk },
+                      dayId: d.id,
+                      dayName: d.name,
+                    })
+                  }
+                >
+                  <Text style={styles.rowTitle}>{d.name}</Text>
+                  <Text style={styles.rowChev}>›</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -115,33 +134,91 @@ export function CustomizeWeeksScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  scrollContent: {
+    paddingBottom: spacing.xl,
+  },
   sectionLabel: {
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: fontSize.sm,
+    fontWeight: weightBold,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    marginTop: 16,
-    marginBottom: 6,
-    paddingHorizontal: 16,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.base,
     color: colors.secondary,
   },
-  weekHeader: {
-    fontWeight: '600',
-    marginTop: 14,
-    marginBottom: 4,
-    paddingHorizontal: 16,
+  weekGroup: {
+    marginTop: spacing.md,
+  },
+  weekHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    marginBottom: spacing.xs,
+  },
+  weekHeaderText: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
     color: colors.primary,
   },
-  weekSub: { fontWeight: '400', fontSize: 12, color: colors.secondary },
+  weekNumber: {
+    color: colors.primary,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  weekName: {
+    color: colors.primary,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  currentStar: {
+    color: colors.accent,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  overridePill: {
+    backgroundColor: colors.accentGlow,
+    borderRadius: 20,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  overridePillText: {
+    color: colors.accent,
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+  },
+  inheritsMeta: {
+    color: colors.secondaryDim,
+    fontSize: fontSize.sm,
+    fontWeight: weightRegular,
+    fontStyle: 'italic',
+  },
   row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginHorizontal: 12,
-    marginVertical: 4,
-    borderRadius: 10,
+    padding: spacing.base,
+    marginHorizontal: spacing.base,
+    marginVertical: spacing.xs + 2,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surfaceElevated,
   },
-  rowTitle: { fontSize: 14, flex: 1, color: colors.primary },
-  rowChev: { fontSize: 18, color: colors.secondary },
+  rowCurrent: {
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+  },
+  rowTitle: {
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+    color: colors.primary,
+    flex: 1,
+  },
+  rowChev: {
+    fontSize: fontSize.md,
+    color: colors.secondary,
+  },
 });

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { colors, fontSize, weightMedium } from '../theme';
+
 export interface InlineNoteEditorProps {
   value: string;
   hint?: string;
@@ -36,7 +38,7 @@ export function InlineNoteEditor({ value, hint, onCommit }: InlineNoteEditorProp
           returnKeyType="done"
           blurOnSubmit
           placeholder={hint ?? 'Add a note…'}
-          placeholderTextColor="rgba(255,255,255,0.35)"
+          placeholderTextColor={colors.secondaryDim}
         />
       </View>
     );
@@ -60,12 +62,46 @@ export function InlineNoteEditor({ value, hint, onCommit }: InlineNoteEditorProp
 }
 
 const styles = StyleSheet.create({
-  viewContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 2, paddingHorizontal: 2, gap: 6 },
-  editingContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 10, gap: 6 },
-  pencilView: { color: 'rgba(255,255,255,0.45)', fontSize: 13 },
-  pencilEditing: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
-  input: { flex: 1, color: '#ffffff', fontSize: 12, fontWeight: '500', padding: 0 },
-  valueText: { color: 'rgba(255,255,255,0.82)', fontSize: 12, fontWeight: '500' },
-  hintText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, fontStyle: 'italic' },
-  placeholderText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, fontStyle: 'italic' },
+  viewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    gap: 6,
+  },
+  editingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  pencilView: { color: colors.secondary, fontSize: fontSize.sm },
+  pencilEditing: { color: colors.secondary, fontSize: fontSize.sm },
+  input: {
+    flex: 1,
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+    padding: 0,
+  },
+  valueText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: weightMedium,
+  },
+  hintText: {
+    color: colors.secondaryDim,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+  },
+  placeholderText: {
+    color: colors.secondaryDim,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+  },
 });
