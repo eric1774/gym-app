@@ -27,6 +27,8 @@ import {
   getExercisesForWeekDay,
   upsertOverride,
   revertOverrideField,
+  updateBaseNote,
+  getWeekOverrideCounts,
 } from '../programs';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -689,5 +691,33 @@ describe('revertOverrideField', () => {
 
     expect(mockExecuteSql).toHaveBeenCalledTimes(2);
     expect(mockExecuteSql.mock.calls[1][1]).toMatch(/SELECT override_sets/);
+  });
+});
+
+describe('updateBaseNote', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+  it('updates the note on program_day_exercises', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await updateBaseNote(10, 'Heavy day — brace hard');
+    const [, sql, params] = mockExecuteSql.mock.calls[0];
+    expect(sql).toMatch(/UPDATE program_day_exercises SET notes = \? WHERE id = \?/);
+    expect(params).toEqual(['Heavy day — brace hard', 10]);
+  });
+  it('accepts null to clear the note', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await updateBaseNote(10, null);
+    expect(mockExecuteSql.mock.calls[0][2]).toEqual([null, 10]);
+  });
+});
+
+describe('getWeekOverrideCounts', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+  it('returns a map of week_number -> override count', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { week_number: 2, override_count: 3 },
+      { week_number: 3, override_count: 7 },
+    ]));
+    const counts = await getWeekOverrideCounts(42);
+    expect(counts).toEqual({ 2: 3, 3: 7 });
   });
 });

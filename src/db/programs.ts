@@ -676,3 +676,33 @@ export async function revertOverrideField(args: {
     [programDayExerciseId, weekNumber],
   );
 }
+
+export async function updateBaseNote(programDayExerciseId: number, notes: string | null): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_day_exercises SET notes = ? WHERE id = ?',
+    [notes, programDayExerciseId],
+  );
+}
+
+export async function getWeekOverrideCounts(programId: number): Promise<Record<number, number>> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT week_number, COUNT(*) AS override_count
+       FROM program_week_day_exercise_overrides
+       WHERE program_day_exercise_id IN (
+         SELECT id FROM program_day_exercises
+         WHERE program_day_id IN (SELECT id FROM program_days WHERE program_id = ?)
+       )
+       GROUP BY week_number`,
+    [programId],
+  );
+  const out: Record<number, number> = {};
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    out[row.week_number] = row.override_count;
+  }
+  return out;
+}
