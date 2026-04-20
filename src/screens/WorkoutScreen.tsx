@@ -30,6 +30,7 @@ import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WeekExerciseResolved, WorkoutSet } from '../types';
 import { getExercisesForWeekDay, updateExerciseTargets } from '../db/programs';
+import { getSessionNote, upsertSessionNote, getLastSessionNote } from '../db/notes';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { updateDefaultRestSeconds } from '../db/exercises';
@@ -254,6 +255,9 @@ export function WorkoutScreen() {
   const [setsByExercise, setSetsByExercise] = useState<Record<number, SetState[]>>({});
   const [nextByExercise, setNextByExercise] = useState<Record<number, { w: number; r: number }>>({});
   const [lastSetsByExercise, setLastSetsByExercise] = useState<Record<number, WorkoutSet[] | null>>({});
+  const [sessionNotes, setSessionNotes] = useState<Record<number, string | null>>({});
+  const [lastHints, setLastHints] = useState<Record<number, string | null>>({});
+  const [programNotesMap, setProgramNotesMap] = useState<Record<number, string | null>>({});
   const [pad, setPad] = useState<PadTarget | null>(null);
 
   // Derived aggregates — match old handleSetLogged exclusions
@@ -397,9 +401,10 @@ export function WorkoutScreen() {
   useEffect(() => {
     if (programDayId) {
       const weekNumber = session?.programWeek ?? 1;
-      getExercisesForWeekDay(programDayId, weekNumber).then((pdes: WeekExerciseResolved[]) => {
+      getExercisesForWeekDay(programDayId, weekNumber).then(async (pdes: WeekExerciseResolved[]) => {
         // Build programTargetsMap
         const map = new Map<number, ProgramTarget>();
+        const notesMap: Record<number, string | null> = {};
         for (const pde of pdes) {
           map.set(pde.exerciseId, {
             pdeId: pde.programDayExerciseId,
@@ -407,8 +412,10 @@ export function WorkoutScreen() {
             targetReps: pde.reps,
             targetWeightLbs: pde.weightLbs,
           });
+          notesMap[pde.exerciseId] = pde.notes ?? null;
         }
         setProgramTargetsMap(map);
+        setProgramNotesMap(notesMap);
 
         // Build superset maps from supersetGroupId
         const groupsMap = new Map<number, number[]>();
@@ -428,17 +435,35 @@ export function WorkoutScreen() {
         setExerciseSupersetMap(exMap);
         supersetGroupsRef.current = groupsMap;
         exerciseSupersetMapRef.current = exMap;
+
+        // Populate session notes + last-session hint maps
+        if (session?.id) {
+          const sid = session.id;
+          const [sessionNotePairs, lastHintPairs] = await Promise.all([
+            Promise.all(pdes.map(r =>
+              getSessionNote(sid, r.exerciseId).then(n => [r.exerciseId, n] as const)
+            )),
+            Promise.all(pdes.map(r =>
+              getLastSessionNote(r.exerciseId).then(n => [r.exerciseId, n] as const)
+            )),
+          ]);
+          setSessionNotes(Object.fromEntries(sessionNotePairs));
+          setLastHints(Object.fromEntries(lastHintPairs));
+        }
       });
     } else {
       const emptyMap1 = new Map<number, number[]>();
       const emptyMap2 = new Map<number, number>();
       setProgramTargetsMap(new Map());
+      setProgramNotesMap({});
+      setSessionNotes({});
+      setLastHints({});
       setSupersetGroups(emptyMap1);
       setExerciseSupersetMap(emptyMap2);
       supersetGroupsRef.current = emptyMap1;
       exerciseSupersetMapRef.current = emptyMap2;
     }
-  }, [programDayId, session?.programWeek]);
+  }, [programDayId, session?.programWeek, session?.id]);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -1108,6 +1133,13 @@ export function WorkoutScreen() {
                     const exercise = exercises.find(ex => ex.id === se.exerciseId);
                     if (!exercise) { return null; }
                     const isActive = activeExerciseId === se.exerciseId;
+                    const programNote = programNotesMap[se.exerciseId] ?? null;
+                    const resolvedNote =
+                      sessionNotes[se.exerciseId] ?? programNote ?? null;
+                    const hint =
+                      !sessionNotes[se.exerciseId] && !programNote
+                        ? lastHints[se.exerciseId] ?? null
+                        : null;
                     return (
                       <ExerciseCard
                         key={se.exerciseId}
@@ -1132,6 +1164,16 @@ export function WorkoutScreen() {
                         onStartRest={() => handleStartRest(se.exerciseId)}
                         onRestChange={(newRest) => handleRestChange(se.exerciseId, newRest)}
                         onSwap={() => setSwapTarget(exercise ?? null)}
+                        note={resolvedNote}
+                        lastSessionNoteHint={hint}
+                        onNoteCommit={async (text) => {
+                          if (!session?.id) { return; }
+                          await upsertSessionNote(session.id, se.exerciseId, text);
+                          setSessionNotes(prev => ({
+                            ...prev,
+                            [se.exerciseId]: text.trim() === '' ? null : text,
+                          }));
+                        }}
                       />
                     );
                   })}
