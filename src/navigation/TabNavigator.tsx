@@ -179,8 +179,8 @@ function ProgramsStackNavigator() {
       <ProgramsStack.Screen name="ProgramsList" component={ProgramsScreen} />
       <ProgramsStack.Screen name="ProgramDetail" component={ProgramDetailScreen} />
       <ProgramsStack.Screen name="DayDetail" component={DayDetailScreen} />
-      <ProgramsStack.Screen name="CustomizeWeeks" component={CustomizeWeeksScreen} options={{ title: 'Customize weeks' }} />
-      <ProgramsStack.Screen name="WeekDayEditor" component={WeekDayEditorScreen} options={{ title: '' }} />
+      <ProgramsStack.Screen name="CustomizeWeeks" component={CustomizeWeeksScreen} />
+      <ProgramsStack.Screen name="WeekDayEditor" component={WeekDayEditorScreen} />
     </ProgramsStack.Navigator>
   );
 }

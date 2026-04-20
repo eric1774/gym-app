@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
   getExercisesForWeekDay,
@@ -21,12 +22,15 @@ import {
   weightRegular,
   weightMedium,
   weightSemiBold,
+  weightBold,
 } from '../theme';
 import type { ProgramsStackParamList } from '../navigation/TabNavigator';
 
 type Route = RouteProp<ProgramsStackParamList, 'WeekDayEditor'>;
+type Nav = NativeStackNavigationProp<ProgramsStackParamList, 'WeekDayEditor'>;
 
 export function WeekDayEditorScreen() {
+  const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { scope, dayId, dayName } = route.params;
   const isBase = scope === 'base';
@@ -85,8 +89,19 @@ export function WeekDayEditorScreen() {
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerBlock}>
-          <Text style={styles.header}>{headerText}</Text>
-          <Text style={styles.subHeader}>{subHeaderText}</Text>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => nav.goBack()}
+              style={styles.backButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.backText}>{'\u2039'}</Text>
+            </TouchableOpacity>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.header}>{headerText}</Text>
+              <Text style={styles.subHeader}>{subHeaderText}</Text>
+            </View>
+          </View>
         </View>
 
         {rows.map(r => {
@@ -221,6 +236,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.sm,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -spacing.sm,
+    marginRight: spacing.xs,
+  },
+  backText: {
+    fontSize: 32,
+    color: colors.accent,
+    fontWeight: weightBold,
+    lineHeight: 36,
+  },
+  headerTextBlock: {
+    flex: 1,
   },
   header: {
     fontSize: fontSize.md,

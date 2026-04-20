@@ -28,6 +28,9 @@ export function CustomizeWeeksScreen() {
   const nav = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { programId } = route.params;
+  const handleBack = useCallback(() => {
+    nav.goBack();
+  }, [nav]);
 
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
@@ -66,6 +69,21 @@ export function CustomizeWeeksScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.backText}>{'\u2039'}</Text>
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Customize Weeks
+          </Text>
+        </View>
+        <View style={styles.headerRight} />
+      </View>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionLabel}>Base template</Text>
         {days.map(d => (
@@ -134,6 +152,37 @@ export function CustomizeWeeksScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: {
+    fontSize: 32,
+    color: colors.accent,
+    fontWeight: weightBold,
+    lineHeight: 36,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+    color: colors.primary,
+  },
+  headerRight: {
+    width: 44,
+  },
   scrollContent: {
     paddingBottom: spacing.xl,
   },
