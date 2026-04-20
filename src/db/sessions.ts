@@ -7,6 +7,7 @@ export function rowToSession(row: {
   started_at: string;
   completed_at: string | null;
   program_day_id: number | null;
+  program_week?: number | null;
   avg_hr?: number | null;
   peak_hr?: number | null;
 }): WorkoutSession {
@@ -15,6 +16,7 @@ export function rowToSession(row: {
     startedAt: row.started_at,
     completedAt: row.completed_at ?? null,
     programDayId: row.program_day_id ?? null,
+    programWeek: row.program_week ?? null,
     avgHr: row.avg_hr ?? null,
     peakHr: row.peak_hr ?? null,
   };
@@ -62,7 +64,7 @@ export async function createSession(programDayId?: number | null): Promise<Worko
     'INSERT INTO workout_sessions (started_at, completed_at, program_day_id, program_week) VALUES (?, NULL, ?, ?)',
     [startedAt, programDayId ?? null, programWeek],
   );
-  const row = await executeSql(database, 'SELECT id, started_at, completed_at, program_day_id, avg_hr, peak_hr FROM workout_sessions WHERE id = ?', [
+  const row = await executeSql(database, 'SELECT id, started_at, completed_at, program_day_id, program_week, avg_hr, peak_hr FROM workout_sessions WHERE id = ?', [
     result.insertId,
   ]);
   return rowToSession(row.rows.item(0));
@@ -75,7 +77,7 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
   const database = await db;
   const result = await executeSql(
     database,
-    'SELECT id, started_at, completed_at, program_day_id, avg_hr, peak_hr FROM workout_sessions WHERE completed_at IS NULL ORDER BY started_at DESC LIMIT 1',
+    'SELECT id, started_at, completed_at, program_day_id, program_week, avg_hr, peak_hr FROM workout_sessions WHERE completed_at IS NULL ORDER BY started_at DESC LIMIT 1',
   );
   if (result.rows.length === 0) {
     return null;

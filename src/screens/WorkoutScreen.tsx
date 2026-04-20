@@ -28,8 +28,8 @@ import { RestTimerBanner } from '../components/RestTimerBanner';
 import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
-import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WorkoutSet } from '../types';
-import { getProgramDayExercises, updateExerciseTargets } from '../db/programs';
+import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WeekExerciseResolved, WorkoutSet } from '../types';
+import { getExercisesForWeekDay, updateExerciseTargets } from '../db/programs';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { updateDefaultRestSeconds } from '../db/exercises';
@@ -396,15 +396,16 @@ export function WorkoutScreen() {
 
   useEffect(() => {
     if (programDayId) {
-      getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
+      const weekNumber = session?.programWeek ?? 1;
+      getExercisesForWeekDay(programDayId, weekNumber).then((pdes: WeekExerciseResolved[]) => {
         // Build programTargetsMap
         const map = new Map<number, ProgramTarget>();
         for (const pde of pdes) {
           map.set(pde.exerciseId, {
-            pdeId: pde.id,
-            targetSets: pde.targetSets,
-            targetReps: pde.targetReps,
-            targetWeightLbs: pde.targetWeightLbs,
+            pdeId: pde.programDayExerciseId,
+            targetSets: pde.sets,
+            targetReps: pde.reps,
+            targetWeightLbs: pde.weightLbs,
           });
         }
         setProgramTargetsMap(map);
@@ -437,7 +438,7 @@ export function WorkoutScreen() {
       supersetGroupsRef.current = emptyMap1;
       exerciseSupersetMapRef.current = emptyMap2;
     }
-  }, [programDayId]);
+  }, [programDayId, session?.programWeek]);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -774,16 +775,17 @@ export function WorkoutScreen() {
     } catch {
       // Revert on error — re-fetch from DB
       if (programDayId) {
-        getProgramDayExercises(programDayId).then((pdes: ProgramDayExercise[]) => {
+        const weekNumber = session?.programWeek ?? 1;
+        getExercisesForWeekDay(programDayId, weekNumber).then((pdes: WeekExerciseResolved[]) => {
           const map = new Map<number, ProgramTarget>();
           for (const pde of pdes) {
-            map.set(pde.exerciseId, { pdeId: pde.id, targetSets: pde.targetSets, targetReps: pde.targetReps, targetWeightLbs: pde.targetWeightLbs });
+            map.set(pde.exerciseId, { pdeId: pde.programDayExerciseId, targetSets: pde.sets, targetReps: pde.reps, targetWeightLbs: pde.weightLbs });
           }
           setProgramTargetsMap(map);
         });
       }
     }
-  }, [editingExerciseId, programDayId]);
+  }, [editingExerciseId, programDayId, session?.programWeek]);
 
   const editingExerciseName = useMemo(() => {
     if (editingExerciseId === null) { return ''; }
