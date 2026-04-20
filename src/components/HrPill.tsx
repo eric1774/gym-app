@@ -7,7 +7,7 @@ export type HrZone = 1 | 2 | 3 | 4 | 5;
 
 interface HrPillProps {
   bpm: number | null;          // null = disconnected
-  zone: HrZone | null;         // null when bpm is null
+  zone: HrZone | null;         // null when disconnected OR bpm is below Zone 1
 }
 
 /** Blend a hex color with opacity hex suffix (RN doesn't parse 8-digit hex uniformly). */
@@ -35,7 +35,7 @@ export function HrPill({ bpm, zone }: HrPillProps) {
           {disconnected ? '--' : bpm}
         </Text>
         <Text style={[styles.zoneLabel, { color: zoneColor }]}>
-          {disconnected ? 'BPM' : `Z${zone} · BPM`}
+          {zone === null ? 'BPM' : `Z${zone} · BPM`}
         </Text>
       </View>
     </View>
