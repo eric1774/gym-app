@@ -48,6 +48,7 @@ export function rowToProgramDayExercise(row: {
   target_weight_kg: number;
   sort_order: number;
   superset_group_id: number | null;
+  notes?: string | null;
 }): ProgramDayExercise {
   return {
     id: row.id,
@@ -58,6 +59,7 @@ export function rowToProgramDayExercise(row: {
     targetWeightLbs: row.target_weight_kg,
     sortOrder: row.sort_order,
     supersetGroupId: row.superset_group_id ?? null,
+    notes: row.notes ?? null,
   };
 }
 

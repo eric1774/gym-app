@@ -947,6 +947,7 @@ export async function exportAllData(): Promise<FullDataExport> {
           targetWeightLbs: e.target_weight_kg,
           sortOrder: e.sort_order,
           supersetGroupId: e.superset_group_id ?? null,
+          notes: e.notes ?? null,
         });
       }
       days.push({

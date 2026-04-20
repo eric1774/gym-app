@@ -29,7 +29,7 @@ import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WeekExerciseResolved, WorkoutSet } from '../types';
-import { getExercisesForWeekDay, updateExerciseTargets } from '../db/programs';
+import { getExercisesForWeekDay, getProgramDayExercises, upsertOverride, revertOverrideField } from '../db/programs';
 import { getSessionNote, upsertSessionNote, getLastSessionNote } from '../db/notes';
 import { EditTargetsModal } from '../components/EditTargetsModal';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
@@ -300,9 +300,15 @@ export function WorkoutScreen() {
 
   // Inline target editing state
   const [editingExerciseId, setEditingExerciseId] = useState<number | null>(null);
+  // Bumping this triggers a re-fetch of program data (used after saving targets)
+  const [programDataVersion, setProgramDataVersion] = useState(0);
 
   // Load program day exercises when session is a program workout
   const [programTargetsMap, setProgramTargetsMap] = useState<Map<number, ProgramTarget>>(new Map());
+  // Resolved weekly view keyed by exerciseId — powers the EditTargetsModal
+  const [resolvedByExerciseId, setResolvedByExerciseId] = useState<Record<number, WeekExerciseResolved>>({});
+  // Base program_day_exercises rows keyed by programDayExerciseId (base values for "inherit from base")
+  const [baseExercisesById, setBaseExercisesById] = useState<Record<number, ProgramDayExercise>>({});
   // TODO(workout-v1): wire setProgramDayName from a getProgramDay(programDayId)
   // DB call so WorkoutHeader can show the real day name (e.g. 'PUSH DAY') instead
   // of the 'WORKOUT' fallback. Pre-existing state; never populated before V1.
@@ -401,10 +407,14 @@ export function WorkoutScreen() {
   useEffect(() => {
     if (programDayId) {
       const weekNumber = session?.programWeek ?? 1;
-      getExercisesForWeekDay(programDayId, weekNumber).then(async (pdes: WeekExerciseResolved[]) => {
+      Promise.all([
+        getExercisesForWeekDay(programDayId, weekNumber),
+        getProgramDayExercises(programDayId),
+      ]).then(async ([pdes, basePdes]: [WeekExerciseResolved[], ProgramDayExercise[]]) => {
         // Build programTargetsMap
         const map = new Map<number, ProgramTarget>();
         const notesMap: Record<number, string | null> = {};
+        const resolvedMap: Record<number, WeekExerciseResolved> = {};
         for (const pde of pdes) {
           map.set(pde.exerciseId, {
             pdeId: pde.programDayExerciseId,
@@ -413,9 +423,18 @@ export function WorkoutScreen() {
             targetWeightLbs: pde.weightLbs,
           });
           notesMap[pde.exerciseId] = pde.notes ?? null;
+          resolvedMap[pde.exerciseId] = pde;
         }
         setProgramTargetsMap(map);
         setProgramNotesMap(notesMap);
+        setResolvedByExerciseId(resolvedMap);
+
+        // Build base-values map keyed by programDayExerciseId
+        const baseMap: Record<number, ProgramDayExercise> = {};
+        for (const base of basePdes) {
+          baseMap[base.id] = base;
+        }
+        setBaseExercisesById(baseMap);
 
         // Build superset maps from supersetGroupId
         const groupsMap = new Map<number, number[]>();
@@ -456,6 +475,8 @@ export function WorkoutScreen() {
       const emptyMap2 = new Map<number, number>();
       setProgramTargetsMap(new Map());
       setProgramNotesMap({});
+      setResolvedByExerciseId({});
+      setBaseExercisesById({});
       setSessionNotes({});
       setLastHints({});
       setSupersetGroups(emptyMap1);
@@ -463,7 +484,7 @@ export function WorkoutScreen() {
       supersetGroupsRef.current = emptyMap1;
       exerciseSupersetMapRef.current = emptyMap2;
     }
-  }, [programDayId, session?.programWeek, session?.id]);
+  }, [programDayId, session?.programWeek, session?.id, programDataVersion]);
 
   // Default to first non-complete exercise on session load
   useEffect(() => {
@@ -778,75 +799,10 @@ export function WorkoutScreen() {
     });
   }, [exercises, navigation]);
 
-  const handleSaveTargets = useCallback(async (pdeId: number, sets: number, reps: number, weight: number) => {
-    if (editingExerciseId === null) { return; }
-    // Optimistic local update
-    setProgramTargetsMap(prev => {
-      const next = new Map(prev);
-      next.set(editingExerciseId, { pdeId, targetSets: sets, targetReps: reps, targetWeightLbs: weight });
-      return next;
-    });
-    // Also update nextByExercise so the meta row + stepper reflect the new targets.
-    setNextByExercise(prev => ({
-      ...prev,
-      [editingExerciseId]: { w: weight, r: reps },
-    }));
-    setEditingExerciseId(null);
-    // pdeId <= 0 is a sentinel for swapped-in exercises that have no program_day_exercises
-    // row. Persist session-local only — do not hit the DB.
-    if (pdeId <= 0) { return; }
-    try {
-      await updateExerciseTargets(pdeId, sets, reps, weight);
-    } catch {
-      // Revert on error — re-fetch from DB
-      if (programDayId) {
-        const weekNumber = session?.programWeek ?? 1;
-        getExercisesForWeekDay(programDayId, weekNumber).then((pdes: WeekExerciseResolved[]) => {
-          const map = new Map<number, ProgramTarget>();
-          for (const pde of pdes) {
-            map.set(pde.exerciseId, { pdeId: pde.programDayExerciseId, targetSets: pde.sets, targetReps: pde.reps, targetWeightLbs: pde.weightLbs });
-          }
-          setProgramTargetsMap(map);
-        });
-      }
-    }
-  }, [editingExerciseId, programDayId, session?.programWeek]);
-
   const editingExerciseName = useMemo(() => {
     if (editingExerciseId === null) { return ''; }
     return exercises.find(ex => ex.id === editingExerciseId)?.name ?? '';
   }, [editingExerciseId, exercises]);
-
-  const editingDayExercise = useMemo((): ProgramDayExercise | null => {
-    if (editingExerciseId === null) { return null; }
-    const target = programTargetsMap.get(editingExerciseId);
-    if (target && programDayId) {
-      return {
-        id: target.pdeId,
-        programDayId,
-        exerciseId: editingExerciseId,
-        targetSets: target.targetSets,
-        targetReps: target.targetReps,
-        targetWeightLbs: target.targetWeightLbs,
-        sortOrder: 0,
-        supersetGroupId: null,
-      };
-    }
-    // Swapped-in exercise with no program_day_exercises row: synthesize a
-    // session-local day-exercise with sentinel pdeId=-1 so the EditTargetsModal
-    // can seed values from the user's current next-set dial.
-    const next = nextByExercise[editingExerciseId] ?? { w: 0, r: 0 };
-    return {
-      id: -1,
-      programDayId: programDayId ?? -1,
-      exerciseId: editingExerciseId,
-      targetSets: 3,
-      targetReps: next.r > 0 ? next.r : 10,
-      targetWeightLbs: next.w,
-      sortOrder: 0,
-      supersetGroupId: null,
-    };
-  }, [editingExerciseId, programDayId, programTargetsMap, nextByExercise]);
 
   const handleRestChange = useCallback(
     (exerciseId: number, newRestSeconds: number) => {
@@ -1222,13 +1178,73 @@ export function WorkoutScreen() {
       />
 
       {/* Inline target editing modal */}
-      <EditTargetsModal
-        visible={editingExerciseId !== null}
-        onClose={() => setEditingExerciseId(null)}
-        exerciseName={editingExerciseName}
-        dayExercise={editingDayExercise}
-        onSave={handleSaveTargets}
-      />
+      {(() => {
+        const resolved = editingExerciseId !== null ? resolvedByExerciseId[editingExerciseId] : undefined;
+        const base = resolved ? baseExercisesById[resolved.programDayExerciseId] : undefined;
+        // Only render with real base + resolved data. Swapped-in exercises (no program_day_exercises
+        // row) are not week-overridable; skip until a base row exists.
+        if (editingExerciseId === null || !resolved || !base) {
+          // Fallback: render hidden modal to keep hook order stable
+          return (
+            <EditTargetsModal
+              visible={false}
+              onClose={() => setEditingExerciseId(null)}
+              exerciseName=""
+              programDayExerciseId={null}
+              scope={{ week: session?.programWeek ?? 1 }}
+              baseSets={0}
+              baseReps={0}
+              baseWeightLbs={0}
+              baseNote={null}
+              initialSets={0}
+              initialReps={0}
+              initialWeightLbs={0}
+              initialNote={null}
+              setsOverridden={false}
+              repsOverridden={false}
+              weightOverridden={false}
+              notesOverridden={false}
+              onSave={() => {}}
+            />
+          );
+        }
+        return (
+          <EditTargetsModal
+            visible={true}
+            onClose={() => setEditingExerciseId(null)}
+            exerciseName={editingExerciseName}
+            programDayExerciseId={resolved.programDayExerciseId}
+            scope={{ week: session?.programWeek ?? 1 }}
+            baseSets={base.targetSets}
+            baseReps={base.targetReps}
+            baseWeightLbs={base.targetWeightLbs}
+            baseNote={base.notes}
+            initialSets={resolved.sets}
+            initialReps={resolved.reps}
+            initialWeightLbs={resolved.weightLbs}
+            initialNote={resolved.notes}
+            setsOverridden={resolved.setsOverridden}
+            repsOverridden={resolved.repsOverridden}
+            weightOverridden={resolved.weightOverridden}
+            notesOverridden={resolved.notesOverridden}
+            onSave={async (patch) => {
+              if (!session?.programWeek) { return; }
+              const weekNumber = session.programWeek;
+              const id = resolved.programDayExerciseId;
+              for (const key of ['sets', 'reps', 'weight', 'notes'] as const) {
+                const f = patch[key];
+                if (f.inherit) {
+                  await revertOverrideField({ programDayExerciseId: id, weekNumber, field: key });
+                } else {
+                  await upsertOverride({ programDayExerciseId: id, weekNumber, field: key, value: f.value });
+                }
+              }
+              setEditingExerciseId(null);
+              setProgramDataVersion(v => v + 1);
+            }}
+          />
+        );
+      })()}
 
       <SwapSheet
         visible={swapTarget !== null}

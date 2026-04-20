@@ -21,6 +21,7 @@ import {
   removeSupersetGroup,
   reorderProgramDayExercises,
   updateExerciseTargets,
+  updateBaseNote,
   getWarmupTemplateIdForDay,
   setWarmupTemplateIdForDay,
   clearWarmupTemplateIdForDay,
@@ -214,17 +215,33 @@ export function DayDetailScreen() {
   );
 
   const handleSaveTargets = useCallback(
-    async (id: number, sets: number, reps: number, weight: number) => {
+    async (
+      id: number,
+      patch: {
+        sets: { inherit: true } | { inherit: false; value: number };
+        reps: { inherit: true } | { inherit: false; value: number };
+        weight: { inherit: true } | { inherit: false; value: number };
+        notes: { inherit: true } | { inherit: false; value: string | null };
+      },
+    ) => {
+      // Base-scope: "inherit" is not meaningful — in practice all fields arrive as { inherit: false }
+      // because EditTargetsModal always produces non-inherit patches when scope === 'base'.
+      const setsVal = patch.sets.inherit ? 0 : patch.sets.value;
+      const repsVal = patch.reps.inherit ? 0 : patch.reps.value;
+      const weightVal = patch.weight.inherit ? 0 : patch.weight.value;
+      const notesVal = patch.notes.inherit ? null : patch.notes.value;
+
       setDayExercises(prev =>
         prev.map(pde =>
           pde.id === id
-            ? { ...pde, targetSets: sets, targetReps: reps, targetWeightLbs: weight }
+            ? { ...pde, targetSets: setsVal, targetReps: repsVal, targetWeightLbs: weightVal, notes: notesVal }
             : pde,
         ),
       );
       setSelectedExercise(null);
       try {
-        await updateExerciseTargets(id, sets, reps, weight);
+        await updateExerciseTargets(id, setsVal, repsVal, weightVal);
+        await updateBaseNote(id, notesVal);
       } catch {
         await refresh();
       }
@@ -506,9 +523,25 @@ export function DayDetailScreen() {
       <EditTargetsModal
         visible={selectedExercise !== null}
         onClose={() => setSelectedExercise(null)}
-        dayExercise={selectedExercise}
         exerciseName={selectedExerciseName}
-        onSave={handleSaveTargets}
+        programDayExerciseId={selectedExercise?.id ?? null}
+        scope="base"
+        baseSets={selectedExercise?.targetSets ?? 0}
+        baseReps={selectedExercise?.targetReps ?? 0}
+        baseWeightLbs={selectedExercise?.targetWeightLbs ?? 0}
+        baseNote={selectedExercise?.notes ?? null}
+        initialSets={selectedExercise?.targetSets ?? 0}
+        initialReps={selectedExercise?.targetReps ?? 0}
+        initialWeightLbs={selectedExercise?.targetWeightLbs ?? 0}
+        initialNote={selectedExercise?.notes ?? null}
+        setsOverridden={false}
+        repsOverridden={false}
+        weightOverridden={false}
+        notesOverridden={false}
+        onSave={async (patch) => {
+          if (!selectedExercise) { return; }
+          await handleSaveTargets(selectedExercise.id, patch);
+        }}
       />
 
       {/* Warmup template picker */}

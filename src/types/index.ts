@@ -113,6 +113,7 @@ export interface ProgramDayExercise {
   targetWeightLbs: number;
   sortOrder: number;
   supersetGroupId: number | null;
+  notes: string | null;
 }
 
 // ── Dashboard domain types (Phase 3) ──────────────────────────────
