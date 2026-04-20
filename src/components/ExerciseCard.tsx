@@ -22,6 +22,7 @@ import { NextSetPanel } from './NextSetPanel';
 import { Check, Trophy, More } from './icons';
 import { SetState, ProgramTarget } from './exerciseCardState';
 import { ExerciseMoreSheet } from './ExerciseMoreSheet';
+import { InlineNoteEditor } from './InlineNoteEditor';
 
 export interface SupersetBadge {
   label: string;               // "A", "B"
@@ -54,6 +55,9 @@ export interface ExerciseCardProps {
   onViewHistory: () => void;       // REQUIRED — wires into More menu
   onStartRest: () => void;         // PRESERVED — pendingRest button
   onRestChange: (newRestSeconds: number) => void;  // PRESERVED — rest stepper
+  note?: string | null;
+  lastSessionNoteHint?: string | null;
+  onNoteCommit?: (text: string) => void;
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -86,6 +90,9 @@ export function ExerciseCard({
   onViewHistory,
   onStartRest,
   onRestChange,
+  note,
+  lastSessionNoteHint,
+  onNoteCommit,
 }: ExerciseCardProps) {
   const [restStepperVisible, setRestStepperVisible] = useState(false);
   const [moreSheetVisible, setMoreSheetVisible] = useState(false);
@@ -289,6 +296,16 @@ export function ExerciseCard({
               activeOpacity={0.85}>
               <Text style={styles.startRestText}>Start Rest Timer</Text>
             </TouchableOpacity>
+          )}
+
+          {onNoteCommit && (
+            <View style={styles.noteWrap}>
+              <InlineNoteEditor
+                value={note ?? ''}
+                hint={lastSessionNoteHint ?? undefined}
+                onCommit={onNoteCommit}
+              />
+            </View>
           )}
         </View>
       )}
@@ -511,4 +528,5 @@ const styles = StyleSheet.create({
     fontWeight: weightSemiBold,
     color: colors.onAccent,
   },
+  noteWrap: { marginTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 10 },
 });
