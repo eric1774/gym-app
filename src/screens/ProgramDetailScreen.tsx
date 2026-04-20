@@ -551,13 +551,11 @@ export function ProgramDetailScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {isActivated && (
-            <TouchableOpacity
-              style={styles.customizeWeeksButton}
-              onPress={() => navigation.navigate('CustomizeWeeks', { programId })}>
-              <Text style={styles.customizeWeeksText}>Customize Weeks</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.customizeWeeksButton}
+            onPress={() => navigation.navigate('CustomizeWeeks', { programId })}>
+            <Text style={styles.customizeWeeksText}>Customize Weeks</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Progress bar */}
