@@ -1,5 +1,5 @@
 import { db, executeSql, runTransaction } from './database';
-import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem } from '../types';
+import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem, WeekExerciseResolved } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
@@ -74,6 +74,24 @@ export function rowToProgramWeek(row: {
     weekNumber: row.week_number,
     name: row.name ?? null,
     details: row.details ?? null,
+  };
+}
+
+function rowToWeekExerciseResolved(row: any): WeekExerciseResolved {
+  return {
+    programDayExerciseId: row.program_day_exercise_id,
+    exerciseId: row.exercise_id,
+    sortOrder: row.sort_order,
+    supersetGroupId: row.superset_group_id ?? null,
+    sets: row.sets,
+    reps: row.reps,
+    weightLbs: row.weight_kg, // legacy: column named _kg, value stored in lbs
+    notes: row.notes ?? null,
+    overrideRowExists: Boolean(row.override_row_exists),
+    setsOverridden: Boolean(row.sets_overridden),
+    repsOverridden: Boolean(row.reps_overridden),
+    weightOverridden: Boolean(row.weight_overridden),
+    notesOverridden: Boolean(row.notes_overridden),
   };
 }
 
@@ -284,6 +302,42 @@ export async function getProgramDayExercises(dayId: number): Promise<ProgramDayE
     exercises.push(rowToProgramDayExercise(result.rows.item(i)));
   }
   return exercises;
+}
+
+export async function getExercisesForWeekDay(
+  programDayId: number,
+  weekNumber: number,
+): Promise<WeekExerciseResolved[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT
+       pde.id                                AS program_day_exercise_id,
+       pde.exercise_id                       AS exercise_id,
+       pde.sort_order                        AS sort_order,
+       pde.superset_group_id                 AS superset_group_id,
+       COALESCE(ov.override_sets,      pde.target_sets)       AS sets,
+       COALESCE(ov.override_reps,      pde.target_reps)       AS reps,
+       COALESCE(ov.override_weight_kg, pde.target_weight_kg)  AS weight_kg,
+       COALESCE(ov.notes,              pde.notes)             AS notes,
+       CASE WHEN ov.id IS NOT NULL THEN 1 ELSE 0 END               AS override_row_exists,
+       CASE WHEN ov.override_sets      IS NOT NULL THEN 1 ELSE 0 END AS sets_overridden,
+       CASE WHEN ov.override_reps      IS NOT NULL THEN 1 ELSE 0 END AS reps_overridden,
+       CASE WHEN ov.override_weight_kg IS NOT NULL THEN 1 ELSE 0 END AS weight_overridden,
+       CASE WHEN ov.notes              IS NOT NULL THEN 1 ELSE 0 END AS notes_overridden
+     FROM program_day_exercises pde
+     LEFT JOIN program_week_day_exercise_overrides ov
+       ON  ov.program_day_exercise_id = pde.id
+       AND ov.week_number = ?
+     WHERE pde.program_day_id = ?
+     ORDER BY pde.sort_order`,
+    [weekNumber, programDayId],
+  );
+  const out: WeekExerciseResolved[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    out.push(rowToWeekExerciseResolved(result.rows.item(i)));
+  }
+  return out;
 }
 
 /** Add an exercise to a program day. sort_order = count of existing + 1. */

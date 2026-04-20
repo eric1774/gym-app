@@ -24,6 +24,7 @@ import {
   reorderProgramDayExercises,
   createSupersetGroup,
   removeSupersetGroup,
+  getExercisesForWeekDay,
 } from '../programs';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -545,5 +546,75 @@ describe('removeSupersetGroup', () => {
       expect.stringContaining('superset_group_id = NULL'),
       [5, 1700000000000],
     );
+  });
+});
+
+describe('getExercisesForWeekDay', () => {
+  beforeEach(() => {
+    mockExecuteSql.mockReset();
+  });
+
+  it('returns base values when no overrides exist', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      {
+        program_day_exercise_id: 10,
+        exercise_id: 5,
+        sort_order: 1,
+        superset_group_id: null,
+        sets: 4,
+        reps: 8,
+        weight_kg: 135,
+        notes: null,
+        override_row_exists: 0,
+        sets_overridden: 0,
+        reps_overridden: 0,
+        weight_overridden: 0,
+        notes_overridden: 0,
+      },
+    ]));
+
+    const rows = await getExercisesForWeekDay(99, 1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      programDayExerciseId: 10,
+      sets: 4,
+      reps: 8,
+      weightLbs: 135,
+      notes: null,
+      overrideRowExists: false,
+      setsOverridden: false,
+    });
+  });
+
+  it('passes programDayId and weekNumber as parameters', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getExercisesForWeekDay(42, 3);
+    const [, sql, params] = mockExecuteSql.mock.calls[0];
+    expect(sql.toLowerCase()).toContain('left join program_week_day_exercise_overrides');
+    expect(params).toEqual([3, 42]);
+  });
+
+  it('reflects partial override (sets only)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      {
+        program_day_exercise_id: 10,
+        exercise_id: 5,
+        sort_order: 1,
+        superset_group_id: null,
+        sets: 5,
+        reps: 8,
+        weight_kg: 135,
+        notes: null,
+        override_row_exists: 1,
+        sets_overridden: 1,
+        reps_overridden: 0,
+        weight_overridden: 0,
+        notes_overridden: 0,
+      },
+    ]));
+    const rows = await getExercisesForWeekDay(99, 3);
+    expect(rows[0].setsOverridden).toBe(true);
+    expect(rows[0].repsOverridden).toBe(false);
+    expect(rows[0].overrideRowExists).toBe(true);
   });
 });
