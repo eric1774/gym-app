@@ -25,6 +25,8 @@ import { ProgressHubScreen } from '../screens/ProgressHubScreen';
 import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
 import { SessionBreakdownScreen } from '../screens/SessionBreakdownScreen';
 import { SessionDayProgressScreen } from '../screens/SessionDayProgressScreen';
+import { CustomizeWeeksScreen } from '../screens/CustomizeWeeksScreen';
+import { WeekDayEditorScreen } from '../screens/WeekDayEditorScreen';
 
 export type TabParamList = {
   DashboardTab: undefined;
@@ -51,6 +53,8 @@ export type ProgramsStackParamList = {
   ProgramsList: undefined;
   ProgramDetail: { programId: number };
   DayDetail: { dayId: number; dayName: string };
+  CustomizeWeeks: { programId: number };
+  WeekDayEditor: { programId: number; scope: 'base' | { week: number }; dayId: number; dayName: string };
 };
 
 export type DashboardStackParamList = {
@@ -175,6 +179,8 @@ function ProgramsStackNavigator() {
       <ProgramsStack.Screen name="ProgramsList" component={ProgramsScreen} />
       <ProgramsStack.Screen name="ProgramDetail" component={ProgramDetailScreen} />
       <ProgramsStack.Screen name="DayDetail" component={DayDetailScreen} />
+      <ProgramsStack.Screen name="CustomizeWeeks" component={CustomizeWeeksScreen} />
+      <ProgramsStack.Screen name="WeekDayEditor" component={WeekDayEditorScreen} />
     </ProgramsStack.Navigator>
   );
 }

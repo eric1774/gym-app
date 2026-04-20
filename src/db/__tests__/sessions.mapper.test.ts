@@ -14,6 +14,7 @@ describe('rowToSession', () => {
       startedAt: '2026-01-01T10:00:00',
       completedAt: '2026-01-01T11:00:00',
       programDayId: 5,
+      programWeek: null,
       avgHr: null,
       peakHr: null,
     });

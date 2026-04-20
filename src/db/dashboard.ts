@@ -911,6 +911,7 @@ export async function exportAllData(): Promise<FullDataExport> {
       startedAt: r.started_at,
       completedAt: r.completed_at ?? null,
       programDayId: r.program_day_id ?? null,
+      programWeek: r.program_week ?? null,
       avgHr: r.avg_hr ?? null,
       peakHr: r.peak_hr ?? null,
       sets,
@@ -946,6 +947,7 @@ export async function exportAllData(): Promise<FullDataExport> {
           targetWeightLbs: e.target_weight_kg,
           sortOrder: e.sort_order,
           supersetGroupId: e.superset_group_id ?? null,
+          notes: e.notes ?? null,
         });
       }
       days.push({

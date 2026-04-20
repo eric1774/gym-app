@@ -50,6 +50,8 @@ export interface WorkoutSession {
   completedAt: string | null;
   /** null in Phase 1; Phase 2 will populate this when attaching sessions to program days */
   programDayId: number | null;
+  /** Program week captured at session creation (programs.current_week); null for ad-hoc sessions */
+  programWeek: number | null;
   /** Average heart rate (BPM) for the session — null when no HR monitor was used (Phase 26) */
   avgHr: number | null;
   /** Peak heart rate (BPM) for the session — null when no HR monitor was used (Phase 26) */
@@ -111,6 +113,7 @@ export interface ProgramDayExercise {
   targetWeightLbs: number;
   sortOrder: number;
   supersetGroupId: number | null;
+  notes: string | null;
 }
 
 // ── Dashboard domain types (Phase 3) ──────────────────────────────
@@ -618,6 +621,41 @@ export interface WarmupSessionItem {
   targetValue: number | null;
   isComplete: boolean;
   sortOrder: number;
+}
+
+export interface WeekOverride {
+  id: number;
+  programDayExerciseId: number;
+  weekNumber: number;
+  overrideSets: number | null;
+  overrideReps: number | null;
+  overrideWeightLbs: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeekExerciseResolved {
+  programDayExerciseId: number;
+  exerciseId: number;
+  sortOrder: number;
+  supersetGroupId: number | null;
+  sets: number;
+  reps: number;
+  weightLbs: number;
+  notes: string | null;
+  overrideRowExists: boolean;
+  setsOverridden: boolean;
+  repsOverridden: boolean;
+  weightOverridden: boolean;
+  notesOverridden: boolean;
+}
+
+export interface SessionNote {
+  sessionId: number;
+  exerciseId: number;
+  notes: string | null;
+  updatedAt: string;
 }
 
 export * from './gamification';

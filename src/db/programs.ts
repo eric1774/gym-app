@@ -1,5 +1,5 @@
 import { db, executeSql, runTransaction } from './database';
-import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem } from '../types';
+import { Program, ProgramDay, ProgramDayExercise, ProgramWeek, ProgramSelectorItem, WeekExerciseResolved } from '../types';
 
 // ── Row mappers ─────────────────────────────────────────────────────
 
@@ -48,6 +48,7 @@ export function rowToProgramDayExercise(row: {
   target_weight_kg: number;
   sort_order: number;
   superset_group_id: number | null;
+  notes?: string | null;
 }): ProgramDayExercise {
   return {
     id: row.id,
@@ -58,6 +59,7 @@ export function rowToProgramDayExercise(row: {
     targetWeightLbs: row.target_weight_kg,
     sortOrder: row.sort_order,
     supersetGroupId: row.superset_group_id ?? null,
+    notes: row.notes ?? null,
   };
 }
 
@@ -74,6 +76,24 @@ export function rowToProgramWeek(row: {
     weekNumber: row.week_number,
     name: row.name ?? null,
     details: row.details ?? null,
+  };
+}
+
+function rowToWeekExerciseResolved(row: any): WeekExerciseResolved {
+  return {
+    programDayExerciseId: row.program_day_exercise_id,
+    exerciseId: row.exercise_id,
+    sortOrder: row.sort_order,
+    supersetGroupId: row.superset_group_id ?? null,
+    sets: row.sets,
+    reps: row.reps,
+    weightLbs: row.weight_kg, // legacy: column named _kg, value stored in lbs
+    notes: row.notes ?? null,
+    overrideRowExists: Boolean(row.override_row_exists),
+    setsOverridden: Boolean(row.sets_overridden),
+    repsOverridden: Boolean(row.reps_overridden),
+    weightOverridden: Boolean(row.weight_overridden),
+    notesOverridden: Boolean(row.notes_overridden),
   };
 }
 
@@ -269,6 +289,20 @@ export async function renameProgram(id: number, name: string): Promise<void> {
   await executeSql(database, 'UPDATE programs SET name = ? WHERE id = ?', [name, id]);
 }
 
+/**
+ * Update a program's total weeks. If shrinking (newWeeks < oldWeeks), cleans up
+ * any per-week override rows that would be orphaned (week_number > newWeeks).
+ */
+export async function updateProgramWeeks(programId: number, newWeeks: number): Promise<void> {
+  const database = await db;
+  const cur = await executeSql(database, 'SELECT weeks FROM programs WHERE id = ?', [programId]);
+  const old = cur.rows.length ? (cur.rows.item(0).weeks as number) : null;
+  await executeSql(database, 'UPDATE programs SET weeks = ? WHERE id = ?', [newWeeks, programId]);
+  if (old !== null && newWeeks < old) {
+    await deleteOverridesBeyondWeek(programId, newWeeks);
+  }
+}
+
 // ── Program Day Exercise CRUD ───────────────────────────────────────
 
 /** Return all exercises for a program day, ordered by sort_order. */
@@ -284,6 +318,42 @@ export async function getProgramDayExercises(dayId: number): Promise<ProgramDayE
     exercises.push(rowToProgramDayExercise(result.rows.item(i)));
   }
   return exercises;
+}
+
+export async function getExercisesForWeekDay(
+  programDayId: number,
+  weekNumber: number,
+): Promise<WeekExerciseResolved[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT
+       pde.id                                AS program_day_exercise_id,
+       pde.exercise_id                       AS exercise_id,
+       pde.sort_order                        AS sort_order,
+       pde.superset_group_id                 AS superset_group_id,
+       COALESCE(ov.override_sets,      pde.target_sets)       AS sets,
+       COALESCE(ov.override_reps,      pde.target_reps)       AS reps,
+       COALESCE(ov.override_weight_kg, pde.target_weight_kg)  AS weight_kg,
+       COALESCE(ov.notes,              pde.notes)             AS notes,
+       CASE WHEN ov.id IS NOT NULL THEN 1 ELSE 0 END               AS override_row_exists,
+       CASE WHEN ov.override_sets      IS NOT NULL THEN 1 ELSE 0 END AS sets_overridden,
+       CASE WHEN ov.override_reps      IS NOT NULL THEN 1 ELSE 0 END AS reps_overridden,
+       CASE WHEN ov.override_weight_kg IS NOT NULL THEN 1 ELSE 0 END AS weight_overridden,
+       CASE WHEN ov.notes              IS NOT NULL THEN 1 ELSE 0 END AS notes_overridden
+     FROM program_day_exercises pde
+     LEFT JOIN program_week_day_exercise_overrides ov
+       ON  ov.program_day_exercise_id = pde.id
+       AND ov.week_number = ?
+     WHERE pde.program_day_id = ?
+     ORDER BY pde.sort_order`,
+    [weekNumber, programDayId],
+  );
+  const out: WeekExerciseResolved[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    out.push(rowToWeekExerciseResolved(result.rows.item(i)));
+  }
+  return out;
 }
 
 /** Add an exercise to a program day. sort_order = count of existing + 1. */
@@ -547,5 +617,122 @@ export async function clearWarmupTemplateIdForDay(
     database,
     'UPDATE program_days SET warmup_template_id = NULL WHERE id = ?',
     [dayId],
+  );
+}
+
+// ── Per-week Exercise Overrides ────────────────────────────────────
+
+type OverrideField = 'sets' | 'reps' | 'weight' | 'notes';
+
+const OVERRIDE_COLUMN: Record<OverrideField, string> = {
+  sets: 'override_sets',
+  reps: 'override_reps',
+  weight: 'override_weight_kg',
+  notes: 'notes',
+};
+
+export async function upsertOverride(args: {
+  programDayExerciseId: number;
+  weekNumber: number;
+  field: OverrideField;
+  value: number | string | null;
+}): Promise<void> {
+  const { programDayExerciseId, weekNumber, field, value } = args;
+  const col = OVERRIDE_COLUMN[field];
+  const now = new Date().toISOString();
+  const database = await db;
+  await executeSql(
+    database,
+    `INSERT INTO program_week_day_exercise_overrides
+       (program_day_exercise_id, week_number, ${col}, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(program_day_exercise_id, week_number)
+     DO UPDATE SET ${col} = excluded.${col}, updated_at = excluded.updated_at`,
+    [programDayExerciseId, weekNumber, value, now, now],
+  );
+}
+
+export async function revertOverrideField(args: {
+  programDayExerciseId: number;
+  weekNumber: number;
+  field: OverrideField;
+}): Promise<void> {
+  const { programDayExerciseId, weekNumber, field } = args;
+  const col = OVERRIDE_COLUMN[field];
+  const now = new Date().toISOString();
+  const database = await db;
+
+  await executeSql(
+    database,
+    `UPDATE program_week_day_exercise_overrides
+       SET ${col} = NULL, updated_at = ?
+     WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [now, programDayExerciseId, weekNumber],
+  );
+
+  const check = await executeSql(
+    database,
+    `SELECT override_sets, override_reps, override_weight_kg, notes
+       FROM program_week_day_exercise_overrides
+      WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [programDayExerciseId, weekNumber],
+  );
+  if (check.rows.length === 0) { return; }
+  const row = check.rows.item(0);
+  const allNull = row.override_sets == null
+    && row.override_reps == null
+    && row.override_weight_kg == null
+    && (row.notes == null || row.notes === '');
+  if (!allNull) { return; }
+
+  await executeSql(
+    database,
+    `DELETE FROM program_week_day_exercise_overrides
+      WHERE program_day_exercise_id = ? AND week_number = ?`,
+    [programDayExerciseId, weekNumber],
+  );
+}
+
+export async function updateBaseNote(programDayExerciseId: number, notes: string | null): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    'UPDATE program_day_exercises SET notes = ? WHERE id = ?',
+    [notes, programDayExerciseId],
+  );
+}
+
+export async function getWeekOverrideCounts(programId: number): Promise<Record<number, number>> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT week_number, COUNT(*) AS override_count
+       FROM program_week_day_exercise_overrides
+       WHERE program_day_exercise_id IN (
+         SELECT id FROM program_day_exercises
+         WHERE program_day_id IN (SELECT id FROM program_days WHERE program_id = ?)
+       )
+       GROUP BY week_number`,
+    [programId],
+  );
+  const out: Record<number, number> = {};
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    out[row.week_number] = row.override_count;
+  }
+  return out;
+}
+
+export async function deleteOverridesBeyondWeek(programId: number, newWeekCount: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    `DELETE FROM program_week_day_exercise_overrides
+      WHERE week_number > ?
+        AND program_day_exercise_id IN (
+          SELECT id FROM program_day_exercises
+          WHERE program_day_id IN (SELECT id FROM program_days WHERE program_id = ?)
+        )`,
+    [newWeekCount, programId],
   );
 }
