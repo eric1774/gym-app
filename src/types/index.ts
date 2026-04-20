@@ -620,4 +620,39 @@ export interface WarmupSessionItem {
   sortOrder: number;
 }
 
+export interface WeekOverride {
+  id: number;
+  programDayExerciseId: number;
+  weekNumber: number;
+  overrideSets: number | null;
+  overrideReps: number | null;
+  overrideWeightLbs: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WeekExerciseResolved {
+  programDayExerciseId: number;
+  exerciseId: number;
+  sortOrder: number;
+  supersetGroupId: number | null;
+  sets: number;
+  reps: number;
+  weightLbs: number;
+  notes: string | null;
+  overrideRowExists: boolean;
+  setsOverridden: boolean;
+  repsOverridden: boolean;
+  weightOverridden: boolean;
+  notesOverridden: boolean;
+}
+
+export interface SessionNote {
+  sessionId: number;
+  exerciseId: number;
+  notes: string | null;
+  updatedAt: string;
+}
+
 export * from './gamification';
