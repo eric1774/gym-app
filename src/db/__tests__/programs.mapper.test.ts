@@ -74,6 +74,7 @@ describe('rowToProgramDayExercise', () => {
       targetWeightLbs: 80,
       sortOrder: 0,
       supersetGroupId: 1710000000000,
+      notes: null,
     });
   });
 
