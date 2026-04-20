@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -14,7 +14,7 @@ import {
 } from '../db/programs';
 import { getExercises } from '../db/exercises';
 import type { WeekExerciseResolved, ProgramDayExercise } from '../types';
-import { EditTargetsModal } from '../components/EditTargetsModal';
+import { EditTargetsModal, EditTargetsScope } from '../components/EditTargetsModal';
 import {
   colors,
   spacing,
@@ -35,6 +35,14 @@ export function WeekDayEditorScreen() {
   const { scope, dayId, dayName } = route.params;
   const isBase = scope === 'base';
   const weekNumber = isBase ? 1 : scope.week;
+
+  // Memoize scope to keep prop identity stable across re-renders. Defensive —
+  // route.params.scope is usually stable, but memoizing matches the pattern
+  // used in WorkoutScreen and makes EditTargetsModal immune to parent churn.
+  const stableScope = useMemo<EditTargetsScope>(
+    () => (scope === 'base' ? 'base' : { week: scope.week }),
+    [scope],
+  );
 
   const [rows, setRows] = useState<WeekExerciseResolved[]>([]);
   const [baseRows, setBaseRows] = useState<Record<number, ProgramDayExercise>>({});
@@ -175,7 +183,7 @@ export function WeekDayEditorScreen() {
           onClose={() => setEditing(null)}
           exerciseName={names[editing.exerciseId] ?? ''}
           programDayExerciseId={editing.programDayExerciseId}
-          scope={scope}
+          scope={stableScope}
           baseSets={baseRows[editing.programDayExerciseId].targetSets}
           baseReps={baseRows[editing.programDayExerciseId].targetReps}
           baseWeightLbs={baseRows[editing.programDayExerciseId].targetWeightLbs}

@@ -31,7 +31,7 @@ import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { Exercise, ExerciseCategory, ExerciseMeasurementType, ExerciseSession, ProgramDayExercise, WeekExerciseResolved, WorkoutSet } from '../types';
 import { getExercisesForWeekDay, getProgramDayExercises, upsertOverride, revertOverrideField } from '../db/programs';
 import { getSessionNote, upsertSessionNote, getLastSessionNote } from '../db/notes';
-import { EditTargetsModal } from '../components/EditTargetsModal';
+import { EditTargetsModal, EditTargetsScope } from '../components/EditTargetsModal';
 import { hasSessionActivity, updateSessionRestSeconds } from '../db/sessions';
 import { updateDefaultRestSeconds } from '../db/exercises';
 import { PRToast, PRToastHandle } from '../components/PRToast';
@@ -222,6 +222,14 @@ export function WorkoutScreen() {
     skipAllWarmupItems,
   } = useSession();
   const { remainingSeconds, totalSeconds, isRunning, startTimer, stopTimer, addTime } = useTimer();
+
+  // Stable scope reference for EditTargetsModal. Inline {{ week: ... }} objects
+  // create a new reference on every parent render (rest timer ticks, set logs,
+  // heart-rate updates), which would otherwise reset the modal's inherit toggles.
+  const editTargetsScope = useMemo<EditTargetsScope>(
+    () => ({ week: session?.programWeek ?? 1 }),
+    [session?.programWeek],
+  );
 
   const elapsed = useElapsedSeconds(session?.startedAt ?? null);
   const [activeExerciseId, setActiveExerciseId] = useState<number | null>(null);
@@ -1248,7 +1256,7 @@ export function WorkoutScreen() {
               onClose={() => setEditingExerciseId(null)}
               exerciseName=""
               programDayExerciseId={null}
-              scope={{ week: session?.programWeek ?? 1 }}
+              scope={editTargetsScope}
               baseSets={0}
               baseReps={0}
               baseWeightLbs={0}
@@ -1271,7 +1279,7 @@ export function WorkoutScreen() {
             onClose={() => setEditingExerciseId(null)}
             exerciseName={editingExerciseName}
             programDayExerciseId={resolved.programDayExerciseId}
-            scope={{ week: session?.programWeek ?? 1 }}
+            scope={editTargetsScope}
             baseSets={base.targetSets}
             baseReps={base.targetReps}
             baseWeightLbs={base.targetWeightLbs}

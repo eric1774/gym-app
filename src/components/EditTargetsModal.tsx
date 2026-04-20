@@ -78,21 +78,27 @@ export function EditTargetsModal({
 
   const [error, setError] = useState<string | null>(null);
 
+  // Derive a stable string key from scope so the reset effect fires on semantic
+  // changes, not on every new `scope` object reference from the parent. Inline
+  // scope={{ week: n }} props produce a new reference on every parent render,
+  // which would otherwise reset local toggles (e.g. inherit flags snapping back
+  // on) each time the workout screen re-renders for rest ticks or logged sets.
+  const scopeKey = scope === 'base' ? 'base' : `w${scope.week}`;
+
   // Reset state when the modal opens fresh with a different exercise/scope.
   useEffect(() => {
-    if (visible) {
-      setSets(String(initialSets));
-      setReps(String(initialReps));
-      setWeight(String(initialWeightLbs));
-      setNote(initialNote ?? '');
-      setSetsInherit(scope !== 'base' && !setsOverridden);
-      setRepsInherit(scope !== 'base' && !repsOverridden);
-      setWeightInherit(scope !== 'base' && !weightOverridden);
-      setNotesInherit(scope !== 'base' && !notesOverridden);
-      setError(null);
-    }
+    if (!visible) { return; }
+    setSets(String(initialSets));
+    setReps(String(initialReps));
+    setWeight(String(initialWeightLbs));
+    setNote(initialNote ?? '');
+    setSetsInherit(scope !== 'base' && !setsOverridden);
+    setRepsInherit(scope !== 'base' && !repsOverridden);
+    setWeightInherit(scope !== 'base' && !weightOverridden);
+    setNotesInherit(scope !== 'base' && !notesOverridden);
+    setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [programDayExerciseId, visible, scope]);
+  }, [programDayExerciseId, visible, scopeKey]);
 
   const isScopedToWeek = scope !== 'base';
 
