@@ -29,6 +29,7 @@ import {
   revertOverrideField,
   updateBaseNote,
   getWeekOverrideCounts,
+  deleteOverridesBeyondWeek,
 } from '../programs';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -719,5 +720,17 @@ describe('getWeekOverrideCounts', () => {
     ]));
     const counts = await getWeekOverrideCounts(42);
     expect(counts).toEqual({ 2: 3, 3: 7 });
+  });
+});
+
+describe('deleteOverridesBeyondWeek', () => {
+  beforeEach(() => { mockExecuteSql.mockReset(); });
+  it('deletes overrides for weeks > newWeekCount for the given program', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await deleteOverridesBeyondWeek(42, 4);
+    const [, sql, params] = mockExecuteSql.mock.calls[0];
+    expect(sql).toMatch(/DELETE FROM program_week_day_exercise_overrides/);
+    expect(sql).toMatch(/week_number > \?/);
+    expect(params).toEqual([4, 42]);
   });
 });

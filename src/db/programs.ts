@@ -706,3 +706,17 @@ export async function getWeekOverrideCounts(programId: number): Promise<Record<n
   }
   return out;
 }
+
+export async function deleteOverridesBeyondWeek(programId: number, newWeekCount: number): Promise<void> {
+  const database = await db;
+  await executeSql(
+    database,
+    `DELETE FROM program_week_day_exercise_overrides
+      WHERE week_number > ?
+        AND program_day_exercise_id IN (
+          SELECT id FROM program_day_exercises
+          WHERE program_day_id IN (SELECT id FROM program_days WHERE program_id = ?)
+        )`,
+    [newWeekCount, programId],
+  );
+}
