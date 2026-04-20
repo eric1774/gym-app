@@ -48,7 +48,7 @@ interface Migration {
  * - Version 20: Fix manual-completion session timestamps to match their program week
  * - Version 21: Add archived_at column to programs for archive support
  */
-const MIGRATIONS: Migration[] = [
+export const MIGRATIONS: Migration[] = [
   {
     version: 1,
     description: 'Create base tables (exercises, sessions, sets, programs)',
@@ -959,6 +959,44 @@ const MIGRATIONS: Migration[] = [
       tx.executeSql(
         'ALTER TABLE program_days ADD COLUMN warmup_template_id INTEGER REFERENCES warmup_templates(id)',
       );
+    },
+  },
+  {
+    version: 23,
+    description: 'Per-week-per-day exercise overrides: notes on base, overrides table, session notes',
+    up: (tx: Transaction) => {
+      tx.executeSql(
+        'ALTER TABLE program_day_exercises ADD COLUMN notes TEXT'
+      );
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS program_week_day_exercise_overrides (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          program_day_exercise_id INTEGER NOT NULL,
+          week_number INTEGER NOT NULL,
+          override_sets INTEGER,
+          override_reps INTEGER,
+          override_weight_kg REAL,
+          notes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE (program_day_exercise_id, week_number),
+          FOREIGN KEY (program_day_exercise_id) REFERENCES program_day_exercises(id) ON DELETE CASCADE
+        )
+      `);
+      tx.executeSql(
+        'CREATE INDEX IF NOT EXISTS idx_pwdx_lookup ON program_week_day_exercise_overrides (program_day_exercise_id, week_number)'
+      );
+      tx.executeSql(`
+        CREATE TABLE IF NOT EXISTS exercise_session_notes (
+          session_id INTEGER NOT NULL,
+          exercise_id INTEGER NOT NULL,
+          notes TEXT,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (session_id, exercise_id),
+          FOREIGN KEY (session_id)  REFERENCES workout_sessions(id) ON DELETE CASCADE,
+          FOREIGN KEY (exercise_id) REFERENCES exercises(id)        ON DELETE CASCADE
+        )
+      `);
     },
   },
 ];

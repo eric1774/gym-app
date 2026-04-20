@@ -3,7 +3,7 @@ jest.mock('../database');
 
 import { executeSql } from '../database';
 import { mockResultSet } from '@test-utils/dbMock';
-import { runMigrations } from '../migrations';
+import { MIGRATIONS, runMigrations } from '../migrations';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
 
@@ -222,5 +222,29 @@ describe('runMigrations', () => {
     expect(txCalls.some(s => s.includes('CREATE TABLE IF NOT EXISTS water_settings'))).toBe(true);
     expect(txCalls.some(s => s.includes('amount_oz'))).toBe(true);
     expect(txCalls.some(s => s.includes('goal_oz'))).toBe(true);
+  });
+});
+
+describe('Migration v23', () => {
+  it('defines version 23 with the expected shape', () => {
+    const v23 = MIGRATIONS.find(m => m.version === 23);
+    expect(v23).toBeDefined();
+    expect(v23!.description).toMatch(/override|customiz|per-week/i);
+    expect(typeof v23!.up).toBe('function');
+  });
+
+  it('adds notes column, overrides table, session notes table', () => {
+    const v23 = MIGRATIONS.find(m => m.version === 23)!;
+    const executedStatements: string[] = [];
+    const fakeTx = {
+      executeSql: (sql: string) => { executedStatements.push(sql); },
+    };
+    v23.up(fakeTx as any);
+
+    const joined = executedStatements.join('\n').toLowerCase();
+    expect(joined).toMatch(/alter table program_day_exercises\s+add column notes text/);
+    expect(joined).toMatch(/create table .*program_week_day_exercise_overrides/);
+    expect(joined).toMatch(/create index .*idx_pwdx_lookup/);
+    expect(joined).toMatch(/create table .*exercise_session_notes/);
   });
 });
