@@ -51,6 +51,8 @@ export type ProgramsStackParamList = {
   ProgramsList: undefined;
   ProgramDetail: { programId: number };
   DayDetail: { dayId: number; dayName: string };
+  CustomizeWeeks: { programId: number };
+  WeekDayEditor: { programId: number; scope: 'base' | { week: number }; dayId: number; dayName: string };
 };
 
 export type DashboardStackParamList = {
