@@ -590,15 +590,12 @@ export function ProgramsScreen() {
         />
       </View>
 
-      {programs.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No programs yet</Text>
-          <Text style={styles.emptyHint}>Tap + to create one</Text>
-        </View>
+      {shown.length === 0 ? (
+        <EmptyState tab={tab} onCreate={() => setModalVisible(true)} />
       ) : (
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 100 }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -606,7 +603,8 @@ export function ProgramsScreen() {
               tintColor={colors.accent}
               colors={[colors.accent]}
             />
-          }>
+          }
+        >
           {shown.map(program => (
             <ProgramCard
               key={program.id}

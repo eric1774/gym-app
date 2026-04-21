@@ -57,11 +57,11 @@ describe('ProgramsScreen', () => {
     expect(getByText('IN PROGRESS')).toBeTruthy();
   });
 
-  it('shows empty state when no programs', async () => {
+  it('shows empty state when no programs (active tab)', async () => {
     (getPrograms as jest.Mock).mockResolvedValue([]);
     const { getByText } = renderWithProviders(<ProgramsScreen />);
-    await waitFor(() => getByText('No programs yet'));
-    expect(getByText('Tap + to create one')).toBeTruthy();
+    await waitFor(() => getByText('No active programs'));
+    expect(getByText('Create one')).toBeTruthy();
   });
 
   it('renders not-started program card with Ready to start panel', async () => {
