@@ -555,7 +555,14 @@ export function ProgramsScreen() {
             <Plus size={20} color={colors.onAccent} />
           </TouchableOpacity>
         </View>
-        {/* Stats row will be added in Task 4 */}
+        <View style={newStyles.statsRow}>
+          <StatPill value={activePrograms.length} label="ACTIVE" />
+          <StatPill value={pastPrograms.length} label="COMPLETED" />
+          <StatPill
+            value={activePrograms.filter(p => p.startDate !== null).length}
+            label="IN PROGRESS"
+          />
+        </View>
         {/* Tab switcher will be added in Task 5 */}
       </View>
 

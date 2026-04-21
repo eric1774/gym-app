@@ -38,6 +38,25 @@ describe('ProgramsScreen', () => {
     expect(getByText('Programs')).toBeTruthy();
   });
 
+  it('renders stat pills with counts', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+      { id: 2, name: 'Active One', weeks: 4, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
+      { id: 3, name: 'Done One', weeks: 2, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    (getProgramTotalCompleted as jest.Mock).mockImplementation((programId: number) => {
+      if (programId === 3) return Promise.resolve(2); // 1 day * 2 weeks = done
+      return Promise.resolve(0);
+    });
+
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('ACTIVE'));
+    expect(getByText('ACTIVE')).toBeTruthy();
+    expect(getByText('COMPLETED')).toBeTruthy();
+    expect(getByText('IN PROGRESS')).toBeTruthy();
+  });
+
   it('shows empty state when no programs', async () => {
     (getPrograms as jest.Mock).mockResolvedValue([]);
     const { getByText } = renderWithProviders(<ProgramsScreen />);
