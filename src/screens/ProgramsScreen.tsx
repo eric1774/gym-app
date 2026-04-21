@@ -23,6 +23,33 @@ import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
 import { Program } from '../types';
 import { CreateProgramModal } from './CreateProgramModal';
+import Svg, { Circle } from 'react-native-svg';
+import { Plus } from '../components/icons/Plus';
+import { Dumbbell } from '../components/icons/Dumbbell';
+import { Play } from '../components/icons/Play';
+import { Export as ExportIcon } from '../components/icons/Export';
+import { Trash } from '../components/icons/Trash';
+import { Dots } from '../components/icons/Dots';
+import { Trophy } from '../components/icons/Trophy';
+import { Check } from '../components/icons/Check';
+import { Chevron } from '../components/icons/Chevron';
+
+type ProgramTag = 'STRENGTH' | 'POWER' | 'HYPERTROPHY' | 'CONDITIONING';
+
+function getProgramTag(name: string): ProgramTag {
+  const n = name.toLowerCase();
+  if (/power|5.?3.?1|deadlift|squat.*max|strongman/.test(n)) return 'POWER';
+  if (/hypertrophy|ppl|push.?pull|volume|mass|bodybuild/.test(n)) return 'HYPERTROPHY';
+  if (/conditioning|shred|cardio|hiit|endurance|crossfit/.test(n)) return 'CONDITIONING';
+  return 'STRENGTH';
+}
+
+const TAG_COLORS: Record<ProgramTag, { bg: string; text: string }> = {
+  STRENGTH:     { bg: 'rgba(91,155,240,0.15)',  text: '#5B9BF0' },
+  POWER:        { bg: 'rgba(240,184,48,0.15)',  text: '#F0B830' },
+  HYPERTROPHY:  { bg: 'rgba(141,194,138,0.15)', text: '#8DC28A' },
+  CONDITIONING: { bg: 'rgba(224,105,126,0.15)', text: '#E0697E' },
+};
 
 function ProgressBar({ progress }: { progress: number }) {
   const clampedProgress = Math.max(0, Math.min(1, progress));
@@ -83,6 +110,182 @@ const circleStyles = StyleSheet.create({
     lineHeight: fontSize.base + 2,
   },
 });
+
+function StatPill({ value, label }: { value: number; label: string }) {
+  return (
+    <View style={newStyles.statPill}>
+      <Text style={newStyles.statPillValue}>{value}</Text>
+      <Text style={newStyles.statPillLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function TabSwitcher({
+  tab,
+  onChange,
+  activeCount,
+  pastCount,
+}: {
+  tab: 'active' | 'past';
+  onChange: (t: 'active' | 'past') => void;
+  activeCount: number;
+  pastCount: number;
+}) {
+  return (
+    <View style={newStyles.tabSwitcherContainer}>
+      <TouchableOpacity
+        style={[newStyles.tabButton, tab === 'active' && newStyles.tabButtonActive]}
+        onPress={() => onChange('active')}
+        testID="tab-active"
+      >
+        <Text style={[newStyles.tabButtonText, tab === 'active' && newStyles.tabButtonTextActive]}>
+          Active ({activeCount})
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[newStyles.tabButton, tab === 'past' && newStyles.tabButtonActive]}
+        onPress={() => onChange('past')}
+        testID="tab-past"
+      >
+        <Text style={[newStyles.tabButtonText, tab === 'past' && newStyles.tabButtonTextActive]}>
+          Completed ({pastCount})
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function TagPill({ tag }: { tag: ProgramTag }) {
+  const style = TAG_COLORS[tag];
+  return (
+    <View style={[newStyles.tagPill, { backgroundColor: style.bg }]}>
+      <Text style={[newStyles.tagPillText, { color: style.text }]}>{tag}</Text>
+    </View>
+  );
+}
+
+function TopAccentLine({ progress }: { progress: number }) {
+  const clamped = Math.max(0, Math.min(1, progress));
+  return (
+    <View
+      style={{
+        height: 3,
+        width: `${clamped * 100}%`,
+        backgroundColor: colors.accent,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+      }}
+    />
+  );
+}
+
+function ArcProgress({
+  progress,
+  size = 60,
+  stroke = 5,
+}: {
+  progress: number;
+  size?: number;
+  stroke?: number;
+}) {
+  const clamped = Math.max(0, Math.min(1, progress));
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - clamped);
+  const pct = Math.round(clamped * 100);
+  return (
+    <View style={{ width: size, height: size }}>
+      <Svg
+        width={size}
+        height={size}
+        style={{ transform: [{ rotate: '-90deg' }] }}
+      >
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth={stroke}
+        />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={colors.accent}
+          strokeWidth={stroke}
+          strokeDasharray={`${circ}`}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </Svg>
+      <View style={StyleSheet.absoluteFill}>
+        <View style={newStyles.arcCenter}>
+          <Text style={newStyles.arcPercent}>{pct}</Text>
+          <Text style={newStyles.arcPercentSymbol}>%</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ReadyToStart({ weeks, days }: { weeks: number; days: number }) {
+  return (
+    <View style={newStyles.readyContainer}>
+      <View style={newStyles.readyIconContainer}>
+        <Play size={14} color={colors.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={newStyles.readyTitle}>Ready to start</Text>
+        <Text style={newStyles.readySubtitle}>
+          {days} days/week · {weeks} weeks
+        </Text>
+      </View>
+      <Chevron size={14} color={colors.accent} dir="right" />
+    </View>
+  );
+}
+
+function CompletedBadge({ totalWorkouts, weeks }: { totalWorkouts: number; weeks: number }) {
+  return (
+    <View style={newStyles.completedRow}>
+      <View style={newStyles.completedIconContainer}>
+        <Check size={18} color={colors.accent} />
+      </View>
+      <View>
+        <Text style={newStyles.completedTitle}>Completed</Text>
+        <Text style={newStyles.completedSubtitle}>
+          {totalWorkouts} sessions · {weeks} weeks
+        </Text>
+      </View>
+      <View style={{ marginLeft: 'auto' }}>
+        <View style={newStyles.donePill}>
+          <Trophy size={12} color={colors.prGold} />
+          <Text style={newStyles.donePillText}>Done</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function EmptyState({ tab, onCreate }: { tab: 'active' | 'past'; onCreate: () => void }) {
+  return (
+    <View style={newStyles.emptyContainer}>
+      <View style={newStyles.emptyIconContainer}>
+        <Dumbbell size={28} color={colors.secondaryDim} />
+      </View>
+      <Text style={newStyles.emptyTitleNew}>
+        {tab === 'active' ? 'No active programs' : 'No completed programs'}
+      </Text>
+      {tab === 'active' && (
+        <TouchableOpacity style={newStyles.emptyCreateBtn} onPress={onCreate} testID="empty-create-button">
+          <Text style={newStyles.emptyCreateText}>Create one</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
 
 function PopupMenu({
   visible,
@@ -640,5 +843,304 @@ const menuStyles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: spacing.sm,
+  },
+});
+
+const newStyles = StyleSheet.create({
+  // Header
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.accent,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  titleLarge: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: -1,
+    lineHeight: 30,
+  },
+
+  // Screen layout
+  topWrapper: {
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 18,
+  },
+  statPill: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  statPillValue: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  statPillLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.secondaryDim,
+    letterSpacing: 1.2,
+    marginTop: 1,
+  },
+
+  // Tab switcher
+  tabSwitcherContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 14,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  tabButtonActive: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderStrong,
+  },
+  tabButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.secondary,
+    letterSpacing: 0.3,
+  },
+  tabButtonTextActive: {
+    color: colors.primary,
+  },
+
+  // Tag pill
+  tagPill: {
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+  },
+  tagPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.6,
+  },
+
+  // Card body
+  cardBody: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  menuButtonRound: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  programNameLarge: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: -0.5,
+    lineHeight: 23,
+    marginBottom: 14,
+  },
+  programNameCompleted: {
+    color: colors.secondary,
+    textDecorationLine: 'line-through',
+  },
+
+  // Progress row
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  statsColumns: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.secondaryDim,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  statValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  statValueDim: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.secondary,
+  },
+
+  // Arc center overlay
+  arcCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  arcPercent: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.primary,
+    lineHeight: 14,
+  },
+  arcPercentSymbol: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: colors.secondaryDim,
+    letterSpacing: 1,
+  },
+
+  // Ready to start
+  readyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(141,194,138,0.3)',
+    backgroundColor: 'rgba(141,194,138,0.06)',
+  },
+  readyIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: colors.accentGlow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  readyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  readySubtitle: {
+    fontSize: 11,
+    color: colors.secondaryDim,
+  },
+
+  // Completed state
+  completedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  completedIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(141,194,138,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.accent,
+  },
+  completedSubtitle: {
+    fontSize: 11,
+    color: colors.secondaryDim,
+  },
+  donePill: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,184,0,0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  donePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.prGold,
+  },
+
+  // Empty state
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 60,
+    gap: 12,
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitleNew: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.secondary,
+  },
+  emptyCreateBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: colors.accentGlow,
+    borderWidth: 1,
+    borderColor: 'rgba(141,194,138,0.3)',
+  },
+  emptyCreateText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.accent,
+  },
+
+  // Card chrome
+  cardRounded: {
+    borderRadius: 20,
+    padding: 0,
+    overflow: 'hidden',
+    marginBottom: 12,
   },
 });
