@@ -209,6 +209,7 @@ export function WorkoutScreen() {
     programDayId,
     startSession,
     endSession,
+    discardSession,
     addExercise,
     toggleExerciseComplete,
     swapExercise: swapExerciseInSession,
@@ -812,6 +813,11 @@ export function WorkoutScreen() {
     return exercises.find(ex => ex.id === editingExerciseId)?.name ?? '';
   }, [editingExerciseId, exercises]);
 
+  const editingExerciseMeasurementType = useMemo(() => {
+    if (editingExerciseId === null) { return undefined; }
+    return exercises.find(ex => ex.id === editingExerciseId)?.measurementType;
+  }, [editingExerciseId, exercises]);
+
   const handleRestChange = useCallback(
     (exerciseId: number, newRestSeconds: number) => {
       const clamped = Math.max(30, Math.min(180, newRestSeconds));
@@ -890,14 +896,14 @@ export function WorkoutScreen() {
     HapticFeedback.trigger('notificationSuccess', { enableVibrateFallback: true });
     const wasProgramWorkout = !!programDayId;
     if (isRunning) { stopTimer(); }
-    await endSession();
+    await discardSession();
     setActiveExerciseId(null);
     setPendingRestExerciseId(null);
     setRestOverrides({});
     if (wasProgramWorkout) {
       (navigation as any).navigate('ProgramsTab');
     }
-  }, [session, programDayId, isRunning, stopTimer, endSession, navigation]);
+  }, [session, programDayId, isRunning, stopTimer, discardSession, navigation]);
 
   const confirmEndWorkout = useCallback(async () => {
     if (!session) { return; }
@@ -1208,6 +1214,7 @@ export function WorkoutScreen() {
               exerciseName={editingExerciseName}
               programDayExerciseId={null}
               scope="base"
+              measurementType={editingExerciseMeasurementType}
               baseSets={seedSets}
               baseReps={seedReps}
               baseWeightLbs={seedWeight}
@@ -1280,6 +1287,7 @@ export function WorkoutScreen() {
             exerciseName={editingExerciseName}
             programDayExerciseId={resolved.programDayExerciseId}
             scope={editTargetsScope}
+            measurementType={editingExerciseMeasurementType}
             baseSets={base.targetSets}
             baseReps={base.targetReps}
             baseWeightLbs={base.targetWeightLbs}
@@ -1386,9 +1394,11 @@ export function WorkoutScreen() {
       <ConfirmSheet
         visible={endWorkoutSheetVisible}
         title="End Workout?"
-        message="This marks your session complete."
+        message="Save this session and see your summary, or discard all logged data."
         confirmLabel="End Workout"
-        destructive
+        destructive={false}
+        secondaryLabel="Discard"
+        onSecondary={confirmDiscard}
         onConfirm={confirmEndWorkout}
         onClose={() => setEndWorkoutSheetVisible(false)}
       />

@@ -526,6 +526,7 @@ export function DayDetailScreen() {
         exerciseName={selectedExerciseName}
         programDayExerciseId={selectedExercise?.id ?? null}
         scope="base"
+        measurementType={selectedExercise ? exerciseMap.get(selectedExercise.exerciseId)?.measurementType : undefined}
         baseSets={selectedExercise?.targetSets ?? 0}
         baseReps={selectedExercise?.targetReps ?? 0}
         baseWeightLbs={selectedExercise?.targetWeightLbs ?? 0}

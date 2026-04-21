@@ -13,6 +13,7 @@ import {
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+import { ExerciseMeasurementType } from '../types';
 
 export type EditTargetsScope = 'base' | { week: number };
 
@@ -22,6 +23,13 @@ export interface EditTargetsModalProps {
   exerciseName: string;
   programDayExerciseId: number | null;
   scope: EditTargetsScope;
+  /**
+   * Exercise measurement type — controls field labels/visibility.
+   *  - 'reps' (default): Sets × Reps @ Weight (lb)
+   *  - 'timed': Sets × Time (seconds stored in the reps field); weight hidden
+   *  - 'height_reps': Sets × Reps @ Height (inches stored in the weight field)
+   */
+  measurementType?: ExerciseMeasurementType;
   // Base values (for "inherit from base" rendering):
   baseSets: number;
   baseReps: number;
@@ -52,6 +60,7 @@ export function EditTargetsModal({
   exerciseName,
   programDayExerciseId,
   scope,
+  measurementType = 'reps',
   baseSets,
   baseReps,
   baseWeightLbs,
@@ -66,6 +75,11 @@ export function EditTargetsModal({
   notesOverridden,
   onSave,
 }: EditTargetsModalProps) {
+  const isTimed = measurementType === 'timed';
+  const isHeightReps = measurementType === 'height_reps';
+  const repsLabel = isTimed ? 'Target Time (seconds)' : 'Target Reps';
+  const weightLabel = isHeightReps ? 'Target Height (in)' : 'Target Weight (lb)';
+  const showWeightField = !isTimed;
   const [sets, setSets] = useState(String(initialSets));
   const [reps, setReps] = useState(String(initialReps));
   const [weight, setWeight] = useState(String(initialWeightLbs));
@@ -111,8 +125,14 @@ export function EditTargetsModal({
     const nf = isBase || !notesInherit ? { inherit: false as const, value: note.trim() === '' ? null : note.trim() } : { inherit: true as const };
 
     if (sf.inherit === false && (isNaN(sf.value) || sf.value < 1)) { setError('Sets must be a positive number'); return; }
-    if (rf.inherit === false && (isNaN(rf.value) || rf.value < 1)) { setError('Reps must be a positive number'); return; }
-    if (wf.inherit === false && (isNaN(wf.value) || wf.value < 0)) { setError('Weight must be zero or more'); return; }
+    if (rf.inherit === false && (isNaN(rf.value) || rf.value < 1)) {
+      setError(isTimed ? 'Time must be a positive number' : 'Reps must be a positive number');
+      return;
+    }
+    if (wf.inherit === false && (isNaN(wf.value) || wf.value < 0)) {
+      setError(isHeightReps ? 'Height must be zero or more' : 'Weight must be zero or more');
+      return;
+    }
 
     setError(null);
     await onSave({ sets: sf, reps: rf, weight: wf, notes: nf });
@@ -156,7 +176,7 @@ export function EditTargetsModal({
             </View>
           )}
 
-          <Text style={[styles.label, styles.fieldGap]}>Target Reps</Text>
+          <Text style={[styles.label, styles.fieldGap]}>{repsLabel}</Text>
           <TextInput
             style={[styles.input, isScopedToWeek && repsInherit && styles.inputMuted]}
             value={reps}
@@ -165,7 +185,7 @@ export function EditTargetsModal({
             placeholder={String(baseReps)}
             placeholderTextColor={colors.secondary}
             returnKeyType="next"
-            maxLength={3}
+            maxLength={isTimed ? 5 : 3}
             editable={!(isScopedToWeek && repsInherit)}
           />
           {isScopedToWeek && (
@@ -175,23 +195,27 @@ export function EditTargetsModal({
             </View>
           )}
 
-          <Text style={[styles.label, styles.fieldGap]}>Target Weight (lb)</Text>
-          <TextInput
-            style={[styles.input, isScopedToWeek && weightInherit && styles.inputMuted]}
-            value={weight}
-            onChangeText={setWeight}
-            keyboardType="decimal-pad"
-            placeholder={String(baseWeightLbs)}
-            placeholderTextColor={colors.secondary}
-            returnKeyType="next"
-            maxLength={6}
-            editable={!(isScopedToWeek && weightInherit)}
-          />
-          {isScopedToWeek && (
-            <View style={styles.inheritRow}>
-              <Text style={styles.inheritLabel}>Inherit from base</Text>
-              <Switch value={weightInherit} onValueChange={setWeightInherit} />
-            </View>
+          {showWeightField && (
+            <>
+              <Text style={[styles.label, styles.fieldGap]}>{weightLabel}</Text>
+              <TextInput
+                style={[styles.input, isScopedToWeek && weightInherit && styles.inputMuted]}
+                value={weight}
+                onChangeText={setWeight}
+                keyboardType="decimal-pad"
+                placeholder={String(baseWeightLbs)}
+                placeholderTextColor={colors.secondary}
+                returnKeyType="next"
+                maxLength={6}
+                editable={!(isScopedToWeek && weightInherit)}
+              />
+              {isScopedToWeek && (
+                <View style={styles.inheritRow}>
+                  <Text style={styles.inheritLabel}>Inherit from base</Text>
+                  <Switch value={weightInherit} onValueChange={setWeightInherit} />
+                </View>
+              )}
+            </>
           )}
 
           <Text style={[styles.label, styles.fieldGap]}>Notes</Text>

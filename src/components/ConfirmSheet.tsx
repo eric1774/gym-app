@@ -18,6 +18,8 @@ interface ConfirmSheetProps {
   confirmLabel: string;
   cancelLabel?: string;
   destructive?: boolean;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -31,6 +33,8 @@ export function ConfirmSheet({
   confirmLabel,
   cancelLabel = 'Cancel',
   destructive = true,
+  secondaryLabel,
+  onSecondary,
   onConfirm,
   onClose,
 }: ConfirmSheetProps) {
@@ -98,6 +102,18 @@ export function ConfirmSheet({
             accessibilityLabel={confirmLabel}>
             <Text style={[styles.primaryText, { color: confirmTextColor }]}>{confirmLabel}</Text>
           </Pressable>
+          {secondaryLabel && onSecondary ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={() => dismiss(onSecondary)}
+              accessibilityRole="button"
+              accessibilityLabel={secondaryLabel}>
+              <Text style={styles.secondaryText}>{secondaryLabel}</Text>
+            </Pressable>
+          ) : null}
           <Pressable
             style={({ pressed }) => [styles.cancelButton, pressed && styles.buttonPressed]}
             onPress={() => dismiss()}
@@ -155,6 +171,20 @@ const styles = StyleSheet.create({
   primaryText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  secondaryButton: {
+    minHeight: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginBottom: 10,
+    backgroundColor: colors.danger,
+  },
+  secondaryText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   cancelButton: {
     minHeight: 48,

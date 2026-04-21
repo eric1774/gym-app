@@ -13,7 +13,7 @@ import {
   updateBaseNote,
 } from '../db/programs';
 import { getExercises } from '../db/exercises';
-import type { WeekExerciseResolved, ProgramDayExercise } from '../types';
+import type { WeekExerciseResolved, ProgramDayExercise, ExerciseMeasurementType } from '../types';
 import { EditTargetsModal, EditTargetsScope } from '../components/EditTargetsModal';
 import {
   colors,
@@ -47,6 +47,7 @@ export function WeekDayEditorScreen() {
   const [rows, setRows] = useState<WeekExerciseResolved[]>([]);
   const [baseRows, setBaseRows] = useState<Record<number, ProgramDayExercise>>({});
   const [names, setNames] = useState<Record<number, string>>({});
+  const [measurementTypes, setMeasurementTypes] = useState<Record<number, ExerciseMeasurementType>>({});
   const [editing, setEditing] = useState<WeekExerciseResolved | null>(null);
 
   const refresh = useCallback(async () => {
@@ -78,10 +79,13 @@ export function WeekDayEditorScreen() {
 
     const all = await getExercises();
     const nameMap: Record<number, string> = {};
+    const measurementMap: Record<number, ExerciseMeasurementType> = {};
     for (const ex of all) {
       nameMap[ex.id] = ex.name;
+      measurementMap[ex.id] = ex.measurementType;
     }
     setNames(nameMap);
+    setMeasurementTypes(measurementMap);
   }, [dayId, isBase, weekNumber]);
 
   useFocusEffect(
@@ -120,6 +124,9 @@ export function WeekDayEditorScreen() {
             (r.repsOverridden ? 1 : 0) +
             (r.weightOverridden ? 1 : 0) +
             (r.notesOverridden ? 1 : 0);
+          const mt = measurementTypes[r.exerciseId] ?? 'reps';
+          const isTimedRow = mt === 'timed';
+          const isHeightRow = mt === 'height_reps';
           return (
             <TouchableOpacity
               key={r.programDayExerciseId}
@@ -145,11 +152,17 @@ export function WeekDayEditorScreen() {
                 <Text style={r.repsOverridden ? styles.overridden : styles.inherited}>
                   {r.reps}
                 </Text>
-                <Text style={styles.sep}> @ </Text>
-                <Text style={r.weightOverridden ? styles.overridden : styles.inherited}>
-                  {r.weightLbs}
-                </Text>
-                <Text style={styles.sep}> lb</Text>
+                {isTimedRow ? (
+                  <Text style={styles.sep}> sec</Text>
+                ) : (
+                  <>
+                    <Text style={styles.sep}> @ </Text>
+                    <Text style={r.weightOverridden ? styles.overridden : styles.inherited}>
+                      {r.weightLbs}
+                    </Text>
+                    <Text style={styles.sep}>{isHeightRow ? ' in' : ' lb'}</Text>
+                  </>
+                )}
               </Text>
 
               {r.notes ? (
@@ -184,6 +197,7 @@ export function WeekDayEditorScreen() {
           exerciseName={names[editing.exerciseId] ?? ''}
           programDayExerciseId={editing.programDayExerciseId}
           scope={stableScope}
+          measurementType={measurementTypes[editing.exerciseId]}
           baseSets={baseRows[editing.programDayExerciseId].targetSets}
           baseReps={baseRows[editing.programDayExerciseId].targetReps}
           baseWeightLbs={baseRows[editing.programDayExerciseId].targetWeightLbs}

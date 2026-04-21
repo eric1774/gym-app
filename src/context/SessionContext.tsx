@@ -42,6 +42,8 @@ interface SessionContextValue {
   startSessionFromProgramDay: (programDayId: number, exercises: Exercise[]) => Promise<void>;
   /** End the session. Returns true if completed (had activity), false if discarded. */
   endSession: () => Promise<boolean>;
+  /** Force-discard the session, deleting all its data regardless of activity. */
+  discardSession: () => Promise<void>;
   addExercise: (exercise: Exercise) => Promise<void>;
   markExerciseComplete: (exerciseId: number) => Promise<void>;
   toggleExerciseComplete: (exerciseId: number) => Promise<void>;
@@ -233,6 +235,18 @@ export function SessionProvider({ children }: Props) {
     return hadActivity;
   }, [session]);
 
+  const discardSession = useCallback(async (): Promise<void> => {
+    if (!session) {
+      return;
+    }
+    await deleteSession(session.id);
+    setSession(null);
+    setSessionExercises([]);
+    setExercises([]);
+    setWarmupItems([]);
+    setWarmupState('none');
+  }, [session]);
+
   const addExercise = useCallback(
     async (exercise: Exercise) => {
       if (!session) {
@@ -335,6 +349,7 @@ export function SessionProvider({ children }: Props) {
       startSession,
       startSessionFromProgramDay,
       endSession,
+      discardSession,
       addExercise,
       markExerciseComplete,
       toggleExerciseComplete,
@@ -359,6 +374,7 @@ export function SessionProvider({ children }: Props) {
       startSession,
       startSessionFromProgramDay,
       endSession,
+      discardSession,
       addExercise,
       markExerciseComplete,
       toggleExerciseComplete,
