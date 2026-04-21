@@ -124,8 +124,7 @@ export function CustomizeWeeksScreen() {
         {Array.from({ length: program.weeks }, (_, i) => i + 1).map(wk => {
           const isCurrent = wk === program.currentWeek;
           const overrideCount = counts[wk] ?? 0;
-          const wk_data = weekData[wk] ?? null;
-          const weekLabel = wk_data?.name ?? null;
+          const weekLabel = weekData[wk]?.name ?? null;
           return (
             <View key={`wk-${wk}`} style={styles.weekGroup}>
               <TouchableOpacity
@@ -166,17 +165,15 @@ export function CustomizeWeeksScreen() {
           );
         })}
       </ScrollView>
-      {program && (
-        <WeekEditModal
-          visible={editingWeek !== null}
-          weekNumber={editingWeek ?? 1}
-          totalWeeks={program.weeks}
-          currentName={editingWeek != null ? (weekData[editingWeek]?.name ?? '') : ''}
-          currentDetails={editingWeek != null ? (weekData[editingWeek]?.details ?? '') : ''}
-          onClose={() => setEditingWeek(null)}
-          onSave={handleSaveWeek}
-        />
-      )}
+      <WeekEditModal
+        visible={editingWeek !== null}
+        weekNumber={editingWeek ?? 1}
+        totalWeeks={program.weeks}
+        currentName={editingWeek != null ? (weekData[editingWeek]?.name ?? '') : ''}
+        currentDetails={editingWeek != null ? (weekData[editingWeek]?.details ?? '') : ''}
+        onClose={() => setEditingWeek(null)}
+        onSave={handleSaveWeek}
+      />
     </SafeAreaView>
   );
 }
