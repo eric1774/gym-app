@@ -1,0 +1,25 @@
+const React = require('react');
+
+const zeroInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+const zeroFrame = { x: 0, y: 0, width: 0, height: 0 };
+
+const passthrough = (name) => {
+  const component = ({ children, ...props }) =>
+    React.createElement(name, props, children);
+  component.displayName = name;
+  return component;
+};
+
+const SafeAreaInsetsContext = React.createContext(zeroInsets);
+const SafeAreaFrameContext = React.createContext(zeroFrame);
+
+module.exports = {
+  __esModule: true,
+  SafeAreaProvider: passthrough('SafeAreaProvider'),
+  SafeAreaView: passthrough('SafeAreaView'),
+  SafeAreaInsetsContext,
+  SafeAreaFrameContext,
+  useSafeAreaInsets: () => zeroInsets,
+  useSafeAreaFrame: () => zeroFrame,
+  initialWindowMetrics: { insets: zeroInsets, frame: zeroFrame },
+};
