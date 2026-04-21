@@ -404,6 +404,7 @@ export function ProgramsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [tab, setTab] = useState<'active' | 'past'>('active');
 
   // Menu state
   const [menuVisible, setMenuVisible] = useState(false);
@@ -538,6 +539,8 @@ export function ProgramsScreen() {
     return s.completed >= s.dayCount * p.weeks;
   });
 
+  const shown = tab === 'active' ? activePrograms : pastPrograms;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={newStyles.topWrapper}>
@@ -563,7 +566,12 @@ export function ProgramsScreen() {
             label="IN PROGRESS"
           />
         </View>
-        {/* Tab switcher will be added in Task 5 */}
+        <TabSwitcher
+          tab={tab}
+          onChange={setTab}
+          activeCount={activePrograms.length}
+          pastCount={pastPrograms.length}
+        />
       </View>
 
       {programs.length === 0 ? (
@@ -583,43 +591,17 @@ export function ProgramsScreen() {
               colors={[colors.accent]}
             />
           }>
-          {/* Active Programs */}
-          {activePrograms.length > 0 && (
-            <>
-              <Text style={styles.sectionHeader}>ACTIVE PROGRAMS</Text>
-              {activePrograms.map(program => (
-                <ProgramCard
-                  key={program.id}
-                  program={program}
-                  isDeleting={deletingId === program.id}
-                  completedWorkouts={programStats[program.id]?.completed ?? 0}
-                  dayCount={programStats[program.id]?.dayCount ?? 0}
-                  onTap={() => handleTap(program)}
-                  onMenuPress={(position) => handleMenuPress(program, position)}
-                />
-              ))}
-            </>
-          )}
-
-          {/* Past Programs */}
-          {pastPrograms.length > 0 && (
-            <>
-              <Text style={[styles.sectionHeader, activePrograms.length > 0 && styles.sectionHeaderSpaced]}>
-                PAST PROGRAMS
-              </Text>
-              {pastPrograms.map(program => (
-                <ProgramCard
-                  key={program.id}
-                  program={program}
-                  isDeleting={deletingId === program.id}
-                  completedWorkouts={programStats[program.id]?.completed ?? 0}
-                  dayCount={programStats[program.id]?.dayCount ?? 0}
-                  onTap={() => handleTap(program)}
-                  onMenuPress={(position) => handleMenuPress(program, position)}
-                />
-              ))}
-            </>
-          )}
+          {shown.map(program => (
+            <ProgramCard
+              key={program.id}
+              program={program}
+              isDeleting={deletingId === program.id}
+              completedWorkouts={programStats[program.id]?.completed ?? 0}
+              dayCount={programStats[program.id]?.dayCount ?? 0}
+              onTap={() => handleTap(program)}
+              onMenuPress={(position) => handleMenuPress(program, position)}
+            />
+          ))}
         </ScrollView>
       )}
 

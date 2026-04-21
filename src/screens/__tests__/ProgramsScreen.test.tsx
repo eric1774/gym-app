@@ -101,26 +101,25 @@ describe('ProgramsScreen', () => {
     expect(getAllByText('Create Program').length).toBeGreaterThan(0);
   });
 
-  it('shows ACTIVE PROGRAMS section when programs exist', async () => {
+  it('shows active tab label with count when programs exist', async () => {
     (getPrograms as jest.Mock).mockResolvedValue([
       { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
     ]);
     (getProgramDays as jest.Mock).mockResolvedValue([]);
     const { getByText } = renderWithProviders(<ProgramsScreen />);
-    await waitFor(() => getByText('ACTIVE PROGRAMS'));
-    expect(getByText('ACTIVE PROGRAMS')).toBeTruthy();
+    await waitFor(() => getByText('Active (1)'));
+    expect(getByText('Active (1)')).toBeTruthy();
   });
 
-  it('shows PAST PROGRAMS section when completed programs exist', async () => {
+  it('shows completed tab label with count when past programs exist', async () => {
     (getPrograms as jest.Mock).mockResolvedValue([
       { id: 1, name: 'Old Program', weeks: 2, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
     ]);
     (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
-    // 1 day * 2 weeks = 2 total workouts, completed = 2 → past
     (getProgramTotalCompleted as jest.Mock).mockResolvedValue(2);
     const { getByText } = renderWithProviders(<ProgramsScreen />);
-    await waitFor(() => getByText('PAST PROGRAMS'));
-    expect(getByText('PAST PROGRAMS')).toBeTruthy();
+    await waitFor(() => getByText('Completed (1)'));
+    expect(getByText('Completed (1)')).toBeTruthy();
   });
 
   it('renders three-dot menu button on program card', async () => {
