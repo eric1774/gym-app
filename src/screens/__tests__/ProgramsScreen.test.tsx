@@ -74,10 +74,10 @@ describe('ProgramsScreen', () => {
     expect(getByText('6 of 12 workouts')).toBeTruthy();
   });
 
-  it('opens create modal when + pressed', async () => {
-    const { getByText, getAllByText } = renderWithProviders(<ProgramsScreen />);
+  it('opens create modal when add button pressed', async () => {
+    const { getByText, getByTestId, getAllByText } = renderWithProviders(<ProgramsScreen />);
     await waitFor(() => getByText('Programs'));
-    fireEvent.press(getByText('+'));
+    fireEvent.press(getByTestId('add-program-button'));
     await waitFor(() => getAllByText('Create Program'));
     expect(getAllByText('Create Program').length).toBeGreaterThan(0);
   });

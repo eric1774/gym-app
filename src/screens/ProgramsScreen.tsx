@@ -540,14 +540,23 @@ export function ProgramsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Programs</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setModalVisible(true)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.addButtonText}>+</Text>
-        </TouchableOpacity>
+      <View style={newStyles.topWrapper}>
+        <View style={newStyles.headerRow}>
+          <View>
+            <Text style={newStyles.eyebrow}>TRAINING</Text>
+            <Text style={newStyles.titleLarge}>Programs</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setModalVisible(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            testID="add-program-button"
+          >
+            <Plus size={20} color={colors.onAccent} />
+          </TouchableOpacity>
+        </View>
+        {/* Stats row will be added in Task 4 */}
+        {/* Tab switcher will be added in Task 5 */}
       </View>
 
       {programs.length === 0 ? (
