@@ -9,8 +9,9 @@ import {
   getProgramDays,
   getWeekOverrideCounts,
   getWeekData,
+  upsertWeekData,
 } from '../db/programs';
-import type { Program, ProgramDay } from '../types';
+import type { Program, ProgramDay, ProgramWeek } from '../types';
 import {
   colors,
   spacing,
@@ -20,6 +21,7 @@ import {
   weightBold,
 } from '../theme';
 import type { ProgramsStackParamList } from '../navigation/TabNavigator';
+import { WeekEditModal } from '../components/WeekEditModal';
 
 type Route = RouteProp<ProgramsStackParamList, 'CustomizeWeeks'>;
 type Nav = NativeStackNavigationProp<ProgramsStackParamList, 'CustomizeWeeks'>;
@@ -35,7 +37,8 @@ export function CustomizeWeeksScreen() {
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [counts, setCounts] = useState<Record<number, number>>({});
-  const [weekNames, setWeekNames] = useState<Record<number, string | null>>({});
+  const [weekData, setWeekData] = useState<Record<number, ProgramWeek | null>>({});
+  const [editingWeek, setEditingWeek] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     const [p, d, c] = await Promise.all([
@@ -50,10 +53,10 @@ export function CustomizeWeeksScreen() {
       const entries = await Promise.all(
         Array.from({ length: p.weeks }, (_, i) => i + 1).map(async wk => {
           const w = await getWeekData(programId, wk);
-          return [wk, w?.name ?? null] as const;
+          return [wk, w] as const;
         }),
       );
-      setWeekNames(Object.fromEntries(entries));
+      setWeekData(Object.fromEntries(entries));
     }
   }, [programId]);
 
@@ -61,6 +64,19 @@ export function CustomizeWeeksScreen() {
     useCallback(() => {
       refresh();
     }, [refresh]),
+  );
+
+  const handleSaveWeek = useCallback(
+    async (name: string | null, details: string | null) => {
+      if (editingWeek === null) return;
+      try {
+        await upsertWeekData(programId, editingWeek, name, details);
+        await refresh();
+      } catch {
+        // ignore
+      }
+    },
+    [programId, editingWeek, refresh],
   );
 
   if (!program) {
@@ -108,10 +124,14 @@ export function CustomizeWeeksScreen() {
         {Array.from({ length: program.weeks }, (_, i) => i + 1).map(wk => {
           const isCurrent = wk === program.currentWeek;
           const overrideCount = counts[wk] ?? 0;
-          const weekLabel = weekNames[wk];
+          const wk_data = weekData[wk] ?? null;
+          const weekLabel = wk_data?.name ?? null;
           return (
             <View key={`wk-${wk}`} style={styles.weekGroup}>
-              <View style={styles.weekHeaderRow}>
+              <TouchableOpacity
+                style={styles.weekHeaderRow}
+                activeOpacity={0.7}
+                onPress={() => setEditingWeek(wk)}>
                 <Text style={styles.weekHeaderText}>
                   <Text style={styles.weekNumber}>W{wk}</Text>
                   {weekLabel ? <Text style={styles.weekName}>{'  '}{weekLabel}</Text> : null}
@@ -124,7 +144,7 @@ export function CustomizeWeeksScreen() {
                 ) : (
                   <Text style={styles.inheritsMeta}>inherits base</Text>
                 )}
-              </View>
+              </TouchableOpacity>
               {days.map(d => (
                 <TouchableOpacity
                   key={`wk-${wk}-${d.id}`}
@@ -146,6 +166,17 @@ export function CustomizeWeeksScreen() {
           );
         })}
       </ScrollView>
+      {program && (
+        <WeekEditModal
+          visible={editingWeek !== null}
+          weekNumber={editingWeek ?? 1}
+          totalWeeks={program.weeks}
+          currentName={editingWeek != null ? (weekData[editingWeek]?.name ?? '') : ''}
+          currentDetails={editingWeek != null ? (weekData[editingWeek]?.details ?? '') : ''}
+          onClose={() => setEditingWeek(null)}
+          onSave={handleSaveWeek}
+        />
+      )}
     </SafeAreaView>
   );
 }
