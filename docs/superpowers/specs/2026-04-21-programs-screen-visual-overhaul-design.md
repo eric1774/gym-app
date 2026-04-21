@@ -136,7 +136,7 @@ Each tab: `flex: 1`, `paddingVertical: 9`, `borderRadius: 10`, `alignItems: 'cen
 
 `programCard` style updates:
 - `borderRadius: 20` (was 14).
-- `padding: 0` (was `spacing.base`) — inner content wrapped in a `cardBody` View with `padding: 16` (ish: matches HTML `'16px 16px 14px'`).
+- `padding: 0` (was `spacing.base`) — inner content wrapped in a `cardBody` View with `paddingTop: 16, paddingHorizontal: 16, paddingBottom: 14`. Matches HTML `'16px 16px 14px'`.
 - `overflow: 'hidden'` — so the `TopAccentLine` clips to the new radius.
 - `borderWidth: 1, borderColor: colors.border` — unchanged.
 - `marginBottom: 12`.
@@ -309,13 +309,13 @@ Rendered when the current tab's list is empty. **Behavior change:** the current 
 - `emptyCreateBtn`: `paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: colors.accentGlow, borderWidth: 1, borderColor: 'rgba(141,194,138,0.3)'`.
 - `emptyCreateText`: `fontSize: 13, fontWeight: '800', color: colors.accent`.
 
-Header + stats + tab switcher remain visible above the empty state (they're outside the `ScrollView` in the new layout, or at worst in a non-scrolling wrapper — see layout note).
+Header + stats + tab switcher remain visible above the empty state because they live in the `topWrapper` View outside the conditional — see Layout Structure below.
 
 ## Layout structure inside `SafeAreaView`
 
 ```
 <SafeAreaView>
-  <View style={topWrapper}>         // paddingHorizontal: 18, paddingTop: existing spacing
+  <View style={topWrapper}>         // paddingHorizontal: 18, paddingTop: 18
     <Header />                      // #1
     <StatsRow />                    // #2
     <TabSwitcher />                 // #3
