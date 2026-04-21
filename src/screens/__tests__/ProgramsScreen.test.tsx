@@ -231,4 +231,61 @@ describe('ProgramsScreen', () => {
       expect.stringMatching(/^PPL_.*\.json$/),
     ));
   });
+
+  it('switches to past tab and shows completed programs', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'Active One', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+      { id: 2, name: 'Finished One', weeks: 2, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    (getProgramTotalCompleted as jest.Mock).mockImplementation((programId: number) => {
+      if (programId === 2) return Promise.resolve(2);
+      return Promise.resolve(0);
+    });
+
+    const { getByText, getByTestId, queryByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('Active One'));
+    // Initially on active tab
+    expect(getByText('Active One')).toBeTruthy();
+    expect(queryByText('Finished One')).toBeNull();
+
+    // Switch to past tab
+    fireEvent.press(getByTestId('tab-past'));
+    await waitFor(() => getByText('Finished One'));
+    expect(getByText('Finished One')).toBeTruthy();
+    expect(queryByText('Active One')).toBeNull();
+  });
+
+  it('shows "No completed programs" when switching to empty past tab', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: 'Active One', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(0);
+
+    const { getByText, getByTestId } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('Active One'));
+
+    fireEvent.press(getByTestId('tab-past'));
+    await waitFor(() => getByText('No completed programs'));
+    expect(getByText('No completed programs')).toBeTruthy();
+  });
+
+  it('renders correct tag pill based on program name heuristic', async () => {
+    (getPrograms as jest.Mock).mockResolvedValue([
+      { id: 1, name: '5/3/1 Powerlifting', weeks: 12, currentWeek: 2, startDate: '2025-01-01', createdAt: '' },
+      { id: 2, name: 'Push Pull Legs', weeks: 6, currentWeek: 1, startDate: null, createdAt: '' },
+      { id: 3, name: 'Summer Shred', weeks: 10, currentWeek: 5, startDate: '2025-01-01', createdAt: '' },
+      { id: 4, name: 'Generic Program', weeks: 4, currentWeek: 1, startDate: null, createdAt: '' },
+    ]);
+    (getProgramDays as jest.Mock).mockImplementation(() => Promise.resolve([{ id: 1 }]));
+    (getProgramTotalCompleted as jest.Mock).mockResolvedValue(0);
+
+    const { getByText } = renderWithProviders(<ProgramsScreen />);
+    await waitFor(() => getByText('POWER'));
+    expect(getByText('POWER')).toBeTruthy();
+    expect(getByText('HYPERTROPHY')).toBeTruthy();
+    expect(getByText('CONDITIONING')).toBeTruthy();
+    expect(getByText('STRENGTH')).toBeTruthy(); // fallback for Generic Program
+  });
 });
