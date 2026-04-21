@@ -637,6 +637,7 @@ export function ProgramsScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <>
+              <ExportIcon size={16} color={colors.secondary} />
               <Text style={[menuStyles.menuItemText, !menuProgramHasData && menuStyles.menuItemTextDisabled]}>
                 Export
               </Text>
@@ -655,6 +656,7 @@ export function ProgramsScreen() {
           onPress={handleDeleteFromMenu}
           activeOpacity={0.7}
         >
+          <Trash size={16} color={colors.danger} />
           <Text style={[menuStyles.menuItemText, menuStyles.menuItemDanger]}>Delete</Text>
         </TouchableOpacity>
       </PopupMenu>
@@ -817,11 +819,12 @@ const styles = StyleSheet.create({
 const menuStyles = StyleSheet.create({
   container: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 8,
+    borderRadius: 14,
     paddingVertical: spacing.xs,
     minWidth: 180,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
+    overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -831,8 +834,9 @@ const menuStyles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 10,
   },
   menuItemDisabled: {
     opacity: 0.4,
