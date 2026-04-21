@@ -64,7 +64,7 @@ describe('ProgramsScreen', () => {
     expect(getByText('Tap + to create one')).toBeTruthy();
   });
 
-  it('renders program card with name', async () => {
+  it('renders not-started program card with Ready to start panel', async () => {
     (getPrograms as jest.Mock).mockResolvedValue([
       { id: 1, name: 'PPL', weeks: 4, currentWeek: 1, startDate: null, createdAt: '', isActive: true },
     ]);
@@ -75,7 +75,8 @@ describe('ProgramsScreen', () => {
     const { getByText } = renderWithProviders(<ProgramsScreen />);
     await waitFor(() => getByText('PPL'));
     expect(getByText('PPL')).toBeTruthy();
-    expect(getByText('4 weeks · Not started')).toBeTruthy();
+    expect(getByText('Ready to start')).toBeTruthy();
+    expect(getByText('1 days/week · 4 weeks')).toBeTruthy();
   });
 
   it('renders active program with progress', async () => {
@@ -89,8 +90,13 @@ describe('ProgramsScreen', () => {
     (getProgramTotalCompleted as jest.Mock).mockResolvedValue(6);
     const { getByText } = renderWithProviders(<ProgramsScreen />);
     await waitFor(() => getByText('PPL'));
-    expect(getByText('Progress')).toBeTruthy();
-    expect(getByText('6 of 12 workouts')).toBeTruthy();
+    expect(getByText('WEEK')).toBeTruthy();
+    expect(getByText('SESSIONS')).toBeTruthy();
+    // Current week (2) + total (4) render in one Text node as "2/4";
+    // completed (6) + total (12) render in one Text node as "6/12".
+    // (Inner <Text> just styles the "/N" segment dimmer.)
+    expect(getByText('2/4')).toBeTruthy();
+    expect(getByText('6/12')).toBeTruthy();
   });
 
   it('opens create modal when add button pressed', async () => {

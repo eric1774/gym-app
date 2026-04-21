@@ -333,66 +333,82 @@ function ProgramCard({
   const isActivated = program.startDate !== null;
   const totalWorkouts = dayCount * program.weeks;
   const isComplete = isActivated && totalWorkouts > 0 && completedWorkouts >= totalWorkouts;
-  const progress = isActivated && totalWorkouts > 0 ? Math.min(completedWorkouts / totalWorkouts, 1) : 0;
-  const progressPercent = Math.round(progress * 100);
+  const progress =
+    isActivated && totalWorkouts > 0 ? Math.min(completedWorkouts / totalWorkouts, 1) : 0;
+  const tag = getProgramTag(program.name);
 
   return (
     <TouchableOpacity
-      style={[styles.programCard, isDeleting && styles.cardDeleting]}
+      style={[
+        styles.programCard,
+        newStyles.cardRounded,
+        isDeleting && styles.cardDeleting,
+      ]}
       onPress={onTap}
-      activeOpacity={0.7}>
-      {/* Top row: name + completion circle + menu button */}
-      <View style={styles.programCardHeader}>
-        <Text style={styles.programName}>{program.name}</Text>
-        <View style={styles.headerRight}>
-          <CompletionCircle isComplete={isComplete} />
+      activeOpacity={0.7}
+    >
+      {isActivated && !isComplete && <TopAccentLine progress={progress} />}
+
+      <View style={newStyles.cardBody}>
+        {/* Card header: tag pill + menu button */}
+        <View style={newStyles.cardHeaderRow}>
+          <TagPill tag={tag} />
           <TouchableOpacity
-            onPress={(e) => { onMenuPress({ top: (e?.nativeEvent?.pageY ?? 0) + 8, right: 16 }); }}
+            onPress={(e) => {
+              onMenuPress({ top: (e?.nativeEvent?.pageY ?? 0) + 8, right: 16 });
+            }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.menuButton}
+            style={newStyles.menuButtonRound}
             testID="menu-button"
           >
-            <Text style={styles.menuDots}>{'\u22EE'}</Text>
+            <Dots size={18} color={colors.secondary} />
           </TouchableOpacity>
         </View>
+
+        {/* Program name */}
+        <Text
+          style={[
+            newStyles.programNameLarge,
+            isComplete && newStyles.programNameCompleted,
+          ]}
+        >
+          {program.name}
+        </Text>
+
+        {/* State-specific body */}
+        {isActivated && !isComplete && (
+          <View style={newStyles.progressRow}>
+            <ArcProgress progress={progress} size={60} stroke={5} />
+            <View style={{ flex: 1 }}>
+              <View style={newStyles.statsColumns}>
+                <View>
+                  <Text style={newStyles.statLabel}>WEEK</Text>
+                  <Text style={newStyles.statValue}>
+                    {program.currentWeek}
+                    <Text style={newStyles.statValueDim}>/{program.weeks}</Text>
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={newStyles.statLabel}>SESSIONS</Text>
+                  <Text style={newStyles.statValue}>
+                    {completedWorkouts}
+                    <Text style={newStyles.statValueDim}>/{totalWorkouts}</Text>
+                  </Text>
+                </View>
+              </View>
+              <ProgressBar progress={progress} />
+            </View>
+          </View>
+        )}
+
+        {!isActivated && (
+          <ReadyToStart weeks={program.weeks} days={dayCount} />
+        )}
+
+        {isComplete && (
+          <CompletedBadge totalWorkouts={totalWorkouts} weeks={program.weeks} />
+        )}
       </View>
-
-      {isActivated && !isComplete && (
-        <>
-          {/* Nested info cards */}
-          <View style={styles.nestedCard}>
-            <Text style={styles.nestedCardLabel}>Progress</Text>
-            <Text style={styles.nestedCardValue}>
-              {completedWorkouts} of {totalWorkouts} workouts
-            </Text>
-          </View>
-
-          <View style={styles.nestedCard}>
-            <Text style={styles.nestedCardLabel}>Week</Text>
-            <Text style={styles.nestedCardValue}>
-              {program.currentWeek} of {program.weeks}
-            </Text>
-          </View>
-
-          {/* Progress bar */}
-          <View style={styles.progressContainer}>
-            <ProgressBar progress={progress} />
-            <Text style={styles.progressLabel}>{progressPercent}%</Text>
-          </View>
-        </>
-      )}
-
-      {!isActivated && (
-        <Text style={styles.programSubtitle}>
-          {program.weeks} week{program.weeks !== 1 ? 's' : ''} · Not started
-        </Text>
-      )}
-
-      {isComplete && (
-        <Text style={styles.programSubtitle}>
-          {program.weeks} week{program.weeks !== 1 ? 's' : ''}
-        </Text>
-      )}
     </TouchableOpacity>
   );
 }
