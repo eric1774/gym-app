@@ -351,7 +351,7 @@ function ProgramCard({
       onPress={onTap}
       activeOpacity={0.7}
     >
-      {isActivated && !isComplete && <TopAccentLine progress={progress} />}
+      {isActivated && !isComplete && totalWorkouts > 0 && <TopAccentLine progress={progress} />}
 
       <View style={newStyles.cardBody}>
         {/* Card header: tag pill + menu button */}
@@ -382,7 +382,7 @@ function ProgramCard({
         </Text>
 
         {/* State-specific body */}
-        {isActivated && !isComplete && (
+        {isActivated && !isComplete && totalWorkouts > 0 && (
           <View style={newStyles.progressRow}>
             <ArcProgress progress={progress} size={60} stroke={5} />
             <View style={{ flex: 1 }}>
