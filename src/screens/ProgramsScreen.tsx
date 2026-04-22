@@ -20,7 +20,7 @@ import { ExportToast, ExportToastHandle } from '../components/ExportToast';
 import { saveFileToDevice } from '../native/FileSaver';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
+import { fontSize, weightMedium } from '../theme/typography';
 import { Program } from '../types';
 import { CreateProgramModal } from './CreateProgramModal';
 import Svg, { Circle } from 'react-native-svg';
@@ -70,44 +70,6 @@ const progressStyles = StyleSheet.create({
     height: 8,
     backgroundColor: colors.accent,
     borderRadius: 8,
-  },
-});
-
-function CompletionCircle({ isComplete }: { isComplete: boolean }) {
-  return (
-    <View
-      style={[
-        circleStyles.circle,
-        isComplete ? circleStyles.circleDone : circleStyles.circlePending,
-      ]}>
-      {isComplete && <Text style={circleStyles.checkIcon}>{'\u2713'}</Text>}
-    </View>
-  );
-}
-
-const CIRCLE_SIZE = 32;
-const circleStyles = StyleSheet.create({
-  circle: {
-    width: CIRCLE_SIZE,
-    height: CIRCLE_SIZE,
-    borderRadius: CIRCLE_SIZE / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-  },
-  circlePending: {
-    borderColor: colors.secondary,
-    backgroundColor: 'transparent',
-  },
-  circleDone: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent,
-  },
-  checkIcon: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.onAccent,
-    lineHeight: fontSize.base + 2,
   },
 });
 
@@ -683,19 +645,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
   addButton: {
     width: 44,
     height: 44,
@@ -704,29 +653,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addButtonText: {
-    fontSize: fontSize.xl,
-    color: colors.onAccent,
-    fontWeight: weightBold,
-    lineHeight: 26,
-  },
   scrollView: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.base,
-    paddingBottom: spacing.xl,
-  },
-  sectionHeader: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.secondary,
-    letterSpacing: 1.2,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  sectionHeaderSpaced: {
-    marginTop: spacing.xl,
   },
   programCard: {
     backgroundColor: colors.surface,
@@ -738,87 +666,6 @@ const styles = StyleSheet.create({
   },
   cardDeleting: {
     opacity: 0.5,
-  },
-  programCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  programName: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  menuButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menuDots: {
-    fontSize: fontSize.lg,
-    color: colors.secondary,
-    fontWeight: weightBold,
-  },
-  programSubtitle: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
-    color: colors.secondary,
-    marginTop: spacing.xs,
-  },
-  nestedCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  nestedCardLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
-    color: colors.secondary,
-    marginBottom: 2,
-  },
-  nestedCardValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightSemiBold,
-    color: colors.primary,
-  },
-  progressContainer: {
-    marginTop: spacing.xs,
-  },
-  progressLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.accent,
-    marginTop: spacing.xs,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  emptyText: {
-    fontSize: fontSize.base,
-    color: colors.secondary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  emptyHint: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
-    textAlign: 'center',
   },
 });
 
