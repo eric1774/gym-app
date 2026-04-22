@@ -136,6 +136,8 @@ function TabSwitcher({
       <TouchableOpacity
         style={[newStyles.tabButton, tab === 'active' && newStyles.tabButtonActive]}
         onPress={() => onChange('active')}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: tab === 'active' }}
         testID="tab-active"
       >
         <Text style={[newStyles.tabButtonText, tab === 'active' && newStyles.tabButtonTextActive]}>
@@ -145,6 +147,8 @@ function TabSwitcher({
       <TouchableOpacity
         style={[newStyles.tabButton, tab === 'past' && newStyles.tabButtonActive]}
         onPress={() => onChange('past')}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: tab === 'past' }}
         testID="tab-past"
       >
         <Text style={[newStyles.tabButtonText, tab === 'past' && newStyles.tabButtonTextActive]}>
@@ -359,6 +363,8 @@ function ProgramCard({
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={newStyles.menuButtonRound}
+            accessibilityRole="button"
+            accessibilityLabel={`More options for ${program.name}`}
             testID="menu-button"
           >
             <Dots size={18} color={colors.secondary} />
@@ -569,6 +575,8 @@ export function ProgramsScreen() {
             style={styles.addButton}
             onPress={() => setModalVisible(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Create program"
             testID="add-program-button"
           >
             <Plus size={20} color={colors.onAccent} />
