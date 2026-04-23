@@ -146,3 +146,61 @@ describe('LogBodyMetricModal — body_fat mode & toggle', () => {
     expect(getByText('Log Body Fat %')).toBeTruthy();
   });
 });
+
+describe('LogBodyMetricModal — date, edit mode, collision', () => {
+  it('pre-fills value and note in edit mode', () => {
+    const { getByTestId } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="weight"
+        initialDate="2026-04-17"
+        initialValue={177.4}
+        initialNote="post-run"
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    expect(getByTestId('log-body-metric-value').props.value).toBe('177.4');
+  });
+
+  it('calls onCollision when a date with an existing reading is saved in add-mode', () => {
+    const onCollision = jest.fn();
+    const onSave = jest.fn();
+    const { getByTestId } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="weight"
+        initialDate="2026-04-17"
+        existingDates={new Set(['2026-04-17'])}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onCollision={onCollision}
+      />,
+    );
+    fireEvent.changeText(getByTestId('log-body-metric-value'), '177.4');
+    fireEvent.press(getByTestId('log-body-metric-save'));
+    expect(onCollision).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('does NOT call onCollision when in edit mode (initialValue is supplied)', () => {
+    const onCollision = jest.fn();
+    const onSave = jest.fn();
+    const { getByTestId } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="weight"
+        initialDate="2026-04-17"
+        initialValue={177.4}
+        existingDates={new Set(['2026-04-17'])}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onCollision={onCollision}
+      />,
+    );
+    fireEvent.changeText(getByTestId('log-body-metric-value'), '176.0');
+    fireEvent.press(getByTestId('log-body-metric-save'));
+    expect(onCollision).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});

@@ -28,8 +28,10 @@ export interface LogBodyMetricModalProps {
   initialDate: string;
   initialValue?: number | null;
   initialNote?: string | null;
+  existingDates?: Set<string>;   // populated in add-mode to detect collisions
   onClose: () => void;
   onSave: (payload: LogBodyMetricPayload) => void;
+  onCollision?: (payload: LogBodyMetricPayload) => void;
 }
 
 const RANGES: Record<BodyMetricType, { min: number; max: number; unit: BodyMetricUnit; label: string; title: string }> = {
@@ -43,8 +45,10 @@ export function LogBodyMetricModal({
   initialDate,
   initialValue,
   initialNote,
+  existingDates,
   onClose,
   onSave,
+  onCollision,
 }: LogBodyMetricModalProps) {
   const [mode, setMode] = useState<BodyMetricType>(initialMode);
   const [value, setValue] = useState('');
@@ -67,13 +71,24 @@ export function LogBodyMetricModal({
 
   const handleSave = () => {
     if (!inRange) return;
-    onSave({
+    const payload: LogBodyMetricPayload = {
       metricType: mode,
       value: parsed,
       unit: range.unit,
       recordedDate: initialDate,
       note: note.trim() === '' ? null : note.trim(),
-    });
+    };
+
+    const isEditMode = initialValue != null;
+    const hasCollision =
+      !isEditMode && existingDates != null && existingDates.has(initialDate);
+
+    if (hasCollision && onCollision) {
+      onCollision(payload);
+      return;
+    }
+
+    onSave(payload);
     onClose();
   };
 
