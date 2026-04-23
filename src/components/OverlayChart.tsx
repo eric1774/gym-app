@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dimensions, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import { computeMovingAverage } from '../db/bodyMetrics';
 import { colors } from '../theme/colors';
 import type { BodyCompScope } from '../types';
 
@@ -51,6 +52,7 @@ export function OverlayChart({
   endDate,
   weights,
   calories,
+  bodyFat,
   calorieGoal,
 }: OverlayChartProps) {
   const W = Dimensions.get('window').width - 2 * 16;
@@ -90,6 +92,41 @@ export function OverlayChart({
       return `${i === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(' ');
+
+  // 7-day moving average — compute MA ending at each weight-reading date.
+  // Skip null entries (fewer than 3 samples in the window).
+  const maPoints = weights
+    .map(w => {
+      const ma = computeMovingAverage(
+        weights.map(p => ({ recordedDate: p.recordedDate, value: p.value })),
+        w.recordedDate,
+        7,
+      );
+      return ma != null
+        ? { t: toTime(w.recordedDate), y: weightToY(ma) }
+        : null;
+    })
+    .filter((p): p is { t: number; y: number } => p !== null);
+
+  const maPath = maPoints
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${timeToX(p.t).toFixed(2)},${p.y.toFixed(2)}`)
+    .join(' ');
+
+  // BF% dots — positioned on the weight line's Y on each BF% reading's date.
+  // If there's no weight on that date, fall back to the midpoint of the weight scale.
+  const bfDots = bodyFat
+    .filter(b => {
+      const t = toTime(b.recordedDate);
+      return t >= tMin && t <= tMax;
+    })
+    .map(b => {
+      const wOnDate = weights.find(w => w.recordedDate === b.recordedDate);
+      const yValue = wOnDate ? wOnDate.value : (minWeight + maxWeight) / 2;
+      return {
+        x: timeToX(toTime(b.recordedDate)),
+        y: weightToY(yValue),
+      };
+    });
 
   // Y-axis ticks (left — weight)
   const weightTicks = [0, 1, 2, 3].map(i => {
@@ -212,24 +249,36 @@ export function OverlayChart({
           </SvgText>
         ))}
 
-        {/* 8. Weight line (front) */}
+        {/* 8. Raw weight line — faint (texture) */}
         {weights.length >= 2 && (
           <Path
             d={weightPath}
+            stroke="rgba(141,194,138,0.35)"
+            strokeWidth={1.2}
+            fill="none"
+          />
+        )}
+
+        {/* 9. 7-day MA line — bold (main signal) */}
+        {maPoints.length >= 2 && (
+          <Path
+            d={maPath}
             stroke={colors.accent}
             strokeWidth={2.5}
             fill="none"
           />
         )}
 
-        {/* 9. Weight dots */}
-        {weights.map((w, i) => (
+        {/* 10. BF% gold dots — positioned on the weight line */}
+        {bfDots.map((dot, i) => (
           <Circle
-            key={`wd-${i}`}
-            cx={timeToX(toTime(w.recordedDate))}
-            cy={weightToY(w.value)}
-            r={2.5}
-            fill={colors.accent}
+            key={`bf-${i}`}
+            cx={dot.x}
+            cy={dot.y}
+            r={5}
+            fill="#F4C77B"
+            stroke={colors.background}
+            strokeWidth={1.5}
           />
         ))}
       </Svg>
