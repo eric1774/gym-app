@@ -167,3 +167,41 @@ export async function findProgramIdAtDate(recordedDate: string): Promise<number 
   if (result.rows.length === 0) return null;
   return result.rows.item(0).id as number;
 }
+
+export async function getBodyMetricsInRange(
+  metricType: BodyMetricType,
+  startDate: string,
+  endDate: string,
+): Promise<BodyMetric[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT * FROM body_metrics WHERE metric_type = ? AND recorded_date BETWEEN ? AND ? ORDER BY recorded_date ASC`,
+    [metricType, startDate, endDate],
+  );
+  const out: BodyMetric[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    out.push(rowToBodyMetric(result.rows.item(i) as BodyMetricRow));
+  }
+  return out;
+}
+
+/**
+ * Average the values whose recordedDate is within `[endDate - (windowDays - 1), endDate]`.
+ * Returns null if fewer than 3 samples fall within the window (honest about insufficient data).
+ */
+export function computeMovingAverage(
+  points: { recordedDate: string; value: number }[],
+  endDate: string,
+  windowDays: number,
+): number | null {
+  const end = new Date(endDate + 'T00:00:00Z');
+  const startMs = end.getTime() - (windowDays - 1) * 86400000;
+  const inWindow = points.filter(p => {
+    const ts = new Date(p.recordedDate + 'T00:00:00Z').getTime();
+    return ts >= startMs && ts <= end.getTime();
+  });
+  if (inWindow.length < 3) return null;
+  const sum = inWindow.reduce((acc, p) => acc + p.value, 0);
+  return sum / inWindow.length;
+}

@@ -8,6 +8,8 @@ import {
   rowToBodyMetric,
   upsertBodyMetric,
   findProgramIdAtDate,
+  getBodyMetricsInRange,
+  computeMovingAverage,
 } from '../bodyMetrics';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -226,5 +228,75 @@ describe('findProgramIdAtDate', () => {
     const result = await findProgramIdAtDate('2026-04-17');
 
     expect(result).toBeNull();
+  });
+});
+
+// ── getBodyMetricsInRange ────────────────────────────────────────────
+
+describe('getBodyMetricsInRange', () => {
+  it('returns rows ordered by date', async () => {
+    const row1 = { id: 1, metric_type: 'weight', value: 180, unit: 'lb', recorded_date: '2026-04-15', program_id: null, note: null, created_at: '2026-04-15T08:00:00.000Z', updated_at: '2026-04-15T08:00:00.000Z' };
+    const row2 = { id: 2, metric_type: 'weight', value: 179, unit: 'lb', recorded_date: '2026-04-16', program_id: null, note: null, created_at: '2026-04-16T08:00:00.000Z', updated_at: '2026-04-16T08:00:00.000Z' };
+    const row3 = { id: 3, metric_type: 'weight', value: 178, unit: 'lb', recorded_date: '2026-04-17', program_id: null, note: null, created_at: '2026-04-17T08:00:00.000Z', updated_at: '2026-04-17T08:00:00.000Z' };
+
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([row1, row2, row3]));
+
+    const rows = await getBodyMetricsInRange('weight', '2026-04-15', '2026-04-17');
+
+    expect(rows).toHaveLength(3);
+    expect(rows[0].recordedDate).toBe('2026-04-15');
+    expect(rows[1].recordedDate).toBe('2026-04-16');
+    expect(rows[2].recordedDate).toBe('2026-04-17');
+
+    const [, sql, params] = mockExecuteSql.mock.calls[0];
+    expect(sql).toContain('WHERE metric_type = ? AND recorded_date BETWEEN ? AND ?');
+    expect(sql).toContain('ORDER BY recorded_date ASC');
+    expect(params).toEqual(['weight', '2026-04-15', '2026-04-17']);
+  });
+
+  it('respects metric_type filter', async () => {
+    const weightRow2 = { id: 1, metric_type: 'weight', value: 177.4, unit: 'lb', recorded_date: '2026-04-01', program_id: null, note: null, created_at: '2026-04-01T08:00:00.000Z', updated_at: '2026-04-01T08:00:00.000Z' };
+
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([weightRow2]));
+
+    const rows = await getBodyMetricsInRange('weight', '2026-04-01', '2026-04-30');
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].metricType).toBe('weight');
+
+    const [, , params] = mockExecuteSql.mock.calls[0];
+    expect(params[0]).toBe('weight');
+  });
+});
+
+// ── computeMovingAverage ─────────────────────────────────────────────
+
+describe('computeMovingAverage', () => {
+  it('returns null when fewer than 3 points in window', () => {
+    const input = [
+      { recordedDate: '2026-04-15', value: 180 },
+      { recordedDate: '2026-04-16', value: 179 },
+    ];
+    expect(computeMovingAverage(input, '2026-04-16', 7)).toBeNull();
+  });
+
+  it('averages the last N days (inclusive window)', () => {
+    const input = [
+      { recordedDate: '2026-04-10', value: 180 },
+      { recordedDate: '2026-04-11', value: 179 },
+      { recordedDate: '2026-04-12', value: 178 },
+      { recordedDate: '2026-04-13', value: 177 },
+    ];
+    // 7-day window ending 2026-04-13 covers all 4 points: avg = 178.5
+    expect(computeMovingAverage(input, '2026-04-13', 7)).toBeCloseTo(178.5, 2);
+  });
+
+  it('skips missing days (does not zero-fill)', () => {
+    const input = [
+      { recordedDate: '2026-04-10', value: 180 },
+      { recordedDate: '2026-04-13', value: 174 },
+      { recordedDate: '2026-04-16', value: 168 },
+    ];
+    expect(computeMovingAverage(input, '2026-04-16', 7)).toBeCloseTo(174, 2);
   });
 });
