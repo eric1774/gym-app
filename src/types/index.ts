@@ -659,3 +659,21 @@ export interface SessionNote {
 }
 
 export * from './gamification';
+
+// --- Body composition tracking ---
+export type BodyMetricType = 'weight' | 'body_fat';
+export type BodyMetricUnit = 'lb' | 'percent';
+
+export interface BodyMetric {
+  id: number;
+  metricType: BodyMetricType;
+  value: number;
+  unit: BodyMetricUnit;
+  recordedDate: string;        // ISO YYYY-MM-DD
+  programId: number | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BodyCompScope = 'month' | 'week' | 'day';

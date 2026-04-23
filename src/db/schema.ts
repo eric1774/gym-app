@@ -233,3 +233,25 @@ export const CREATE_WARMUP_SESSION_ITEMS_TABLE = `
     sort_order INTEGER NOT NULL DEFAULT 0
   )
 `;
+
+export const CREATE_BODY_METRICS_TABLE = `
+  CREATE TABLE IF NOT EXISTS body_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metric_type TEXT NOT NULL CHECK (metric_type IN ('weight', 'body_fat')),
+    value REAL NOT NULL,
+    unit TEXT NOT NULL,
+    recorded_date TEXT NOT NULL,
+    program_id INTEGER,
+    note TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (program_id) REFERENCES programs(id) ON DELETE SET NULL,
+    UNIQUE (metric_type, recorded_date)
+  )
+`;
+
+export const CREATE_BODY_METRICS_TYPE_DATE_INDEX =
+  'CREATE INDEX IF NOT EXISTS idx_body_metrics_type_date ON body_metrics (metric_type, recorded_date)';
+
+export const CREATE_BODY_METRICS_PROGRAM_INDEX =
+  'CREATE INDEX IF NOT EXISTS idx_body_metrics_program ON body_metrics (program_id)';

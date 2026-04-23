@@ -12,6 +12,9 @@ import {
   CREATE_WARMUP_TEMPLATES_TABLE,
   CREATE_WARMUP_TEMPLATE_ITEMS_TABLE,
   CREATE_WARMUP_SESSION_ITEMS_TABLE,
+  CREATE_BODY_METRICS_TABLE,
+  CREATE_BODY_METRICS_TYPE_DATE_INDEX,
+  CREATE_BODY_METRICS_PROGRAM_INDEX,
 } from './schema';
 
 /**
@@ -47,6 +50,7 @@ interface Migration {
  * - Version 19: Create program_weeks table for week names and details
  * - Version 20: Fix manual-completion session timestamps to match their program week
  * - Version 21: Add archived_at column to programs for archive support
+ * - Version 24: Create body_metrics table for weight and body fat tracking
  */
 export const MIGRATIONS: Migration[] = [
   {
@@ -997,6 +1001,15 @@ export const MIGRATIONS: Migration[] = [
           FOREIGN KEY (exercise_id) REFERENCES exercises(id)        ON DELETE CASCADE
         )
       `);
+    },
+  },
+  {
+    version: 24,
+    description: 'Create body_metrics table for weight and body fat tracking',
+    up: (tx: Transaction) => {
+      tx.executeSql(CREATE_BODY_METRICS_TABLE);
+      tx.executeSql(CREATE_BODY_METRICS_TYPE_DATE_INDEX);
+      tx.executeSql(CREATE_BODY_METRICS_PROGRAM_INDEX);
     },
   },
 ];
