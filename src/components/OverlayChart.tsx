@@ -21,6 +21,7 @@ export interface OverlayChartProps {
   bodyFat: BodyFatPoint[];
   programs: ProgramBound[];
   calorieGoal: number;
+  onBodyFatDotPress?: (date: string) => void;
 }
 
 const PADDING = { top: 12, bottom: 26, left: 36, right: 42 };
@@ -56,6 +57,7 @@ export function OverlayChart({
   bodyFat,
   programs,
   calorieGoal,
+  onBodyFatDotPress,
 }: OverlayChartProps) {
   const W = Dimensions.get('window').width - 2 * 16;
   const H = scope === 'week' ? 200 : 170;
@@ -127,6 +129,7 @@ export function OverlayChart({
       return {
         x: timeToX(toTime(b.recordedDate)),
         y: weightToY(yValue),
+        date: b.recordedDate,
       };
     });
 
@@ -306,15 +309,25 @@ export function OverlayChart({
 
         {/* 10. BF% gold dots — positioned on the weight line */}
         {bfDots.map((dot, i) => (
-          <Circle
-            key={`bf-${i}`}
-            cx={dot.x}
-            cy={dot.y}
-            r={5}
-            fill="#F4C77B"
-            stroke={colors.background}
-            strokeWidth={1.5}
-          />
+          <React.Fragment key={`bf-${i}`}>
+            <Circle
+              cx={dot.x}
+              cy={dot.y}
+              r={5}
+              fill="#F4C77B"
+              stroke={colors.background}
+              strokeWidth={1.5}
+            />
+            {onBodyFatDotPress && (
+              <Circle
+                cx={dot.x}
+                cy={dot.y}
+                r={14}
+                fill="transparent"
+                onPress={() => onBodyFatDotPress(dot.date)}
+              />
+            )}
+          </React.Fragment>
         ))}
 
         {/* 11. Program boundary lines + labels (MONTH scope only) */}

@@ -17,6 +17,7 @@ export interface BodyCompWeekViewProps {
   programs: ProgramBound[];
   calorieGoal: number;
   onJumpToDay: (date: string) => void;
+  onLongPressDay?: (date: string) => void;
 }
 
 function formatDayRow(iso: string): string {
@@ -36,6 +37,7 @@ export function BodyCompWeekView({
   programs,
   calorieGoal,
   onJumpToDay,
+  onLongPressDay,
 }: BodyCompWeekViewProps) {
   // Build the 7-day grid
   const start = new Date(startDate + 'T00:00:00');
@@ -96,6 +98,7 @@ export function BodyCompWeekView({
               key={date}
               testID={`week-row-${date}`}
               onPress={() => onJumpToDay(date)}
+              onLongPress={() => onLongPressDay?.(date)}
               style={styles.row}
             >
               <Text style={styles.rowLabel}>{formatDayRow(date)}</Text>

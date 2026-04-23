@@ -16,6 +16,7 @@ export interface BodyCompMonthViewProps {
   calories: DailyCalorieTotal[];
   programs: ProgramBound[];
   calorieGoal: number;
+  onBodyFatDotPress?: (date: string) => void;
 }
 
 function avg(xs: number[]): number | null {
@@ -51,6 +52,7 @@ export function BodyCompMonthView({
   calories,
   programs,
   calorieGoal,
+  onBodyFatDotPress,
 }: BodyCompMonthViewProps) {
   const avgWeight = avg(weightsInRange.map(w => w.value));
   const avgCals = avg(calories.map(c => c.total));
@@ -94,6 +96,7 @@ export function BodyCompMonthView({
           bodyFat={bodyFat.map(b => ({ recordedDate: b.recordedDate, value: b.value }))}
           programs={programs}
           calorieGoal={calorieGoal}
+          onBodyFatDotPress={onBodyFatDotPress}
         />
       </View>
 

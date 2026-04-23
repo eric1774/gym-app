@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -72,6 +72,7 @@ export function BodyCompView() {
   const [firstOfMonthWeight, setFirstOfMonthWeight] = useState<number | null>(null);
   const [sevenDayMaVal, setSevenDayMaVal] = useState<number | null>(null);
   const [macroGoalsState, setMacroGoalsState] = useState<{ protein: number; carbs: number; fat: number }>({ protein: 180, carbs: 220, fat: 73 });
+  const [editingMetric, setEditingMetric] = useState<{ type: 'weight' | 'body_fat'; date: string; value: number; note: string | null } | null>(null);
 
   // Compute the scope's [startDate, endDate] window from the current selected date.
   const { startDate, endDate } = useMemo(() => {
@@ -174,6 +175,21 @@ export function BodyCompView() {
     await refresh();
   };
 
+  const existingWeightDates = useMemo(
+    () => new Set(weightsInRange.map(w => w.recordedDate)),
+    [weightsInRange],
+  );
+
+  const openEditForBodyFatOnDate = async (d: string) => {
+    const row = await getBodyMetricByDate('body_fat', d);
+    if (row) { setEditingMetric({ type: 'body_fat', date: d, value: row.value, note: row.note }); }
+  };
+
+  const openEditForWeightOnDate = async (d: string) => {
+    const row = await getBodyMetricByDate('weight', d);
+    if (row) { setEditingMetric({ type: 'weight', date: d, value: row.value, note: row.note }); }
+  };
+
   // Empty state — no weights logged anywhere in history
   if (hasAny === false) {
     return (
@@ -190,6 +206,7 @@ export function BodyCompView() {
           visible={logVisible}
           mode="weight"
           initialDate={today}
+          existingDates={new Set()}
           onClose={() => setLogVisible(false)}
           onSave={handleSave}
         />
@@ -218,6 +235,7 @@ export function BodyCompView() {
             calories={calories}
             programs={programs}
             calorieGoal={calorieGoal}
+            onBodyFatDotPress={openEditForBodyFatOnDate}
           />
         ) : scope === 'week' ? (
           <BodyCompWeekView
@@ -230,6 +248,7 @@ export function BodyCompView() {
             programs={programs}
             calorieGoal={calorieGoal}
             onJumpToDay={(d) => { setScope('day'); setDate(d); }}
+            onLongPressDay={openEditForWeightOnDate}
           />
         ) : dayDetail ? (
           <BodyCompDayView
@@ -249,9 +268,54 @@ export function BodyCompView() {
         visible={logVisible}
         mode="weight"
         initialDate={today}
+        existingDates={existingWeightDates}
         onClose={() => setLogVisible(false)}
         onSave={handleSave}
+        onCollision={(payload) => {
+          Alert.alert(
+            'Replace existing reading?',
+            `A weight reading already exists for ${payload.recordedDate}.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Replace',
+                onPress: async () => {
+                  await upsertBodyMetric({
+                    metricType: payload.metricType,
+                    value: payload.value,
+                    unit: payload.unit,
+                    recordedDate: payload.recordedDate,
+                    note: payload.note,
+                  });
+                  setLogVisible(false);
+                  await refresh();
+                },
+              },
+            ],
+          );
+        }}
       />
+      {editingMetric && (
+        <LogBodyMetricModal
+          visible={true}
+          mode={editingMetric.type}
+          initialDate={editingMetric.date}
+          initialValue={editingMetric.value}
+          initialNote={editingMetric.note}
+          onClose={() => setEditingMetric(null)}
+          onSave={async (payload) => {
+            await upsertBodyMetric({
+              metricType: payload.metricType,
+              value: payload.value,
+              unit: payload.unit,
+              recordedDate: payload.recordedDate,
+              note: payload.note,
+            });
+            setEditingMetric(null);
+            await refresh();
+          }}
+        />
+      )}
     </View>
   );
 }
