@@ -133,10 +133,42 @@ export async function getProgram(id: number): Promise<Program | null> {
   return rowToProgram(result.rows.item(0));
 }
 
-/** Delete a program. CASCADE handles child rows. */
+/**
+ * Delete a program and everything logged in it.
+ *
+ * CASCADE handles program_days / program_day_exercises / program_weeks via
+ * schema foreign keys, but workout_sessions.program_day_id has no FK, so
+ * sessions (and their sets) would otherwise be orphaned. We delete those
+ * manually in a transaction so "delete program" means the full lineage:
+ * program → days → exercises → sessions → sets → exercise_sessions.
+ *
+ * body_metrics.program_id uses ON DELETE SET NULL by design — scale readings
+ * survive the delete so your body-weight history is preserved.
+ */
 export async function deleteProgram(id: number): Promise<void> {
   const database = await db;
-  await executeSql(database, 'DELETE FROM programs WHERE id = ?', [id]);
+
+  // Collect session IDs belonging to this program's days before we start deleting.
+  const sessionsResult = await executeSql(
+    database,
+    `SELECT ws.id FROM workout_sessions ws
+     INNER JOIN program_days pd ON pd.id = ws.program_day_id
+     WHERE pd.program_id = ?`,
+    [id],
+  );
+  const sessionIds: number[] = [];
+  for (let i = 0; i < sessionsResult.rows.length; i++) {
+    sessionIds.push(sessionsResult.rows.item(i).id as number);
+  }
+
+  await runTransaction(database, tx => {
+    for (const sid of sessionIds) {
+      tx.executeSql('DELETE FROM workout_sets WHERE session_id = ?', [sid]);
+      tx.executeSql('DELETE FROM exercise_sessions WHERE session_id = ?', [sid]);
+      tx.executeSql('DELETE FROM workout_sessions WHERE id = ?', [sid]);
+    }
+    tx.executeSql('DELETE FROM programs WHERE id = ?', [id]);
+  });
 }
 
 /** Activate a program by setting start_date to now. */

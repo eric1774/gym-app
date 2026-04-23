@@ -102,7 +102,12 @@ export function BodyCompWeekView({
               style={styles.row}
             >
               <Text style={styles.rowLabel}>{formatDayRow(date)}</Text>
-              <Text style={[styles.rowValue, isOver ? { color: '#F4A76B' } : undefined]}>
+              <Text
+                style={[
+                  styles.rowValue,
+                  c != null ? (isOver ? { color: colors.accent } : { color: '#F0B830' }) : undefined,
+                ]}
+              >
                 {w != null ? `${w.toFixed(1)}` : '—'} · {c != null ? `${c.toLocaleString()} kcal` : '—'}
               </Text>
             </Pressable>

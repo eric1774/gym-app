@@ -62,9 +62,11 @@ export async function initDatabase(): Promise<void> {
   const { ensureMuscleGroupMappings } = await import('./muscleGroups');
   await ensureMuscleGroupMappings();
 
-  // Import program data from prod export (idempotent — skips if data exists)
-  const { importProgramData } = await import('./importProgram');
-  await importProgramData();
+  // NOTE: importProgramData() used to run here unconditionally. It re-seeded
+  // the "8 week program" on every launch, which meant deleting the program
+  // caused it to reappear on next app open. importProgram.ts is kept as a
+  // manual utility (callable from a future Settings debug action) but no
+  // longer fires on boot.
 
   // Data repair is user-initiated only (Settings > Repair Data).
   // Never run repair automatically on boot — it must require explicit confirmation.

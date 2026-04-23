@@ -69,7 +69,7 @@ export function BodyCompDayView({
         <View style={styles.kpi}>
           <Text style={styles.kpiLabel}>CALORIES</Text>
           <Text style={styles.kpiValue}>{Math.round(detail.calories).toLocaleString()} <Text style={styles.kpiUnit}>/ {calorieGoal.toLocaleString()}</Text></Text>
-          <Text style={[styles.kpiDelta, calDelta > 0 ? { color: '#F4A76B' } : { color: colors.accent }]}>
+          <Text style={[styles.kpiDelta, calDelta > 0 ? { color: colors.accent } : { color: '#F0B830' }]}>
             {Math.round(Math.abs(calDelta)).toLocaleString()} {calDelta >= 0 ? 'over' : 'under'} goal
           </Text>
         </View>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -156,24 +157,25 @@ export function DashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerRow}>
-        <Text style={styles.title}>Dashboard</Text>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('Settings')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          testID="settings-button"
-          accessibilityLabel="Settings"
-          accessibilityRole="button"
-        >
-          <GearIcon color={colors.secondary} />
-        </TouchableOpacity>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Dashboard</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            testID="settings-button"
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+          >
+            <GearIcon color={colors.secondary} />
+          </TouchableOpacity>
+        </View>
 
-      <LevelBar
-        level={levelState.level}
-        title={levelState.title}
-        progressToNext={levelState.progressToNext}
-      />
+        <LevelBar
+          level={levelState.level}
+          title={levelState.title}
+          progressToNext={levelState.progressToNext}
+        />
 
       {/* Next Workout Card — only shown when an activated program exists */}
         {nextWorkout !== null && (
@@ -233,29 +235,30 @@ export function DashboardScreen() {
           }}
         />
 
-        <LogBodyMetricModal
-          visible={logModalVisible}
-          mode="weight"
-          initialDate={today}
-          initialValue={logModalInitialValue}
-          onClose={() => setLogModalVisible(false)}
-          onSave={async (payload) => {
-            await upsertBodyMetric({
-              metricType: payload.metricType,
-              value: payload.value,
-              unit: payload.unit,
-              recordedDate: payload.recordedDate,
-              note: payload.note,
-            });
-            await refreshWeights();
-          }}
+        <WeeklySnapshotCard
+          snapshot={snapshot}
+          onPress={() => navigation.navigate('ProgressHub')}
         />
+        <NutritionRingsCard />
+      </ScrollView>
 
-      <WeeklySnapshotCard
-        snapshot={snapshot}
-        onPress={() => navigation.navigate('ProgressHub')}
+      <LogBodyMetricModal
+        visible={logModalVisible}
+        mode="weight"
+        initialDate={today}
+        initialValue={logModalInitialValue}
+        onClose={() => setLogModalVisible(false)}
+        onSave={async (payload) => {
+          await upsertBodyMetric({
+            metricType: payload.metricType,
+            value: payload.value,
+            unit: payload.unit,
+            recordedDate: payload.recordedDate,
+            note: payload.note,
+          });
+          await refreshWeights();
+        }}
       />
-      <NutritionRingsCard />
       <HighlightReelModal
         badges={backfilledBadges}
         onDismiss={clearBackfill}
@@ -272,6 +275,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xxxl,
   },
   headerRow: {
     flexDirection: 'row',

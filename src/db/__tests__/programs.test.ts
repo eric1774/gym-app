@@ -157,16 +157,57 @@ describe('getProgram', () => {
 });
 
 describe('deleteProgram', () => {
-  it('calls DELETE with the correct program id', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([], 0));
+  it('deletes sessions/sets inside a transaction then deletes the program', async () => {
+    // First call: SELECT session IDs belonging to this program's days (returns two)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 10 }, { id: 11 }]));
+
+    let capturedTx: { executeSql: jest.Mock } | null = null;
+    mockRunTransaction.mockImplementation(async (_db, work) => {
+      const tx = { executeSql: jest.fn() };
+      capturedTx = tx;
+      work(tx as any);
+    });
 
     await deleteProgram(1);
 
+    // Pre-transaction SELECT for session IDs
     expect(mockExecuteSql).toHaveBeenCalledWith(
       mockDb,
-      expect.stringContaining('DELETE FROM programs'),
+      expect.stringContaining('SELECT ws.id FROM workout_sessions'),
       [1],
     );
+
+    // Transaction should delete sets, exercise_sessions, sessions for each session, then program
+    expect(capturedTx).not.toBeNull();
+    const calls = capturedTx!.executeSql.mock.calls;
+    // 3 deletes × 2 sessions = 6 + 1 DELETE FROM programs = 7
+    expect(calls).toHaveLength(7);
+    expect(calls[0]).toEqual(['DELETE FROM workout_sets WHERE session_id = ?', [10]]);
+    expect(calls[1]).toEqual(['DELETE FROM exercise_sessions WHERE session_id = ?', [10]]);
+    expect(calls[2]).toEqual(['DELETE FROM workout_sessions WHERE id = ?', [10]]);
+    expect(calls[3]).toEqual(['DELETE FROM workout_sets WHERE session_id = ?', [11]]);
+    expect(calls[4]).toEqual(['DELETE FROM exercise_sessions WHERE session_id = ?', [11]]);
+    expect(calls[5]).toEqual(['DELETE FROM workout_sessions WHERE id = ?', [11]]);
+    expect(calls[6]).toEqual(['DELETE FROM programs WHERE id = ?', [1]]);
+  });
+
+  it('still runs the transaction when the program has no sessions', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    let capturedTx: { executeSql: jest.Mock } | null = null;
+    mockRunTransaction.mockImplementation(async (_db, work) => {
+      const tx = { executeSql: jest.fn() };
+      capturedTx = tx;
+      work(tx as any);
+    });
+
+    await deleteProgram(7);
+
+    expect(capturedTx).not.toBeNull();
+    const calls = capturedTx!.executeSql.mock.calls;
+    // Only the program delete — no session children to clean up
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual(['DELETE FROM programs WHERE id = ?', [7]]);
   });
 });
 

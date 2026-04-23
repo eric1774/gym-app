@@ -26,8 +26,8 @@ export interface OverlayChartProps {
 
 const PADDING = { top: 12, bottom: 26, left: 36, right: 42 };
 
-const BAR_OVER_GOAL = 'rgba(244,167,107,0.7)';   // warm orange — cal > goal
-const BAR_UNDER_GOAL = 'rgba(141,194,138,0.6)';  // mint at 60% — cal <= goal
+const BAR_OVER_GOAL = 'rgba(141,194,138,0.7)';   // mint — cal > goal (hit target)
+const BAR_UNDER_GOAL = 'rgba(240,184,48,0.6)';   // warm amber — cal <= goal (under-fed)
 const GOAL_LINE = 'rgba(244,167,107,0.35)';      // faint orange for goal reference
 
 function toTime(date: string): number {
