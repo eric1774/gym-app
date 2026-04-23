@@ -199,6 +199,12 @@ export function BodyCompView() {
 
   return (
     <View style={{ flex: 1 }}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Body Composition</Text>
+        <Pressable testID="body-comp-log-btn" onPress={() => setLogVisible(true)} style={styles.logBtn} hitSlop={8}>
+          <Text style={styles.logBtnText}>+</Text>
+        </Pressable>
+      </View>
       <BodyCompScopeBar scope={scope} onChange={setScope} />
       <BodyCompDateNav scope={scope} date={date} today={today} onChange={setDate} />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
@@ -256,4 +262,8 @@ const styles = StyleSheet.create({
   emptySubtitle: { color: colors.secondary, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.sm, maxWidth: 280 },
   emptyBtn: { backgroundColor: colors.accent, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: 10, marginTop: spacing.xl },
   emptyBtnText: { color: colors.background, fontSize: fontSize.base, fontWeight: weightBold },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.base, paddingTop: spacing.base },
+  headerTitle: { color: colors.primary, fontSize: fontSize.base, fontWeight: weightSemiBold },
+  logBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(141,194,138,0.15)', alignItems: 'center', justifyContent: 'center' },
+  logBtnText: { color: colors.accent, fontSize: 22, fontWeight: '300' },
 });
