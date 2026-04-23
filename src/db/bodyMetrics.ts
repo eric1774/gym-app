@@ -205,3 +205,68 @@ export function computeMovingAverage(
   const sum = inWindow.reduce((acc, p) => acc + p.value, 0);
   return sum / inWindow.length;
 }
+
+// ── Phase 6 additions ─────────────────────────────────────────────────
+
+export interface DailyCalorieTotal {
+  recordedDate: string;
+  total: number;
+}
+
+/**
+ * Meals table has no `calories` column — derive from macros.
+ * `local_date` (TEXT) is the canonical day-bucket column, no TZ math needed.
+ */
+export async function getDailyCalorieTotals(
+  startDate: string,
+  endDate: string,
+): Promise<DailyCalorieTotal[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT local_date as d,
+            COALESCE(SUM(protein_grams), 0) as p,
+            COALESCE(SUM(carb_grams), 0)    as c,
+            COALESCE(SUM(fat_grams), 0)     as f
+       FROM meals
+      WHERE local_date BETWEEN ? AND ?
+      GROUP BY local_date
+      ORDER BY local_date ASC`,
+    [startDate, endDate],
+  );
+  const out: DailyCalorieTotal[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const total = (row.p as number) * 4 + (row.c as number) * 4 + (row.f as number) * 9;
+    out.push({ recordedDate: row.d, total });
+  }
+  return out;
+}
+
+export interface ProgramBound {
+  id: number;
+  name: string;
+  startDate: string;
+  weeks: number;
+}
+
+export async function getProgramsInRange(
+  startDate: string,
+  endDate: string,
+): Promise<ProgramBound[]> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT id, name, start_date, weeks FROM programs
+      WHERE start_date IS NOT NULL
+        AND DATE(start_date, '+' || (weeks * 7) || ' days') >= DATE(?)
+        AND DATE(start_date) <= DATE(?)`,
+    [startDate, endDate],
+  );
+  const out: ProgramBound[] = [];
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    out.push({ id: row.id, name: row.name, startDate: row.start_date, weeks: row.weeks });
+  }
+  return out;
+}

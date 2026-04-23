@@ -8,15 +8,43 @@ import { Scale } from '../components/icons/Scale';
 import { BodyCompScopeBar } from '../components/BodyCompScopeBar';
 import { BodyCompDateNav } from '../components/BodyCompDateNav';
 import { LogBodyMetricModal, LogBodyMetricPayload } from '../components/LogBodyMetricModal';
+import { BodyCompMonthView } from '../components/BodyCompMonthView';
 import {
   getBodyMetricsInRange,
+  getDailyCalorieTotals,
+  getProgramsInRange,
   upsertBodyMetric,
+  type DailyCalorieTotal,
+  type ProgramBound,
 } from '../db/bodyMetrics';
-import type { BodyCompScope } from '../types';
+import { getMacroGoals } from '../db/macros';
+import { computeCalories } from '../utils/macros';
+import type { BodyCompScope, BodyMetric } from '../types';
 
 function isoToday(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function toISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function startOfWeekMonday(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const out = new Date(d);
+  out.setDate(d.getDate() + diff);
+  return out;
+}
+
+function subtractDays(isoDate: string, n: number): string {
+  const d = new Date(isoDate + 'T00:00:00');
+  d.setDate(d.getDate() - n);
+  return toISO(d);
 }
 
 export function BodyCompView() {
@@ -26,11 +54,59 @@ export function BodyCompView() {
   const [hasAny, setHasAny] = useState<boolean | null>(null);
   const [logVisible, setLogVisible] = useState(false);
 
+  // Data for the current scope
+  const [weightsForChart, setWeightsForChart] = useState<BodyMetric[]>([]);
+  const [weightsInRange, setWeightsInRange] = useState<BodyMetric[]>([]);
+  const [bodyFat, setBodyFat] = useState<BodyMetric[]>([]);
+  const [calories, setCalories] = useState<DailyCalorieTotal[]>([]);
+  const [programs, setPrograms] = useState<ProgramBound[]>([]);
+  const [calorieGoal, setCalorieGoal] = useState<number>(2200);
+
+  // Compute the scope's [startDate, endDate] window from the current selected date.
+  const { startDate, endDate } = useMemo(() => {
+    const d = new Date(date + 'T00:00:00');
+    if (scope === 'month') {
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return { startDate: toISO(start), endDate: toISO(end) };
+    }
+    if (scope === 'week') {
+      const start = startOfWeekMonday(d);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { startDate: toISO(start), endDate: toISO(end) };
+    }
+    return { startDate: date, endDate: date };
+  }, [scope, date]);
+
   const refresh = useCallback(async () => {
-    // Check ANY weight has been logged in the entire history.
-    const rows = await getBodyMetricsInRange('weight', '0000-01-01', '9999-12-31');
-    setHasAny(rows.length > 0);
-  }, []);
+    // Widen the weight fetch by 7 days for the MA line's left-edge context.
+    const chartStart = subtractDays(startDate, 7);
+
+    const [allWeights, bf, cal, progs, macroGoals, anyWeights] = await Promise.all([
+      getBodyMetricsInRange('weight', chartStart, endDate),
+      getBodyMetricsInRange('body_fat', startDate, endDate),
+      getDailyCalorieTotals(startDate, endDate),
+      getProgramsInRange(startDate, endDate),
+      getMacroGoals().catch(() => null),
+      getBodyMetricsInRange('weight', '0000-01-01', '9999-12-31'),
+    ]);
+
+    setWeightsForChart(allWeights);
+    setWeightsInRange(allWeights.filter(w => w.recordedDate >= startDate));
+    setBodyFat(bf);
+    setCalories(cal);
+    setPrograms(progs);
+    setCalorieGoal(
+      macroGoals &&
+      macroGoals.proteinGoal != null &&
+      macroGoals.carbGoal != null &&
+      macroGoals.fatGoal != null
+        ? computeCalories(macroGoals.proteinGoal, macroGoals.carbGoal, macroGoals.fatGoal)
+        : 2200,
+    );
+    setHasAny(anyWeights.length > 0);
+  }, [startDate, endDate]);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,7 +125,7 @@ export function BodyCompView() {
     await refresh();
   };
 
-  // Empty state
+  // Empty state — no weights logged anywhere in history
   if (hasAny === false) {
     return (
       <View style={styles.emptyContainer}>
@@ -77,12 +153,22 @@ export function BodyCompView() {
       <BodyCompScopeBar scope={scope} onChange={setScope} />
       <BodyCompDateNav scope={scope} date={date} today={today} onChange={setDate} />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
-        {/* Per-scope views will be inserted in Tasks 19–21 */}
-        <View style={{ padding: spacing.lg }}>
-          <Text style={{ color: colors.secondary }}>
-            Scope: {scope} — Date: {date} (chart coming in Task 14–18)
-          </Text>
-        </View>
+        {scope === 'month' ? (
+          <BodyCompMonthView
+            startDate={startDate}
+            endDate={endDate}
+            weightsForChart={weightsForChart}
+            weightsInRange={weightsInRange}
+            bodyFat={bodyFat}
+            calories={calories}
+            programs={programs}
+            calorieGoal={calorieGoal}
+          />
+        ) : scope === 'week' ? (
+          <Text style={{ color: colors.secondary, padding: spacing.lg }}>Week view — Task 20</Text>
+        ) : (
+          <Text style={{ color: colors.secondary, padding: spacing.lg }}>Day view — Task 21</Text>
+        )}
       </ScrollView>
       <LogBodyMetricModal
         visible={logVisible}
