@@ -95,7 +95,7 @@ export function LogBodyMetricModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.keyboardAvoid}
       >
         <Pressable style={styles.overlay} onPress={onClose} />
