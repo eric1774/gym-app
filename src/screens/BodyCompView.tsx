@@ -9,6 +9,7 @@ import { BodyCompScopeBar } from '../components/BodyCompScopeBar';
 import { BodyCompDateNav } from '../components/BodyCompDateNav';
 import { LogBodyMetricModal, LogBodyMetricPayload } from '../components/LogBodyMetricModal';
 import { BodyCompMonthView } from '../components/BodyCompMonthView';
+import { BodyCompWeekView } from '../components/BodyCompWeekView';
 import {
   getBodyMetricsInRange,
   getDailyCalorieTotals,
@@ -165,7 +166,17 @@ export function BodyCompView() {
             calorieGoal={calorieGoal}
           />
         ) : scope === 'week' ? (
-          <Text style={{ color: colors.secondary, padding: spacing.lg }}>Week view — Task 20</Text>
+          <BodyCompWeekView
+            startDate={startDate}
+            endDate={endDate}
+            weightsForChart={weightsForChart}
+            weightsInRange={weightsInRange}
+            bodyFat={bodyFat}
+            calories={calories}
+            programs={programs}
+            calorieGoal={calorieGoal}
+            onJumpToDay={(d) => { setScope('day'); setDate(d); }}
+          />
         ) : (
           <Text style={{ color: colors.secondary, padding: spacing.lg }}>Day view — Task 21</Text>
         )}
