@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -23,6 +23,9 @@ import { formatRelativeTime } from '../utils/formatRelativeTime';
 import { WeeklySnapshotCard } from '../components/WeeklySnapshotCard';
 import { NutritionRingsCard } from '../components/NutritionRingsCard';
 import { getWeeklySnapshot } from '../db/progress';
+import { DashboardWeightCard } from '../components/DashboardWeightCard';
+import { LogBodyMetricModal } from '../components/LogBodyMetricModal';
+import { getBodyMetricByDate, upsertBodyMetric } from '../db/bodyMetrics';
 import { useGamification } from '../context/GamificationContext';
 import { LevelBar } from '../components/LevelBar';
 import { CelebrationModal } from '../components/CelebrationModal';
@@ -65,6 +68,31 @@ export function DashboardScreen() {
   const [snapshot, setSnapshot] = useState<WeeklySnapshot>({ sessionsThisWeek: 0, prsThisWeek: 0, volumeChangePercent: null });
   const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
 
+  const [todayWeight, setTodayWeight] = useState<number | null>(null);
+  const [yesterdayWeight, setYesterdayWeight] = useState<number | null>(null);
+  const [logModalVisible, setLogModalVisible] = useState(false);
+  const [logModalInitialValue, setLogModalInitialValue] = useState<number | null>(null);
+
+  const today = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const yesterday = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const refreshWeights = useCallback(async () => {
+    const [t, y] = await Promise.all([
+      getBodyMetricByDate('weight', today),
+      getBodyMetricByDate('weight', yesterday),
+    ]);
+    setTodayWeight(t?.value ?? null);
+    setYesterdayWeight(y?.value ?? null);
+  }, [today, yesterday]);
+
   // Elapsed timer for active session state
   useEffect(() => {
     if (!session) { setActiveElapsed(0); return; }
@@ -89,12 +117,13 @@ export function DashboardScreen() {
             setNextWorkout(nextDay);
             setSnapshot(snap);
           }
+          await refreshWeights();
         } catch (err) {
           console.warn('Dashboard data fetch failed:', err);
         }
       })();
       return () => { cancelled = true; };
-    }, []),
+    }, [refreshWeights]),
   );
 
   const handleQuickStart = useCallback(async () => {
@@ -181,6 +210,46 @@ export function DashboardScreen() {
             )}
           </View>
         )}
+
+        <DashboardWeightCard
+          todayWeight={todayWeight}
+          yesterdayWeight={yesterdayWeight}
+          onPressLog={() => {
+            setLogModalInitialValue(null);
+            setLogModalVisible(true);
+          }}
+          onPressEdit={() => {
+            setLogModalInitialValue(todayWeight);
+            setLogModalVisible(true);
+          }}
+          onPressCard={() => {
+            const parent = navigation.getParent<NavigationProp<TabParamList>>();
+            if (parent) {
+              (parent as any).navigate('ProteinTab', {
+                screen: 'ProteinHome',
+                params: { initialTab: 2 },
+              });
+            }
+          }}
+        />
+
+        <LogBodyMetricModal
+          visible={logModalVisible}
+          mode="weight"
+          initialDate={today}
+          initialValue={logModalInitialValue}
+          onClose={() => setLogModalVisible(false)}
+          onSave={async (payload) => {
+            await upsertBodyMetric({
+              metricType: payload.metricType,
+              value: payload.value,
+              unit: payload.unit,
+              recordedDate: payload.recordedDate,
+              note: payload.note,
+            });
+            await refreshWeights();
+          }}
+        />
 
       <WeeklySnapshotCard
         snapshot={snapshot}
