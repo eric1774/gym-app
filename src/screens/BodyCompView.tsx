@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -73,6 +73,7 @@ export function BodyCompView() {
   const [sevenDayMaVal, setSevenDayMaVal] = useState<number | null>(null);
   const [macroGoalsState, setMacroGoalsState] = useState<{ protein: number; carbs: number; fat: number }>({ protein: 180, carbs: 220, fat: 73 });
   const [editingMetric, setEditingMetric] = useState<{ type: 'weight' | 'body_fat'; date: string; value: number; note: string | null } | null>(null);
+  const [collisionPrompt, setCollisionPrompt] = useState<LogBodyMetricPayload | null>(null);
 
   // Compute the scope's [startDate, endDate] window from the current selected date.
   const { startDate, endDate } = useMemo(() => {
@@ -271,29 +272,7 @@ export function BodyCompView() {
         existingDates={existingWeightDates}
         onClose={() => setLogVisible(false)}
         onSave={handleSave}
-        onCollision={(payload) => {
-          Alert.alert(
-            'Replace existing reading?',
-            `A weight reading already exists for ${payload.recordedDate}.`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Replace',
-                onPress: async () => {
-                  await upsertBodyMetric({
-                    metricType: payload.metricType,
-                    value: payload.value,
-                    unit: payload.unit,
-                    recordedDate: payload.recordedDate,
-                    note: payload.note,
-                  });
-                  setLogVisible(false);
-                  await refresh();
-                },
-              },
-            ],
-          );
-        }}
+        onCollision={(payload) => setCollisionPrompt(payload)}
       />
       {editingMetric && (
         <LogBodyMetricModal
@@ -316,6 +295,52 @@ export function BodyCompView() {
           }}
         />
       )}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={collisionPrompt !== null}
+        onRequestClose={() => setCollisionPrompt(null)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setCollisionPrompt(null)}>
+          <Pressable style={styles.confirmCard} onPress={() => { /* block backdrop dismiss */ }}>
+            <Text style={styles.confirmTitle}>Replace existing reading?</Text>
+            {collisionPrompt && (
+              <Text style={styles.confirmBody}>
+                A weight reading already exists for {collisionPrompt.recordedDate}.
+              </Text>
+            )}
+            <View style={styles.confirmActions}>
+              <Pressable
+                testID="confirm-replace-cancel"
+                style={styles.confirmCancelBtn}
+                onPress={() => setCollisionPrompt(null)}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                testID="confirm-replace-confirm"
+                style={styles.confirmReplaceBtn}
+                onPress={async () => {
+                  const payload = collisionPrompt;
+                  if (!payload) { return; }
+                  setCollisionPrompt(null);
+                  await upsertBodyMetric({
+                    metricType: payload.metricType,
+                    value: payload.value,
+                    unit: payload.unit,
+                    recordedDate: payload.recordedDate,
+                    note: payload.note,
+                  });
+                  setLogVisible(false);
+                  await refresh();
+                }}
+              >
+                <Text style={styles.confirmReplaceText}>Replace</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -330,4 +355,64 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.primary, fontSize: fontSize.base, fontWeight: weightSemiBold },
   logBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(141,194,138,0.15)', alignItems: 'center', justifyContent: 'center' },
   logBtnText: { color: colors.accent, fontSize: 22, fontWeight: '300' },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  confirmTitle: {
+    color: colors.primary,
+    fontSize: fontSize.lg,
+    fontWeight: weightBold,
+  },
+  confirmBody: {
+    color: colors.secondary,
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    marginTop: spacing.sm,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  confirmCancelBtn: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.surfaceElevated,
+  },
+  confirmCancelText: {
+    color: colors.secondary,
+    fontSize: fontSize.base,
+    fontWeight: weightSemiBold,
+  },
+  confirmReplaceBtn: {
+    flex: 1,
+    minHeight: 44,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+  },
+  confirmReplaceText: {
+    color: colors.onAccent,
+    fontSize: fontSize.base,
+    fontWeight: weightBold,
+  },
 });

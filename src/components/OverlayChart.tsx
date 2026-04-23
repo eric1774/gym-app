@@ -81,8 +81,14 @@ export function OverlayChart({
     : calorieGoal * 1.2;
   const calSpan = Math.max(1, maxCal);
 
+  // Inset the time domain by half-barwidth on WEEK so the first/last bar
+  // center sits inside the plot area instead of covering the Y-axis labels.
+  const barWidth = scope === 'week' ? 22 : 6;
+  const plotInset = scope === 'week' ? barWidth / 2 : 0;
+  const plotW = innerW - 2 * plotInset;
+
   const timeToX = (t: number) =>
-    PADDING.left + ((t - tMin) / tSpan) * innerW;
+    PADDING.left + plotInset + ((t - tMin) / tSpan) * plotW;
   const weightToY = (v: number) =>
     PADDING.top + innerH - ((v - minWeight) / wSpan) * innerH;
   const caloriesToY = (v: number) =>
@@ -168,7 +174,6 @@ export function OverlayChart({
     : [];
 
   const axisY = PADDING.top + innerH;
-  const barWidth = scope === 'week' ? 22 : 6;
   const goalLineY = caloriesToY(calorieGoal);
 
   return (
