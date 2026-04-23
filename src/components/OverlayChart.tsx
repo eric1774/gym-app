@@ -188,28 +188,6 @@ export function OverlayChart({
         </View>
       </View>
       <Svg width={W} height={H}>
-        {/* 0. Axis unit hints — tiny labels at the top of each Y-axis region */}
-        <SvgText
-          x={PADDING.left - 6}
-          y={PADDING.top - 2}
-          fill={colors.secondary}
-          fontSize={8}
-          textAnchor="end"
-          opacity={0.7}
-        >
-          lb
-        </SvgText>
-        <SvgText
-          x={W - PADDING.right + 4}
-          y={PADDING.top - 2}
-          fill={colors.secondary}
-          fontSize={8}
-          textAnchor="start"
-          opacity={0.7}
-        >
-          kcal
-        </SvgText>
-
         {/* 1. Weight horizontal grid lines */}
         {weightTicks.map((tick, i) => (
           <Line
