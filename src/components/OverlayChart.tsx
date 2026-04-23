@@ -53,6 +53,7 @@ export function OverlayChart({
   weights,
   calories,
   bodyFat,
+  programs,
   calorieGoal,
 }: OverlayChartProps) {
   const W = Dimensions.get('window').width - 2 * 16;
@@ -127,6 +128,20 @@ export function OverlayChart({
         y: weightToY(yValue),
       };
     });
+
+  // Program boundary overlays — MONTH scope only.
+  // For each program, a start line and an end line, each shown only if it falls in view.
+  const programLines = scope === 'month'
+    ? programs.flatMap((p, i) => {
+        const startMs = toTime(p.startDate);
+        const endMs = toTime(p.startDate) + p.weeks * 7 * 86400000;
+        const inView = (ms: number) => ms >= tMin && ms <= tMax;
+        const out: { x: number; label: string }[] = [];
+        if (inView(startMs)) { out.push({ x: timeToX(startMs), label: `P${i + 1} start` }); }
+        if (inView(endMs))   { out.push({ x: timeToX(endMs),   label: `P${i + 1} end`   }); }
+        return out;
+      })
+    : [];
 
   // Y-axis ticks (left — weight)
   const weightTicks = [0, 1, 2, 3].map(i => {
@@ -280,6 +295,31 @@ export function OverlayChart({
             stroke={colors.background}
             strokeWidth={1.5}
           />
+        ))}
+
+        {/* 11. Program boundary lines + labels (MONTH scope only) */}
+        {programLines.map((line, i) => (
+          <React.Fragment key={`pb-${i}`}>
+            <Line
+              x1={line.x}
+              x2={line.x}
+              y1={PADDING.top}
+              y2={axisY}
+              stroke={colors.secondary}
+              strokeDasharray="3,3"
+              strokeWidth={1}
+              opacity={0.6}
+            />
+            <SvgText
+              x={line.x}
+              y={PADDING.top - 2}
+              fill={colors.secondary}
+              fontSize={8}
+              textAnchor="middle"
+            >
+              {line.label}
+            </SvgText>
+          </React.Fragment>
         ))}
       </Svg>
     </View>
