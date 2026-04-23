@@ -239,7 +239,7 @@ export const CREATE_BODY_METRICS_TABLE = `
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     metric_type TEXT NOT NULL CHECK (metric_type IN ('weight', 'body_fat')),
     value REAL NOT NULL,
-    unit TEXT NOT NULL,
+    unit TEXT NOT NULL CHECK (unit IN ('lb', 'percent')),
     recorded_date TEXT NOT NULL,
     program_id INTEGER,
     note TEXT,
