@@ -10,12 +10,17 @@ import { BodyCompDateNav } from '../components/BodyCompDateNav';
 import { LogBodyMetricModal, LogBodyMetricPayload } from '../components/LogBodyMetricModal';
 import { BodyCompMonthView } from '../components/BodyCompMonthView';
 import { BodyCompWeekView } from '../components/BodyCompWeekView';
+import { BodyCompDayView } from '../components/BodyCompDayView';
 import {
+  getBodyMetricByDate,
   getBodyMetricsInRange,
   getDailyCalorieTotals,
+  getDayDetail,
   getProgramsInRange,
   upsertBodyMetric,
+  computeMovingAverage,
   type DailyCalorieTotal,
+  type DayDetail,
   type ProgramBound,
 } from '../db/bodyMetrics';
 import { getMacroGoals } from '../db/macros';
@@ -62,6 +67,11 @@ export function BodyCompView() {
   const [calories, setCalories] = useState<DailyCalorieTotal[]>([]);
   const [programs, setPrograms] = useState<ProgramBound[]>([]);
   const [calorieGoal, setCalorieGoal] = useState<number>(2200);
+  const [dayDetail, setDayDetail] = useState<DayDetail | null>(null);
+  const [yesterdayWeightInDay, setYesterdayWeightInDay] = useState<number | null>(null);
+  const [firstOfMonthWeight, setFirstOfMonthWeight] = useState<number | null>(null);
+  const [sevenDayMaVal, setSevenDayMaVal] = useState<number | null>(null);
+  const [macroGoalsState, setMacroGoalsState] = useState<{ protein: number; carbs: number; fat: number }>({ protein: 180, carbs: 220, fat: 73 });
 
   // Compute the scope's [startDate, endDate] window from the current selected date.
   const { startDate, endDate } = useMemo(() => {
@@ -107,7 +117,44 @@ export function BodyCompView() {
         : 2200,
     );
     setHasAny(anyWeights.length > 0);
-  }, [startDate, endDate]);
+
+    if (scope === 'day') {
+      const detail = await getDayDetail(date);
+      setDayDetail(detail);
+
+      // Yesterday's weight (for vs-yesterday delta)
+      const yIso = subtractDays(date, 1);
+      const yRow = await getBodyMetricByDate('weight', yIso);
+      setYesterdayWeightInDay(yRow?.value ?? null);
+
+      // First weight logged in the current month (for monthly delta)
+      const firstIso = date.slice(0, 8) + '01';
+      const fomList = await getBodyMetricsInRange('weight', firstIso, date);
+      setFirstOfMonthWeight(fomList[0]?.value ?? null);
+
+      // 7-day MA ending at this date — use subtractDays for TZ-safe math
+      const maStart = subtractDays(date, 6);
+      const maPoints = await getBodyMetricsInRange('weight', maStart, date);
+      setSevenDayMaVal(
+        computeMovingAverage(
+          maPoints.map(p => ({ recordedDate: p.recordedDate, value: p.value })),
+          date,
+          7,
+        ),
+      );
+
+      // Macro goals for the rings. Reuse the already-fetched macroGoals
+      // (same null-guard pattern as calorieGoal above — fields can be null).
+      setMacroGoalsState(
+        macroGoals &&
+        macroGoals.proteinGoal != null &&
+        macroGoals.carbGoal != null &&
+        macroGoals.fatGoal != null
+          ? { protein: macroGoals.proteinGoal, carbs: macroGoals.carbGoal, fat: macroGoals.fatGoal }
+          : { protein: 180, carbs: 220, fat: 73 },
+      );
+    }
+  }, [startDate, endDate, scope, date]);
 
   useFocusEffect(
     useCallback(() => {
@@ -177,8 +224,18 @@ export function BodyCompView() {
             calorieGoal={calorieGoal}
             onJumpToDay={(d) => { setScope('day'); setDate(d); }}
           />
+        ) : dayDetail ? (
+          <BodyCompDayView
+            date={date}
+            detail={dayDetail}
+            yesterdayWeight={yesterdayWeightInDay}
+            firstWeightOfMonth={firstOfMonthWeight}
+            calorieGoal={calorieGoal}
+            macroGoals={macroGoalsState}
+            sevenDayMa={sevenDayMaVal}
+          />
         ) : (
-          <Text style={{ color: colors.secondary, padding: spacing.lg }}>Day view — Task 21</Text>
+          <Text style={{ color: colors.secondary, padding: spacing.lg }}>Loading…</Text>
         )}
       </ScrollView>
       <LogBodyMetricModal

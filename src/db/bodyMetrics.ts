@@ -270,3 +270,83 @@ export async function getProgramsInRange(
   }
   return out;
 }
+
+export interface DayMealEntry {
+  name: string;
+  consumedAt: string;
+  calories: number;
+  items: string | null;
+}
+
+export interface DayDetail {
+  weight: number | null;
+  bodyFat: number | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  meals: DayMealEntry[];
+}
+
+export async function getDayDetail(date: string): Promise<DayDetail> {
+  const database = await db;
+
+  const [weightRow, bfRow, mealsRes, totalsRes] = await Promise.all([
+    executeSql(
+      database,
+      `SELECT value FROM body_metrics WHERE metric_type='weight' AND recorded_date=? LIMIT 1`,
+      [date],
+    ),
+    executeSql(
+      database,
+      `SELECT value FROM body_metrics WHERE metric_type='body_fat' AND recorded_date=? LIMIT 1`,
+      [date],
+    ),
+    executeSql(
+      database,
+      `SELECT description, meal_type, logged_at, protein_grams, carb_grams, fat_grams
+         FROM meals
+        WHERE local_date = ?
+        ORDER BY logged_at ASC`,
+      [date],
+    ),
+    executeSql(
+      database,
+      `SELECT COALESCE(SUM(protein_grams), 0) as p,
+              COALESCE(SUM(carb_grams),    0) as c,
+              COALESCE(SUM(fat_grams),     0) as f
+         FROM meals
+        WHERE local_date = ?`,
+      [date],
+    ),
+  ]);
+
+  const meals: DayMealEntry[] = [];
+  for (let i = 0; i < mealsRes.rows.length; i++) {
+    const m = mealsRes.rows.item(i);
+    const p = m.protein_grams as number;
+    const c = m.carb_grams as number;
+    const f = m.fat_grams as number;
+    meals.push({
+      name: m.meal_type as string,
+      consumedAt: m.logged_at as string,
+      calories: p * 4 + c * 4 + f * 9,
+      items: (m.description as string) || null,
+    });
+  }
+
+  const totals = totalsRes.rows.item(0);
+  const p = (totals?.p ?? 0) as number;
+  const c = (totals?.c ?? 0) as number;
+  const f = (totals?.f ?? 0) as number;
+
+  return {
+    weight: weightRow.rows.length > 0 ? (weightRow.rows.item(0).value as number) : null,
+    bodyFat: bfRow.rows.length > 0 ? (bfRow.rows.item(0).value as number) : null,
+    calories: p * 4 + c * 4 + f * 9,
+    protein: p,
+    carbs: c,
+    fat: f,
+    meals,
+  };
+}
