@@ -80,3 +80,69 @@ describe('LogBodyMetricModal — weight mode', () => {
     });
   });
 });
+
+describe('LogBodyMetricModal — body_fat mode & toggle', () => {
+  it('renders the body fat title when mode=body_fat', () => {
+    const { getByText } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="body_fat"
+        initialDate="2026-04-25"
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    expect(getByText('Log Body Fat %')).toBeTruthy();
+  });
+
+  it('rejects body fat value outside 3–60', () => {
+    const { getByTestId } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="body_fat"
+        initialDate="2026-04-25"
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    fireEvent.changeText(getByTestId('log-body-metric-value'), '0.5');
+    expect(getByTestId('log-body-metric-save').props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('accepts valid body fat value', () => {
+    const onSave = jest.fn();
+    const { getByTestId } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="body_fat"
+        initialDate="2026-04-25"
+        onClose={jest.fn()}
+        onSave={onSave}
+      />,
+    );
+    fireEvent.changeText(getByTestId('log-body-metric-value'), '18.0');
+    fireEvent.press(getByTestId('log-body-metric-save'));
+    expect(onSave).toHaveBeenCalledWith({
+      metricType: 'body_fat',
+      value: 18.0,
+      unit: 'percent',
+      recordedDate: '2026-04-25',
+      note: null,
+    });
+  });
+
+  it('mode toggle switches the active metric', () => {
+    const { getByTestId, getByText } = render(
+      <LogBodyMetricModal
+        visible={true}
+        mode="weight"
+        initialDate="2026-04-25"
+        onClose={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+    expect(getByText('Log Weight')).toBeTruthy();
+    fireEvent.press(getByTestId('log-body-metric-mode-body_fat'));
+    expect(getByText('Log Body Fat %')).toBeTruthy();
+  });
+});

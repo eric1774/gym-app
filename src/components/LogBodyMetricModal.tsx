@@ -32,39 +32,45 @@ export interface LogBodyMetricModalProps {
   onSave: (payload: LogBodyMetricPayload) => void;
 }
 
-const WEIGHT_RANGE = { min: 50, max: 500 };
+const RANGES: Record<BodyMetricType, { min: number; max: number; unit: BodyMetricUnit; label: string; title: string }> = {
+  weight:    { min: 50, max: 500, unit: 'lb',      label: 'Weight (lb)',      title: 'Log Weight' },
+  body_fat:  { min: 3,  max: 60,  unit: 'percent', label: 'Body Fat (%)',     title: 'Log Body Fat %' },
+};
 
 export function LogBodyMetricModal({
   visible,
-  mode,
+  mode: initialMode,
   initialDate,
   initialValue,
   initialNote,
   onClose,
   onSave,
 }: LogBodyMetricModalProps) {
+  const [mode, setMode] = useState<BodyMetricType>(initialMode);
   const [value, setValue] = useState('');
   const [note, setNote] = useState('');
 
   useEffect(() => {
     if (visible) {
+      setMode(initialMode);
       setValue(initialValue != null ? String(initialValue) : '');
       setNote(initialNote ?? '');
     }
-  }, [visible, initialValue, initialNote]);
+  }, [visible, initialMode, initialValue, initialNote]);
 
+  const range = RANGES[mode];
   const parsed = parseFloat(value);
   const inRange =
     !Number.isNaN(parsed) &&
-    parsed >= WEIGHT_RANGE.min &&
-    parsed <= WEIGHT_RANGE.max;
+    parsed >= range.min &&
+    parsed <= range.max;
 
   const handleSave = () => {
     if (!inRange) return;
     onSave({
-      metricType: 'weight',
+      metricType: mode,
       value: parsed,
-      unit: 'lb',
+      unit: range.unit,
       recordedDate: initialDate,
       note: note.trim() === '' ? null : note.trim(),
     });
@@ -79,20 +85,41 @@ export function LogBodyMetricModal({
       >
         <Pressable style={styles.overlay} onPress={onClose} />
         <View style={styles.sheet}>
-          <Text style={styles.title}>Log Weight</Text>
+          <Text style={styles.title}>{range.title}</Text>
 
-          <Text style={styles.label}>Weight (lb)</Text>
+          <View style={styles.modeRow}>
+            <Pressable
+              testID="log-body-metric-mode-weight"
+              onPress={() => setMode('weight')}
+              style={[styles.modeBtn, mode === 'weight' && styles.modeBtnActive]}
+            >
+              <Text style={[styles.modeText, mode === 'weight' && styles.modeTextActive]}>Weight</Text>
+            </Pressable>
+            <Pressable
+              testID="log-body-metric-mode-body_fat"
+              onPress={() => setMode('body_fat')}
+              style={[styles.modeBtn, mode === 'body_fat' && styles.modeBtnActive]}
+            >
+              <Text style={[styles.modeText, mode === 'body_fat' && styles.modeTextActive]}>Body Fat %</Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.label}>{range.label}</Text>
           <TextInput
             testID="log-body-metric-value"
             style={styles.input}
-            placeholder="e.g. 177.4"
+            placeholder={mode === 'weight' ? 'e.g. 177.4' : 'e.g. 18.0'}
             placeholderTextColor={colors.secondary}
             keyboardType="decimal-pad"
             value={value}
             onChangeText={setValue}
           />
           {!inRange && value.length > 0 && (
-            <Text style={styles.hint}>Weight must be between 50 and 500 lb.</Text>
+            <Text style={styles.hint}>
+              {mode === 'weight'
+                ? 'Weight must be between 50 and 500 lb.'
+                : 'Body fat must be between 3 and 60%.'}
+            </Text>
           )}
 
           <Text style={styles.label}>Note (optional)</Text>
@@ -135,6 +162,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   title: { color: colors.primary, fontSize: fontSize.lg, fontWeight: weightBold, marginBottom: spacing.base },
+  modeRow: { flexDirection: 'row', backgroundColor: colors.surfaceElevated, borderRadius: 10, padding: 3, marginBottom: spacing.sm },
+  modeBtn: { flex: 1, paddingVertical: spacing.sm, borderRadius: 8, alignItems: 'center' },
+  modeBtnActive: { backgroundColor: colors.surface },
+  modeText: { color: colors.secondary, fontSize: fontSize.sm, fontWeight: weightSemiBold },
+  modeTextActive: { color: colors.primary },
   label: { color: colors.secondary, fontSize: fontSize.xs, marginTop: spacing.base, marginBottom: spacing.xs, fontWeight: weightSemiBold, letterSpacing: 0.5 },
   input: {
     backgroundColor: colors.surfaceElevated,
