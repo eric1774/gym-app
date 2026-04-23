@@ -1,10 +1,10 @@
 import React from 'react';
 import { Dimensions, View } from 'react-native';
-import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import type { BodyCompScope } from '../types';
 
-// ── Public data interfaces (stable API for Tasks 16-18 to consume) ──
+// ── Public data interfaces (stable API for Tasks 17-18 to consume) ──
 export interface WeightPoint { recordedDate: string; value: number }
 export interface CaloriePoint { recordedDate: string; total: number }
 export interface BodyFatPoint { recordedDate: string; value: number }
@@ -21,10 +21,12 @@ export interface OverlayChartProps {
   calorieGoal: number;
 }
 
-// Padding inside the SVG to leave room for axis labels.
-const PADDING = { top: 12, bottom: 26, left: 36, right: 36 };
+const PADDING = { top: 12, bottom: 26, left: 36, right: 42 };
 
-// Parse a YYYY-MM-DD date to a noon-UTC timestamp — stable across DST.
+const BAR_OVER_GOAL = 'rgba(244,167,107,0.7)';   // warm orange — cal > goal
+const BAR_UNDER_GOAL = 'rgba(141,194,138,0.6)';  // mint at 60% — cal <= goal
+const GOAL_LINE = 'rgba(244,167,107,0.35)';      // faint orange for goal reference
+
 function toTime(date: string): number {
   return new Date(date + 'T12:00:00Z').getTime();
 }
@@ -38,13 +40,20 @@ function formatTimeTick(t: number, scope: BodyCompScope): string {
   return '';
 }
 
+function formatCalTick(v: number): string {
+  if (v >= 1000) { return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`; }
+  return String(Math.round(v));
+}
+
 export function OverlayChart({
   scope,
   startDate,
   endDate,
   weights,
+  calories,
+  calorieGoal,
 }: OverlayChartProps) {
-  const W = Dimensions.get('window').width - 2 * 16; // account for outer screen padding
+  const W = Dimensions.get('window').width - 2 * 16;
   const H = scope === 'week' ? 200 : 170;
   const innerW = W - PADDING.left - PADDING.right;
   const innerH = H - PADDING.top - PADDING.bottom;
@@ -53,19 +62,27 @@ export function OverlayChart({
   const tMax = toTime(endDate);
   const tSpan = Math.max(1, tMax - tMin);
 
-  // Weight Y-domain — snap to data with 1-lb padding, fall back to a pleasant default.
+  // Weight Y-domain
   const ws = weights.map(w => w.value);
   const minWeight = ws.length > 0 ? Math.min(...ws) - 1 : 175;
   const maxWeight = ws.length > 0 ? Math.max(...ws) + 1 : 180;
   const wSpan = Math.max(0.1, maxWeight - minWeight);
 
+  // Calorie Y-domain — goes through 0 so bars grow from the baseline.
+  const calTotals = calories.map(c => c.total);
+  const maxCal = calTotals.length > 0
+    ? Math.max(...calTotals, calorieGoal) * 1.1
+    : calorieGoal * 1.2;
+  const calSpan = Math.max(1, maxCal);
+
   const timeToX = (t: number) =>
     PADDING.left + ((t - tMin) / tSpan) * innerW;
   const weightToY = (v: number) =>
     PADDING.top + innerH - ((v - minWeight) / wSpan) * innerH;
+  const caloriesToY = (v: number) =>
+    PADDING.top + innerH - (v / calSpan) * innerH;
 
-  // Build weight polyline: M x1,y1 L x2,y2 L ... (straight segments).
-  // Single-point data renders nothing in the path; we draw a dot below so it's still visible.
+  // Weight line path
   const weightPath = weights
     .map((w, i) => {
       const x = timeToX(toTime(w.recordedDate));
@@ -74,13 +91,17 @@ export function OverlayChart({
     })
     .join(' ');
 
-  // Y-axis ticks: 4 evenly spaced values across weight domain.
+  // Y-axis ticks (left — weight)
   const weightTicks = [0, 1, 2, 3].map(i => {
     const v = minWeight + (i / 3) * wSpan;
     return { v, y: weightToY(v) };
   });
 
-  // X-axis ticks: 7 for week (one per day), 4 for month (week markers), 0 for day.
+  // Y-axis ticks (right — calories: 0, goal, max)
+  const calTickValues = [0, calorieGoal, maxCal];
+  const calTicks = calTickValues.map(v => ({ v, y: caloriesToY(v) }));
+
+  // X-axis ticks
   const tickCount = scope === 'week' ? 7 : scope === 'month' ? 4 : 0;
   const timeTicks = tickCount > 0
     ? Array.from({ length: tickCount }, (_, i) => {
@@ -89,12 +110,14 @@ export function OverlayChart({
       })
     : [];
 
-  const axisY = PADDING.top + innerH; // baseline of the chart
+  const axisY = PADDING.top + innerH;
+  const barWidth = scope === 'week' ? 22 : 6;
+  const goalLineY = caloriesToY(calorieGoal);
 
   return (
     <View testID="overlay-chart">
       <Svg width={W} height={H}>
-        {/* Horizontal grid lines at each weight tick */}
+        {/* 1. Weight horizontal grid lines */}
         {weightTicks.map((tick, i) => (
           <Line
             key={`wg-${i}`}
@@ -108,7 +131,46 @@ export function OverlayChart({
           />
         ))}
 
-        {/* Left Y-axis labels (weight, lb) */}
+        {/* 2. Calorie goal reference line (dashed, faint orange) */}
+        <Line
+          x1={PADDING.left}
+          x2={W - PADDING.right}
+          y1={goalLineY}
+          y2={goalLineY}
+          stroke={GOAL_LINE}
+          strokeDasharray="3,3"
+          strokeWidth={1}
+        />
+
+        {/* 3. Calorie bars (behind weight line) */}
+        {calories.map((c, i) => {
+          const x = timeToX(toTime(c.recordedDate));
+          const y = caloriesToY(c.total);
+          const h = axisY - y;
+          if (h <= 0) { return null; }
+          return (
+            <Rect
+              key={`cb-${i}`}
+              x={x - barWidth / 2}
+              y={y}
+              width={barWidth}
+              height={h}
+              fill={c.total > calorieGoal ? BAR_OVER_GOAL : BAR_UNDER_GOAL}
+            />
+          );
+        })}
+
+        {/* 4. Bottom X-axis baseline */}
+        <Line
+          x1={PADDING.left}
+          x2={W - PADDING.right}
+          y1={axisY}
+          y2={axisY}
+          stroke={colors.surfaceElevated}
+          strokeWidth={1}
+        />
+
+        {/* 5. Left Y-axis labels (weight in lb) */}
         {weightTicks.map((tick, i) => (
           <SvgText
             key={`wl-${i}`}
@@ -122,17 +184,21 @@ export function OverlayChart({
           </SvgText>
         ))}
 
-        {/* Bottom X-axis baseline */}
-        <Line
-          x1={PADDING.left}
-          x2={W - PADDING.right}
-          y1={axisY}
-          y2={axisY}
-          stroke={colors.surfaceElevated}
-          strokeWidth={1}
-        />
+        {/* 6. Right Y-axis labels (calories) */}
+        {calTicks.map((tick, i) => (
+          <SvgText
+            key={`cl-${i}`}
+            x={W - PADDING.right + 4}
+            y={tick.y + 3}
+            fill={colors.secondary}
+            fontSize={9}
+            textAnchor="start"
+          >
+            {formatCalTick(tick.v)}
+          </SvgText>
+        ))}
 
-        {/* X-axis tick labels */}
+        {/* 7. X-axis tick labels */}
         {timeTicks.map((tick, i) => (
           <SvgText
             key={`xl-${i}`}
@@ -146,7 +212,7 @@ export function OverlayChart({
           </SvgText>
         ))}
 
-        {/* Weight line */}
+        {/* 8. Weight line (front) */}
         {weights.length >= 2 && (
           <Path
             d={weightPath}
@@ -156,7 +222,7 @@ export function OverlayChart({
           />
         )}
 
-        {/* Weight dots — always render so single-point data is still visible */}
+        {/* 9. Weight dots */}
         {weights.map((w, i) => (
           <Circle
             key={`wd-${i}`}
