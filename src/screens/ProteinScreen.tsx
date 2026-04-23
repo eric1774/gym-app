@@ -7,11 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBar } from '../components/TabBar';
 import { MacrosView } from '../components/MacrosView';
 import { HydrationView } from '../components/HydrationView';
+import { BodyCompView } from './BodyCompView';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold } from '../theme/typography';
 
-const TABS = ['Macros', 'Hydration'];
+const TABS = ['Macros', 'Hydration', 'Body Comp'];
 
 export function ProteinScreen() {
   const insets = useSafeAreaInsets();
@@ -33,8 +34,10 @@ export function ProteinScreen() {
       <TabBar tabs={TABS} activeIndex={activeTab} onTabPress={setActiveTab} />
       {activeTab === 0 ? (
         <MacrosView navigation={navigation} />
-      ) : (
+      ) : activeTab === 1 ? (
         <HydrationView />
+      ) : (
+        <BodyCompView />
       )}
     </View>
   );
