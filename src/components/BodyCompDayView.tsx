@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
@@ -16,11 +17,41 @@ export interface BodyCompDayViewProps {
 }
 
 function MacroCard({ label, color, grams, goal }: { label: string; color: string; grams: number; goal: number }) {
+  const size = 54;
+  const strokeWidth = 5;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = goal > 0 ? Math.min(1, grams / goal) : 0;
+
   return (
     <View style={styles.macroCard}>
-      <View style={[styles.ring, { borderColor: color, borderRightColor: color + '33' }]}>
-        <Text style={styles.ringVal}>{Math.round(grams)}</Text>
-        <Text style={styles.ringGoal}>/{goal}g</Text>
+      <View style={styles.ringContainer}>
+        <Svg width={size} height={size}>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color + '33'}
+            strokeWidth={strokeWidth}
+            fill="none"
+          />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={circumference * (1 - pct)}
+            strokeLinecap="round"
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        </Svg>
+        <View style={styles.ringLabel}>
+          <Text style={styles.ringVal}>{Math.round(grams)}</Text>
+          <Text style={styles.ringGoal}>/{goal}g</Text>
+        </View>
       </View>
       <Text style={[styles.macroLabel, { color }]}>{label}</Text>
     </View>
@@ -122,7 +153,8 @@ const styles = StyleSheet.create({
   kpiDelta: { fontSize: fontSize.xs, marginTop: 2, color: colors.secondary, fontWeight: weightSemiBold },
   macros: { flexDirection: 'row', gap: spacing.sm, padding: spacing.base },
   macroCard: { flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: spacing.md, alignItems: 'center' },
-  ring: { width: 54, height: 54, borderRadius: 27, borderWidth: 5, alignItems: 'center', justifyContent: 'center' },
+  ringContainer: { width: 54, height: 54 },
+  ringLabel: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   ringVal: { color: colors.primary, fontSize: fontSize.sm, fontWeight: weightBold },
   ringGoal: { color: colors.secondary, fontSize: 9 },
   macroLabel: { fontSize: fontSize.xs, fontWeight: weightBold, marginTop: 6, letterSpacing: 0.6 },
