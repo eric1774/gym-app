@@ -196,15 +196,15 @@ export function OverlayChart({
           <Text style={legendStyles.label}>Body Fat %</Text>
         </View>
         <View style={legendStyles.item}>
-          <Svg width={16} height={2}>
+          <Svg width={14} height={2}>
             <Line
               x1={0}
               y1={1}
-              x2={16}
+              x2={14}
               y2={1}
               stroke={GOAL_LINE}
               strokeWidth={1.2}
-              strokeDasharray="3,3"
+              strokeDasharray="3,2"
             />
           </Svg>
           <Text style={legendStyles.label}>Calorie Goal</Text>
@@ -383,22 +383,22 @@ const legendStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 14,
+    gap: 8,
     paddingBottom: 8,
     paddingLeft: 4,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
   label: {
     color: colors.secondary,
-    fontSize: fontSize.xs,
+    fontSize: 9,
     fontWeight: weightSemiBold,
   },
   weightLine: {
-    width: 14,
+    width: 12,
     height: 2,
     backgroundColor: colors.accent,
     borderRadius: 1,
@@ -408,14 +408,14 @@ const legendStyles = StyleSheet.create({
     gap: 1,
   },
   calSwatch: {
-    width: 6,
-    height: 10,
+    width: 5,
+    height: 9,
     borderRadius: 1,
   },
   bfDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: '#F4C77B',
     borderColor: colors.background,
     borderWidth: 1,
