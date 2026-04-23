@@ -44,3 +44,24 @@ Perform on the emulator + physical device.
 ## Data integrity
 - [ ] Launch on a fresh install — V24 migration runs, table exists, no errors
 - [ ] Restart the app after logging — data persists
+
+## Post-UAT fixes (added after on-device feedback)
+
+### Replace modal + WEEK chart axis (commit 1cf9b4a)
+- [ ] Collision "Replace existing reading?" renders as a dark-mint themed modal, not the white Android Alert
+- [ ] Tapping the backdrop dismisses the modal
+- [ ] WEEK chart: leftmost calorie bar does not cover the Y-axis weight labels
+
+### Keyboard avoidance + DAY calorie rounding (commit a44069b)
+- [ ] Dashboard log modal: tap Weight field — keyboard does not cover the input
+- [ ] Dashboard log modal: tap Note field — keyboard does not cover the input
+- [ ] DAY page: calorie number and over/under-goal delta are whole numbers (no decimals)
+
+### Colors + scroll + program delete (commit 9b267ba)
+- [ ] MONTH + WEEK bars: over-goal is mint (green), under-goal is amber (yellow)
+- [ ] WEEK daily-breakdown row text: over-goal day is mint, under-goal day is amber, missing-data days stay neutral grey
+- [ ] DAY over/under-goal delta text: over is mint, under is amber
+- [ ] Dashboard scrolls — Today's Nutrition (NutritionRingsCard) is reachable below the weight card
+- [ ] Delete a program → close app → reopen → program stays gone
+- [ ] Delete a program → sessions logged under that program are also gone from history/progress views
+- [ ] Delete a program → body-metric weight history still intact (weights survive via ON DELETE SET NULL)
