@@ -119,6 +119,7 @@ export function BodyCompView() {
     setHasAny(anyWeights.length > 0);
 
     if (scope === 'day') {
+      setDayDetail(null);
       const detail = await getDayDetail(date);
       setDayDetail(detail);
 
