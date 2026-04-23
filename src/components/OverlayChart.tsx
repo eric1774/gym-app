@@ -1,8 +1,9 @@
 import React from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { computeMovingAverage } from '../db/bodyMetrics';
 import { colors } from '../theme/colors';
+import { fontSize, weightSemiBold } from '../theme/typography';
 import type { BodyCompScope } from '../types';
 
 // ── Public data interfaces (stable API for Tasks 17-18 to consume) ──
@@ -168,7 +169,47 @@ export function OverlayChart({
 
   return (
     <View testID="overlay-chart">
+      {/* Legend — identifies the 3 data series so color reuse (mint = weight line + under-goal bars) isn't ambiguous. */}
+      <View style={legendStyles.row}>
+        <View style={legendStyles.item}>
+          <View style={legendStyles.weightLine} />
+          <Text style={legendStyles.label}>Weight (lb)</Text>
+        </View>
+        <View style={legendStyles.item}>
+          <View style={legendStyles.calSwatchRow}>
+            <View style={[legendStyles.calSwatch, { backgroundColor: BAR_UNDER_GOAL }]} />
+            <View style={[legendStyles.calSwatch, { backgroundColor: BAR_OVER_GOAL }]} />
+          </View>
+          <Text style={legendStyles.label}>Calories (kcal)</Text>
+        </View>
+        <View style={legendStyles.item}>
+          <View style={legendStyles.bfDot} />
+          <Text style={legendStyles.label}>Body Fat %</Text>
+        </View>
+      </View>
       <Svg width={W} height={H}>
+        {/* 0. Axis unit hints — tiny labels at the top of each Y-axis region */}
+        <SvgText
+          x={PADDING.left - 6}
+          y={PADDING.top - 2}
+          fill={colors.secondary}
+          fontSize={8}
+          textAnchor="end"
+          opacity={0.7}
+        >
+          lb
+        </SvgText>
+        <SvgText
+          x={W - PADDING.right + 4}
+          y={PADDING.top - 2}
+          fill={colors.secondary}
+          fontSize={8}
+          textAnchor="start"
+          opacity={0.7}
+        >
+          kcal
+        </SvgText>
+
         {/* 1. Weight horizontal grid lines */}
         {weightTicks.map((tick, i) => (
           <Line
@@ -325,3 +366,47 @@ export function OverlayChart({
     </View>
   );
 }
+
+const legendStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 14,
+    paddingBottom: 8,
+    paddingLeft: 4,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  label: {
+    color: colors.secondary,
+    fontSize: fontSize.xs,
+    fontWeight: weightSemiBold,
+  },
+  weightLine: {
+    width: 14,
+    height: 2,
+    backgroundColor: colors.accent,
+    borderRadius: 1,
+  },
+  calSwatchRow: {
+    flexDirection: 'row',
+    gap: 1,
+  },
+  calSwatch: {
+    width: 6,
+    height: 10,
+    borderRadius: 1,
+  },
+  bfDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F4C77B',
+    borderColor: colors.background,
+    borderWidth: 1,
+  },
+});
