@@ -150,8 +150,9 @@ export function OverlayChart({
     return { v, y: weightToY(v) };
   });
 
-  // Y-axis ticks (right — calories: 0, goal, max)
-  const calTickValues = [0, calorieGoal, maxCal];
+  // Y-axis ticks (right — calories). Skip the 0 baseline tick — the x-axis IS zero,
+  // and a "0" label collides with the goal tick whenever goal is small relative to max.
+  const calTickValues = [calorieGoal, maxCal];
   const calTicks = calTickValues.map(v => ({ v, y: caloriesToY(v) }));
 
   // X-axis ticks
