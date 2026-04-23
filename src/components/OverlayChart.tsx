@@ -195,6 +195,20 @@ export function OverlayChart({
           <View style={legendStyles.bfDot} />
           <Text style={legendStyles.label}>Body Fat %</Text>
         </View>
+        <View style={legendStyles.item}>
+          <Svg width={16} height={2}>
+            <Line
+              x1={0}
+              y1={1}
+              x2={16}
+              y2={1}
+              stroke={GOAL_LINE}
+              strokeWidth={1.2}
+              strokeDasharray="3,3"
+            />
+          </Svg>
+          <Text style={legendStyles.label}>Calorie Goal</Text>
+        </View>
       </View>
       <Svg width={W} height={H}>
         {/* 1. Weight horizontal grid lines */}
