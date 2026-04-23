@@ -111,7 +111,7 @@ export function BodyCompMonthView({
             : undefined
           }
         />
-        <SummaryRow label="Days logged" value={`${daysLogged}`} />
+        <SummaryRow label="Weigh-ins" value={`${daysLogged}`} />
         <SummaryRow label="Days over calorie goal" value={`${daysOverGoal}`} />
         <SummaryRow
           label="Rate"
