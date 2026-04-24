@@ -7,7 +7,9 @@ const KEY = '@userProfile.firstName';
  * Returns null if no name has been saved.
  */
 export async function getUserFirstName(): Promise<string | null> {
-  return AsyncStorage.getItem(KEY);
+  const v = await AsyncStorage.getItem(KEY);
+  if (v === null || v === '') { return null; }
+  return v;
 }
 
 /**
