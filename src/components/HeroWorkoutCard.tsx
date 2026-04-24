@@ -46,17 +46,15 @@ export function HeroWorkoutCard(p: HeroWorkoutCardProps) {
         base={{ from: '#1E2024', to: '#1A3326', angleDeg: 135 }}
         overlays={[
           {
-            type: 'radial', cx: '10%', cy: '10%', rx: '70%', ry: '70%',
+            type: 'radial',
+            cx: '0%', cy: '0%', rx: '115%', ry: '115%',
             stops: [
-              { offset: 0, color: '#8DC28A', opacity: 0.35 },
-              { offset: 0.55, color: '#8DC28A', opacity: 0 },
-            ],
-          },
-          {
-            type: 'radial', cx: '95%', cy: '0%', rx: '50%', ry: '50%',
-            stops: [
-              { offset: 0, color: '#8DC28A', opacity: 0.2 },
-              { offset: 0.7, color: '#8DC28A', opacity: 0 },
+              { offset: 0,    color: '#8DC28A', opacity: 0.32 },
+              { offset: 0.2,  color: '#8DC28A', opacity: 0.20 },
+              { offset: 0.4,  color: '#8DC28A', opacity: 0.11 },
+              { offset: 0.6,  color: '#8DC28A', opacity: 0.05 },
+              { offset: 0.8,  color: '#8DC28A', opacity: 0.015 },
+              { offset: 1,    color: '#8DC28A', opacity: 0 },
             ],
           },
         ]}

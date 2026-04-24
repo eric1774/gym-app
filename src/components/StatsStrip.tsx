@@ -23,10 +23,14 @@ export function StatsStrip({ data, onPress }: StatsStripProps) {
         borderRadius={16}
         base={{ from: colors.surface, to: colors.surface, angleDeg: 0 }}
         overlays={[{
-          type: 'radial', cx: '50%', cy: '50%', rx: '70%', ry: '70%',
+          type: 'radial',
+          cx: '50%', cy: '50%', rx: '95%', ry: '95%',
           stops: [
-            { offset: 0, color: '#FFB800', opacity: 0.08 },
-            { offset: 0.7, color: '#FFB800', opacity: 0 },
+            { offset: 0,    color: '#FFB800', opacity: 0.09 },
+            { offset: 0.25, color: '#FFB800', opacity: 0.05 },
+            { offset: 0.5,  color: '#FFB800', opacity: 0.025 },
+            { offset: 0.75, color: '#FFB800', opacity: 0.008 },
+            { offset: 1,    color: '#FFB800', opacity: 0 },
           ],
         }]}
       />

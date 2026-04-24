@@ -22,10 +22,14 @@ export function VolumeTrendCard({ deltaPercent, weeklyBars, onPress }: VolumeTre
         borderRadius={14}
         base={{ from: '#1E2024', to: '#1C2228', angleDeg: 165 }}
         overlays={[{
-          type: 'radial', cx: '90%', cy: '10%', rx: '60%', ry: '60%',
+          type: 'radial',
+          cx: '95%', cy: '-10%', rx: '115%', ry: '115%',
           stops: [
-            { offset: 0, color: '#5B7A95', opacity: 0.14 },
-            { offset: 0.65, color: '#5B7A95', opacity: 0 },
+            { offset: 0,    color: '#5B7A95', opacity: 0.16 },
+            { offset: 0.25, color: '#5B7A95', opacity: 0.09 },
+            { offset: 0.5,  color: '#5B7A95', opacity: 0.04 },
+            { offset: 0.75, color: '#5B7A95', opacity: 0.01 },
+            { offset: 1,    color: '#5B7A95', opacity: 0 },
           ],
         }]}
       />
