@@ -19,7 +19,7 @@ import { getStatsStripData, StatsStripData } from '../db/progress';
 import { getHeroWorkoutContext, HeroWorkoutContext } from '../db/heroWorkoutContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
 import { NextWorkoutInfo, Exercise } from '../types';
 import { useSession } from '../context/SessionContext';
@@ -34,7 +34,7 @@ import { VolumeTrendCard } from '../components/VolumeTrendCard';
 import { NutritionRingsCard } from '../components/NutritionRingsCard';
 import { StatsStrip } from '../components/StatsStrip';
 import { LogBodyMetricModal } from '../components/LogBodyMetricModal';
-import { getBodyMetricByDate, upsertBodyMetric } from '../db/bodyMetrics';
+import { upsertBodyMetric } from '../db/bodyMetrics';
 import { CelebrationModal } from '../components/CelebrationModal';
 import { HighlightReelModal } from '../components/HighlightReelModal';
 
@@ -322,9 +322,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   greeting: {
     color: colors.secondary,
@@ -332,8 +332,8 @@ const styles = StyleSheet.create({
   },
   trendRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginHorizontal: 16,
-    marginBottom: 10,
+    gap: spacing.sm,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
   },
 });
