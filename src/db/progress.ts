@@ -1,3 +1,4 @@
+import type { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { db, executeSql } from './database';
 import {
   WeeklySnapshot,
@@ -789,6 +790,104 @@ export async function getSessionComparison(
     comparisonDate,
     comparisonLabel,
   };
+}
+
+// ── getStatsStripData ────────────────────────────────────────────────
+
+export interface StatsStripData {
+  sessions: { current: number; lastWeek: number };
+  prs: { current: number; lastWeek: number };
+  tonnage: { currentLb: number; lastWeekLb: number };
+}
+
+const STATS_STRIP_KG_TO_LB = 2.20462;
+
+/**
+ * Same-point-in-week comparison for dashboard stats strip.
+ *
+ * On Tuesday at 10am:
+ *   current  = Mon 00:00 → now (this week)
+ *   lastWeek = Mon 00:00 last week → (Mon last week + elapsed since this Monday)
+ *
+ * This means we compare Mon-Tue-10am this week to Mon-Tue-10am last week — apples to apples.
+ * Once Sunday rolls over, current = full week, lastWeek = full prior week automatically.
+ */
+export async function getStatsStripData(): Promise<StatsStripData> {
+  const database = await db;
+  const now = new Date();
+  const thisStart = getWeekStart(now);
+  const elapsedMs = now.getTime() - new Date(thisStart).getTime();
+  const lastStart = new Date(getPreviousWeekStart(now));
+  const lastEnd = new Date(lastStart.getTime() + elapsedMs);
+
+  const [sCur, sLast] = await Promise.all([
+    countSessions_(database, thisStart, now.toISOString()),
+    countSessions_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+  const [tCur, tLast] = await Promise.all([
+    sumTonnageKg_(database, thisStart, now.toISOString()),
+    sumTonnageKg_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+  const [pCur, pLast] = await Promise.all([
+    countPRs_(database, thisStart, now.toISOString()),
+    countPRs_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+
+  return {
+    sessions: { current: sCur, lastWeek: sLast },
+    prs: { current: pCur, lastWeek: pLast },
+    tonnage: {
+      currentLb: Math.round(tCur * STATS_STRIP_KG_TO_LB),
+      lastWeekLb: Math.round(tLast * STATS_STRIP_KG_TO_LB),
+    },
+  };
+}
+
+async function countSessions_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT COUNT(*) AS cnt FROM workout_sessions
+      WHERE completed_at >= ? AND completed_at < ?`,
+    [from, to],
+  );
+  return Number(r.rows.item(0).cnt ?? 0);
+}
+
+async function sumTonnageKg_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT SUM(ws.weight_kg * ws.reps) AS v
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+       JOIN exercises e ON e.id = ws.exercise_id
+      WHERE s.completed_at >= ? AND s.completed_at < ?
+        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+        AND e.measurement_type != 'height_reps'`,
+    [from, to],
+  );
+  return Number(r.rows.item(0).v ?? 0);
+}
+
+async function countPRs_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT COUNT(DISTINCT ws.exercise_id) AS pr_count
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       AND ws.weight_kg > (
+         SELECT COALESCE(MAX(ws2.weight_kg), 0)
+         FROM workout_sets ws2
+         INNER JOIN workout_sessions wss2 ON wss2.id = ws2.session_id
+         WHERE ws2.exercise_id = ws.exercise_id
+           AND wss2.completed_at < ?
+           AND (ws2.is_warmup IS NULL OR ws2.is_warmup = 0)
+       )`,
+    [from, to, from],
+  );
+  return Number(r.rows.item(0).pr_count ?? 0);
 }
 
 // ── getSessionSetDetail ──────────────────────────────────────────────

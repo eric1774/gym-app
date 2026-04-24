@@ -8,6 +8,7 @@ import {
   getExerciseInsights,
   getSessionComparison,
   getSessionSetDetail,
+  getStatsStripData,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -350,5 +351,122 @@ describe('getSessionSetDetail', () => {
     const result = await getSessionSetDetail(10, 1);
     expect(result).toHaveLength(1);
     expect(result[0].restSeconds).toBeNull();
+  });
+});
+
+// ── getStatsStripData ────────────────────────────────────────────────
+
+describe('getStatsStripData (same-point-in-week)', () => {
+  it('returns zeros when no events exist', async () => {
+    // Q1: sessions current, Q2: sessions lastWeek
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }]));
+    // Q3: tonnage current, Q4: tonnage lastWeek
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: null }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: null }]));
+    // Q5: PRs current, Q6: PRs lastWeek
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
+
+    const data = await getStatsStripData();
+    expect(data.sessions).toEqual({ current: 0, lastWeek: 0 });
+    expect(data.prs).toEqual({ current: 0, lastWeek: 0 });
+    expect(data.tonnage).toEqual({ currentLb: 0, lastWeekLb: 0 });
+  });
+
+  it('queries sessions in this-week window and last-week-equivalent window', async () => {
+    // Capture all executeSql calls to inspect parameters
+    const calls: Array<{ sql: string; params: unknown[] }> = [];
+    mockExecuteSql.mockImplementation(((_db: unknown, sql: string, params: unknown[]) => {
+      calls.push({ sql, params });
+      if (sql.includes('COUNT(*)') && sql.includes('workout_sessions')) {
+        return Promise.resolve(mockResultSet([{ cnt: 2 }]));
+      }
+      if (sql.includes('SUM(')) {
+        return Promise.resolve(mockResultSet([{ v: 0 }]));
+      }
+      return Promise.resolve(mockResultSet([{ pr_count: 0 }]));
+    }) as any);
+
+    await getStatsStripData();
+
+    // Find the two session-count calls
+    const sessionCalls = calls.filter(
+      c => c.sql.includes('COUNT(*)') && c.sql.includes('workout_sessions'),
+    );
+    expect(sessionCalls).toHaveLength(2);
+
+    const [curFrom, curTo] = sessionCalls[0].params as string[];
+    const [lastFrom, lastTo] = sessionCalls[1].params as string[];
+
+    // Both are ISO strings
+    expect(() => new Date(curFrom)).not.toThrow();
+    expect(() => new Date(curTo)).not.toThrow();
+    expect(() => new Date(lastFrom)).not.toThrow();
+    expect(() => new Date(lastTo)).not.toThrow();
+
+    // current window: thisStart <= now
+    expect(new Date(curFrom).getTime()).toBeLessThanOrEqual(new Date(curTo).getTime());
+
+    // lastWeek window: lastStart is 7 days before thisStart
+    const diffMs = new Date(curFrom).getTime() - new Date(lastFrom).getTime();
+    expect(diffMs).toBeCloseTo(7 * 24 * 60 * 60 * 1000, -3); // ±1 second tolerance
+
+    // elapsed spans should be equal (same-point-in-week)
+    const curElapsed = new Date(curTo).getTime() - new Date(curFrom).getTime();
+    const lastElapsed = new Date(lastTo).getTime() - new Date(lastFrom).getTime();
+    expect(curElapsed).toBeCloseTo(lastElapsed, -3);
+  });
+
+  it('converts tonnage to lb (kg × 2.20462, rounded)', async () => {
+    // sessions: current=1, lastWeek=0
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 1 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }]));
+    // tonnage: current=1000 kg, lastWeek=0 kg
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: 1000 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: 0 }]));
+    // PRs
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
+
+    const data = await getStatsStripData();
+    // 1000 kg × 2.20462 = 2204.62 → rounded = 2205
+    expect(data.tonnage.currentLb).toBe(2205);
+    expect(data.tonnage.lastWeekLb).toBe(0);
+  });
+
+  it('PRs use same window comparison — PR query called twice', async () => {
+    const prCalls: Array<{ sql: string; params: unknown[] }> = [];
+    mockExecuteSql.mockImplementation(((_db: unknown, sql: string, params: unknown[]) => {
+      if (sql.includes('COUNT(*)') && sql.includes('workout_sessions')) {
+        return Promise.resolve(mockResultSet([{ cnt: 0 }]));
+      }
+      if (sql.includes('SUM(')) {
+        return Promise.resolve(mockResultSet([{ v: 0 }]));
+      }
+      // PR query
+      prCalls.push({ sql, params });
+      return Promise.resolve(mockResultSet([{ pr_count: 1 }]));
+    }) as any);
+
+    const data = await getStatsStripData();
+
+    expect(prCalls).toHaveLength(2);
+    // Both calls should use the same 3-parameter PR query shape
+    expect(prCalls[0].params).toHaveLength(3);
+    expect(prCalls[1].params).toHaveLength(3);
+
+    // current PR window: params[2] (the "before this period" cutoff) === params[0] (from)
+    expect(prCalls[0].params[0]).toBe(prCalls[0].params[2]);
+    // last-week PR window: same invariant
+    expect(prCalls[1].params[0]).toBe(prCalls[1].params[2]);
+
+    // The from boundaries for the two calls should be ~7 days apart
+    const diffMs =
+      new Date(prCalls[0].params[0] as string).getTime() -
+      new Date(prCalls[1].params[0] as string).getTime();
+    expect(diffMs).toBeCloseTo(7 * 24 * 60 * 60 * 1000, -3);
+
+    expect(data.prs).toEqual({ current: 1, lastWeek: 1 });
   });
 });
