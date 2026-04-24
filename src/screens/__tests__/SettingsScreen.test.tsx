@@ -30,6 +30,10 @@ jest.mock('../DeviceScanSheet', () => ({
 jest.mock('../../db/repair', () => ({
   repairProgramData: jest.fn().mockResolvedValue('Repair complete'),
 }));
+jest.mock('../../services/UserProfileService', () => ({
+  getUserFirstName: jest.fn().mockResolvedValue(null),
+  setUserFirstName: jest.fn().mockResolvedValue(undefined),
+}));
 
 function renderSettings() {
   return render(
@@ -117,6 +121,39 @@ describe('SettingsScreen', () => {
 
     await waitFor(() => {
       expect(getByPlaceholderText('Enter age')).toBeTruthy();
+    });
+  });
+
+  describe('Your Name field', () => {
+    const { getUserFirstName, setUserFirstName } = require('../../services/UserProfileService');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('pre-populates the name input with the saved name', async () => {
+      getUserFirstName.mockResolvedValue('Eric');
+
+      const { findByDisplayValue } = renderSettings();
+
+      await findByDisplayValue('Eric');
+    });
+
+    it('calls setUserFirstName with trimmed value on blur', async () => {
+      getUserFirstName.mockResolvedValue(null);
+      setUserFirstName.mockResolvedValue(undefined);
+
+      const { getByTestId } = renderSettings();
+
+      await waitFor(() => expect(getByTestId('settings-name-input')).toBeTruthy());
+
+      const input = getByTestId('settings-name-input');
+      fireEvent.changeText(input, '  Eric  ');
+      fireEvent(input, 'blur');
+
+      await waitFor(() => {
+        expect(setUserFirstName).toHaveBeenCalledWith('  Eric  ');
+      });
     });
   });
 });
