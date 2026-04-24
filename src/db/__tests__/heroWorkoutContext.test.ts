@@ -1,10 +1,9 @@
 jest.mock('../database');
 
-import { db, executeSql } from '../database';
 import { mockResultSet } from '@test-utils';
 import { getHeroWorkoutContext } from '../heroWorkoutContext';
 
-const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
+const mockExecuteSql = require('../database').executeSql as jest.MockedFunction<any>;
 
 const mockDb = {};
 const dbModule = require('../database');
@@ -100,5 +99,23 @@ describe('getHeroWorkoutContext', () => {
     expect(result.addedSinceLast).toBeNull();
     // Should NOT make further queries after finding no reps exercise
     expect(mockExecuteSql).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns { headlineLift: null, addedSinceLast: null } when recent session has no sets for the headline exercise', async () => {
+    // Q1: program_day_exercises — returns one reps exercise
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ exercise_id: 10, name: 'Bench Press', measurement_type: 'reps' }]),
+    );
+    // Q2: sessions — returns one session
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 50 }]),
+    );
+    // Q3: topSet for that session/exercise — empty (no sets logged)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+
+    const result = await getHeroWorkoutContext(4);
+
+    expect(result.headlineLift).toBeNull();
+    expect(result.addedSinceLast).toBeNull();
   });
 });
