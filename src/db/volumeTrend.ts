@@ -1,3 +1,4 @@
+import type { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { db, executeSql } from './database';
 
 const KG_TO_LB = 2.20462;
@@ -38,7 +39,7 @@ function addDays(d: Date, n: number): Date {
   return o;
 }
 
-async function sumKg(database: any, fromIso: string, toIso: string): Promise<number> {
+async function sumKg(database: SQLiteDatabase, fromIso: string, toIso: string): Promise<number> {
   const r = await executeSql(
     database,
     `SELECT SUM(ws.weight_kg * ws.reps) AS v
