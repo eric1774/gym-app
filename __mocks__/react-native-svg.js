@@ -20,5 +20,6 @@ module.exports = {
   Polygon: createMockComponent('Polygon'),
   Defs: createMockComponent('Defs'),
   LinearGradient: createMockComponent('LinearGradient'),
+  RadialGradient: createMockComponent('RadialGradient'),
   Stop: createMockComponent('Stop'),
 };
