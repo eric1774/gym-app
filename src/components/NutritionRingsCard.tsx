@@ -19,10 +19,171 @@ const RING_COLORS = {
   water: colors.water,        // #4A8DB7 ocean blue
 } as const;
 
+/** Per-macro tinted seat backgrounds. */
+const SEAT_TINTS = {
+  protein: 'rgba(141,194,138,0.06)',  // mint
+  carbs:   'rgba(255,184,0,0.06)',    // gold
+  fat:     'rgba(232,132,92,0.06)',   // coral
+  water:   'rgba(74,141,183,0.06)',   // water blue
+} as const;
+
 function pct(current: number, goal: number | null): number {
   if (!goal || goal <= 0) return 0;
   return Math.min(100, Math.round((current / goal) * 100));
 }
+
+/** Compute the "Xg left" / "Xg over" / "Goal hit ✓" / "Set goal" sublabel. */
+function sublabel(
+  current: number,
+  goal: number | null,
+  unit: 'g' | 'oz',
+): { text: string; style: 'accent' | 'secondary' | 'setGoal' } {
+  if (goal === null) {
+    return { text: 'Set goal', style: 'setGoal' };
+  }
+  const roundedCurrent = Math.round(current);
+  const roundedGoal = Math.round(goal);
+  if (roundedCurrent === roundedGoal) {
+    return { text: 'Goal hit ✓', style: 'accent' };
+  }
+  if (roundedCurrent > roundedGoal) {
+    return { text: `${roundedCurrent - roundedGoal}${unit} over`, style: 'secondary' };
+  }
+  return { text: `${roundedGoal - roundedCurrent}${unit} left`, style: 'secondary' };
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+export interface MacroStat {
+  current: number;
+  goal: number | null;
+}
+
+export interface NutritionRingsViewProps {
+  protein: MacroStat;
+  carbs: MacroStat;
+  fat: MacroStat;
+  /** Water values in oz. */
+  water: MacroStat;
+  onRingPress?: (kind: 'protein' | 'carbs' | 'fat' | 'water') => void;
+}
+
+// ─── Pure presentation component ─────────────────────────────────────────────
+
+export function NutritionRingsView({
+  protein,
+  carbs,
+  fat,
+  water,
+  onRingPress,
+}: NutritionRingsViewProps) {
+  // Kcal calculations
+  const currentKcal = Math.round(
+    protein.current * 4 + carbs.current * 4 + fat.current * 9,
+  );
+  const allGoalsSet =
+    protein.goal !== null && carbs.goal !== null && fat.goal !== null;
+  const goalKcal = allGoalsSet
+    ? Math.round(
+        (protein.goal as number) * 4 +
+          (carbs.goal as number) * 4 +
+          (fat.goal as number) * 9,
+      )
+    : null;
+
+  const rings = [
+    {
+      key: 'protein' as const,
+      label: 'Protein',
+      color: RING_COLORS.protein,
+      seatTint: SEAT_TINTS.protein,
+      current: protein.current,
+      goal: protein.goal,
+      unit: 'g' as const,
+      delay: 0,
+    },
+    {
+      key: 'carbs' as const,
+      label: 'Carbs',
+      color: RING_COLORS.carbs,
+      seatTint: SEAT_TINTS.carbs,
+      current: carbs.current,
+      goal: carbs.goal,
+      unit: 'g' as const,
+      delay: 50,
+    },
+    {
+      key: 'fat' as const,
+      label: 'Fat',
+      color: RING_COLORS.fat,
+      seatTint: SEAT_TINTS.fat,
+      current: fat.current,
+      goal: fat.goal,
+      unit: 'g' as const,
+      delay: 100,
+    },
+    {
+      key: 'water' as const,
+      label: 'Water',
+      color: RING_COLORS.water,
+      seatTint: SEAT_TINTS.water,
+      current: water.current,
+      goal: water.goal,
+      unit: 'oz' as const,
+      delay: 150,
+    },
+  ];
+
+  const kcalText =
+    goalKcal !== null
+      ? `${currentKcal.toLocaleString()} / ${goalKcal.toLocaleString()} kcal`
+      : `${currentKcal.toLocaleString()} kcal`;
+
+  return (
+    <View style={styles.card}>
+      {/* Header row: label left, kcal total right */}
+      <View style={styles.headerRow}>
+        <Text style={styles.headerLabel}>TODAY&apos;S NUTRITION</Text>
+        <Text style={styles.kcalText}>{kcalText}</Text>
+      </View>
+
+      <View style={styles.row}>
+        {rings.map((ring) => {
+          const percentage = pct(ring.current, ring.goal);
+          const sub = sublabel(ring.current, ring.goal, ring.unit);
+
+          return (
+            <TouchableOpacity
+              key={ring.key}
+              style={[styles.ringColumn, { backgroundColor: ring.seatTint }]}
+              activeOpacity={0.7}
+              onPress={() => onRingPress?.(ring.key)}
+            >
+              <ProgressRing
+                percentage={percentage}
+                color={ring.color}
+                delay={ring.delay}
+              />
+              <Text style={styles.pctText}>
+                {percentage}%
+              </Text>
+              <Text style={styles.label}>{ring.label}</Text>
+              {sub.style === 'setGoal' ? (
+                <Text style={styles.setGoal}>{sub.text}</Text>
+              ) : sub.style === 'accent' ? (
+                <Text style={styles.goalHit}>{sub.text}</Text>
+              ) : (
+                <Text style={styles.subLabel}>{sub.text}</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── Data-fetching wrapper ────────────────────────────────────────────────────
 
 export function NutritionRingsCard() {
   const navigation = useNavigation<NavigationProp<any>>();
@@ -56,11 +217,8 @@ export function NutritionRingsCard() {
     }, []),
   );
 
-  const proteinGoal = goals?.proteinGoal ?? null;
-  const carbGoal = goals?.carbGoal ?? null;
-  const fatGoal = goals?.fatGoal ?? null;
-
-  const navigateToHealth = useCallback((tab: 'macros' | 'hydration') => {
+  const navigateToHealth = useCallback((kind: 'protein' | 'carbs' | 'fat' | 'water') => {
+    const tab = kind === 'water' ? 'hydration' : 'macros';
     const parent = navigation.getParent<NavigationProp<TabParamList>>();
     if (parent) {
       parent.navigate('ProteinTab', {
@@ -70,88 +228,18 @@ export function NutritionRingsCard() {
     }
   }, [navigation]);
 
-  const rings = [
-    {
-      key: 'protein',
-      label: 'Protein',
-      color: RING_COLORS.protein,
-      current: totals.protein,
-      goal: proteinGoal,
-      unit: 'g',
-      tab: 'macros' as const,
-      delay: 0,
-    },
-    {
-      key: 'carbs',
-      label: 'Carbs',
-      color: RING_COLORS.carbs,
-      current: totals.carbs,
-      goal: carbGoal,
-      unit: 'g',
-      tab: 'macros' as const,
-      delay: 50,
-    },
-    {
-      key: 'fat',
-      label: 'Fat',
-      color: RING_COLORS.fat,
-      current: totals.fat,
-      goal: fatGoal,
-      unit: 'g',
-      tab: 'macros' as const,
-      delay: 100,
-    },
-    {
-      key: 'water',
-      label: 'Water',
-      color: RING_COLORS.water,
-      current: waterOz,
-      goal: waterGoalOz,
-      unit: 'oz',
-      tab: 'hydration' as const,
-      delay: 150,
-    },
-  ];
-
   return (
-    <View style={styles.card}>
-      <Text style={styles.header}>TODAY&apos;S NUTRITION</Text>
-      <View style={styles.row}>
-        {rings.map((ring) => {
-          const percentage = pct(ring.current, ring.goal);
-          const hasGoal = ring.goal !== null && ring.goal > 0;
-          const subLabel = hasGoal
-            ? `${Math.round(ring.current)}/${Math.round(ring.goal!)}${ring.unit}`
-            : undefined;
-
-          return (
-            <TouchableOpacity
-              key={ring.key}
-              style={styles.ringColumn}
-              activeOpacity={0.7}
-              onPress={() => navigateToHealth(ring.tab)}
-            >
-              <ProgressRing
-                percentage={percentage}
-                color={ring.color}
-                delay={ring.delay}
-              />
-              <Text style={styles.pctText}>
-                {percentage}%
-              </Text>
-              <Text style={styles.label}>{ring.label}</Text>
-              {hasGoal ? (
-                <Text style={styles.subLabel}>{subLabel}</Text>
-              ) : (
-                <Text style={styles.setGoal}>Set goal</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
+    <NutritionRingsView
+      protein={{ current: totals.protein, goal: goals?.proteinGoal ?? null }}
+      carbs={{ current: totals.carbs, goal: goals?.carbGoal ?? null }}
+      fat={{ current: totals.fat, goal: goals?.fatGoal ?? null }}
+      water={{ current: waterOz, goal: waterGoalOz }}
+      onRingPress={navigateToHealth}
+    />
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   card: {
@@ -163,12 +251,22 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.base,
     marginBottom: spacing.md,
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  headerLabel: {
     color: colors.secondary,
     fontSize: fontSize.sm,
     fontWeight: weightBold,
     letterSpacing: 1.2,
-    marginBottom: spacing.md,
+  },
+  kcalText: {
+    color: colors.secondary,
+    fontSize: 9,
+    fontWeight: '600',
   },
   row: {
     flexDirection: 'row',
@@ -178,10 +276,13 @@ const styles = StyleSheet.create({
   ringColumn: {
     alignItems: 'center',
     minWidth: 62,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
   },
   pctText: {
     position: 'absolute',
-    top: 21,
+    top: 27,
     alignSelf: 'center',
     color: colors.primary,
     fontSize: 14,
@@ -195,6 +296,11 @@ const styles = StyleSheet.create({
   },
   subLabel: {
     color: colors.secondary,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  goalHit: {
+    color: colors.accent,
     fontSize: 10,
     marginTop: 2,
   },
