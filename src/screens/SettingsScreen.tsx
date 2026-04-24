@@ -40,8 +40,9 @@ export function SettingsScreen() {
     });
   }, []);
 
-  const handleNameBlur = useCallback(() => {
-    setUserFirstName(nameValue);
+  const handleNameBlur = useCallback(async () => {
+    const trimmed = nameValue.trim();
+    await setUserFirstName(trimmed.length === 0 ? null : trimmed);
   }, [nameValue]);
 
   // HR Monitor card state

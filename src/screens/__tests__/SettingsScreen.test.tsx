@@ -152,7 +152,7 @@ describe('SettingsScreen', () => {
       fireEvent(input, 'blur');
 
       await waitFor(() => {
-        expect(setUserFirstName).toHaveBeenCalledWith('  Eric  ');
+        expect(setUserFirstName).toHaveBeenCalledWith('Eric');
       });
     });
   });
