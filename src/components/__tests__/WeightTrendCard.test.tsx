@@ -9,7 +9,7 @@ describe('WeightTrendCard', () => {
   }));
 
   it('renders today weight + signed delta with window descriptor', () => {
-    const { getByText } = render(
+    const { getByText, getByTestId } = render(
       <WeightTrendCard
         today={184.2}
         currentSevenDayMA={184.4}
@@ -19,8 +19,8 @@ describe('WeightTrendCard', () => {
       />,
     );
     expect(getByText('184.2')).toBeTruthy();
-    expect(getByText(/lb/)).toBeTruthy();
-    expect(getByText(/7d avg/)).toBeTruthy();
+    expect(getByText(/^\s*lb$/)).toBeTruthy(); // the unit suffix next to the big number
+    expect(getByTestId('weight-trend-delta').props.children).toMatch(/7d avg/);
   });
 
   it('shows em-dash delta when MAs are null', () => {

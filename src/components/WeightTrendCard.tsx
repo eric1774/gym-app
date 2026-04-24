@@ -46,7 +46,7 @@ export function WeightTrendCard({
           {today !== null && delta === null
             ? '—'
             : today !== null && delta !== null
-              ? `${delta < 0 ? '↓' : delta > 0 ? '↑' : '•'} ${Math.abs(delta).toFixed(1)} · 7d avg`
+              ? `${delta < 0 ? '↓' : delta > 0 ? '↑' : '•'} ${Math.abs(delta).toFixed(1)} lb · 7d avg`
               : ''}
         </Text>
         <Sparkline series={dailySeries} />
