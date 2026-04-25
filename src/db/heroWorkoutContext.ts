@@ -1,8 +1,6 @@
 import { db, executeSql } from './database';
 import type { SQLiteDatabase } from 'react-native-sqlite-storage';
 
-const KG_TO_LB = 2.20462;
-
 export interface HeroWorkoutContext {
   headlineLift: { exerciseName: string; weightLb: number; reps: number } | null;
   /** lb added on the headline lift since the session before last; null if only one prior session */
@@ -60,13 +58,13 @@ export async function getHeroWorkoutContext(programDayId: number): Promise<HeroW
   let added: number | null = null;
   if (priorId !== null) {
     const prior = await topSet(database, priorId, exId);
-    if (prior) { added = (recent.weightKg - prior.weightKg) * KG_TO_LB; }
+    if (prior) { added = recent.weightKg - prior.weightKg; }
   }
 
   return {
     headlineLift: {
       exerciseName: exName,
-      weightLb: Math.round(recent.weightKg * KG_TO_LB),
+      weightLb: Math.round(recent.weightKg),
       reps: recent.reps,
     },
     addedSinceLast: added,

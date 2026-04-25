@@ -53,10 +53,9 @@ describe('getVolumeTrend', () => {
 
     expect(result.deltaPercent).toBeCloseTo(10, 5);
     expect(result.weeklyBars).toHaveLength(4);
-    // Each bar: 275 kg × 2.20462 ≈ 606 lb (rounded)
-    const expectedLb = Math.round(275 * 2.20462);
+    // weight_kg column actually stores lb; sum is already in lb
     result.weeklyBars.forEach(bar => {
-      expect(bar.tonnageLb).toBe(expectedLb);
+      expect(bar.tonnageLb).toBe(275);
     });
   });
 

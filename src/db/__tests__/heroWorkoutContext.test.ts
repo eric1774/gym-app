@@ -42,16 +42,16 @@ describe('getHeroWorkoutContext', () => {
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([{ id: 42 }]),
     );
-    // Q3: top set for session 42 — 84 kg × 5 reps (84 × 2.20462 ≈ 185 lb)
+    // Q3: top set for session 42 — 185 lb × 5 reps (column lies — _kg suffix, lb values)
     mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ weight_kg: 83.9146, reps: 5 }]),
+      mockResultSet([{ weight_kg: 184.6, reps: 5 }]),
     );
 
     const result = await getHeroWorkoutContext(1);
 
     expect(result.headlineLift).not.toBeNull();
     expect(result.headlineLift!.exerciseName).toBe('Bench Press');
-    expect(result.headlineLift!.weightLb).toBe(185); // round(83.9146 × 2.20462)
+    expect(result.headlineLift!.weightLb).toBe(185); // round(184.6) = 185
     expect(result.headlineLift!.reps).toBe(5);
     expect(result.addedSinceLast).toBeNull();
   });
@@ -78,10 +78,10 @@ describe('getHeroWorkoutContext', () => {
 
     expect(result.headlineLift).not.toBeNull();
     expect(result.headlineLift!.exerciseName).toBe('Squat');
-    expect(result.headlineLift!.weightLb).toBe(220); // round(100 × 2.20462)
+    // weight_kg column actually stores lb — no conversion
+    expect(result.headlineLift!.weightLb).toBe(100);
     expect(result.headlineLift!.reps).toBe(3);
-    // delta = (100 - 95.5) × 2.20462 ≈ 9.92 lb
-    expect(result.addedSinceLast).toBeCloseTo(4.5 * 2.20462, 4);
+    expect(result.addedSinceLast).toBeCloseTo(4.5, 4);
   });
 
   it('returns { headlineLift: null, addedSinceLast: null } when program day has no reps exercises (only timed/height_reps)', async () => {

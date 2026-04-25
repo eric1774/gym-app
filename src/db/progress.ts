@@ -683,7 +683,7 @@ export async function getExerciseInsights(
 function mapSets(rows: Record<string, unknown>[]): ExerciseHistorySet[] {
   return rows.map(row => ({
     setNumber: row.set_number as number,
-    weightLbs: (row.weight_kg as number) * 2.20462,
+    weightLbs: row.weight_kg as number,
     reps: row.reps as number,
     isWarmup: row.is_warmup === 1,
   }));
@@ -800,8 +800,6 @@ export interface StatsStripData {
   tonnage: { currentLb: number; lastWeekLb: number };
 }
 
-const STATS_STRIP_KG_TO_LB = 2.20462;
-
 /**
  * Same-point-in-week comparison for dashboard stats strip.
  *
@@ -837,8 +835,8 @@ export async function getStatsStripData(): Promise<StatsStripData> {
     sessions: { current: sCur, lastWeek: sLast },
     prs: { current: pCur, lastWeek: pLast },
     tonnage: {
-      currentLb: Math.round(tCur * STATS_STRIP_KG_TO_LB),
-      lastWeekLb: Math.round(tLast * STATS_STRIP_KG_TO_LB),
+      currentLb: Math.round(tCur),
+      lastWeekLb: Math.round(tLast),
     },
   };
 }
@@ -928,7 +926,7 @@ export async function getSessionSetDetail(
 
     details.push({
       setNumber: row.set_number as number,
-      weightLbs: (row.weight_kg as number) * 2.20462,
+      weightLbs: row.weight_kg as number,
       reps: row.reps as number,
       isWarmup: row.is_warmup === 1,
       restSeconds,

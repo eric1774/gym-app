@@ -1,8 +1,6 @@
 import type { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { db, executeSql } from './database';
 
-const KG_TO_LB = 2.20462;
-
 export interface VolumeTrendResult {
   /** % change: (recent4wk − prior4wk) / prior4wk × 100, or null if prior volume is 0 */
   deltaPercent: number | null;
@@ -26,8 +24,8 @@ export async function getVolumeTrend(): Promise<VolumeTrendResult> {
   for (let w = 3; w >= 0; w--) {
     const ws = addDays(now, -(w + 1) * 7);
     const we = addDays(now, -w * 7);
-    const kg = await sumKg(database, ws.toISOString(), we.toISOString());
-    weeklyBars.push({ weekStart: ws.toISOString(), tonnageLb: Math.round(kg * KG_TO_LB) });
+    const lb = await sumKg(database, ws.toISOString(), we.toISOString());
+    weeklyBars.push({ weekStart: ws.toISOString(), tonnageLb: Math.round(lb) });
   }
 
   return { deltaPercent, weeklyBars };

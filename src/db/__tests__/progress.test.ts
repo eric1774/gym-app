@@ -229,9 +229,9 @@ describe('getSessionComparison', () => {
     expect(result!.comparisonDate).toBe('2026-04-03T10:00:00Z');
     expect(result!.comparisonLabel).toBe('vs Previous Session');
     expect(result!.currentSets).toHaveLength(2);
-    expect(result!.currentSets[0].weightLbs).toBeCloseTo(100 * 2.20462, 2);
+    expect(result!.currentSets[0].weightLbs).toBe(100);
     expect(result!.comparisonSets).toHaveLength(1);
-    expect(result!.comparisonSets[0].weightLbs).toBeCloseTo(90 * 2.20462, 2);
+    expect(result!.comparisonSets[0].weightLbs).toBe(90);
   });
 
   it('returns comparison data for lastMonth mode', async () => {
@@ -313,7 +313,7 @@ describe('getSessionSetDetail', () => {
     const result = await getSessionSetDetail(10, 1);
     expect(result).toHaveLength(3);
     expect(result[0].setNumber).toBe(1);
-    expect(result[0].weightLbs).toBeCloseTo(80 * 2.20462, 2);
+    expect(result[0].weightLbs).toBe(80);
     expect(result[0].reps).toBe(10);
     expect(result[0].isWarmup).toBe(false);
     expect(result[0].restSeconds).toBeNull(); // first set
@@ -418,20 +418,19 @@ describe('getStatsStripData (same-point-in-week)', () => {
     expect(curElapsed).toBeCloseTo(lastElapsed, -3);
   });
 
-  it('converts tonnage to lb (kg × 2.20462, rounded)', async () => {
+  it('rounds tonnage from raw weight × reps stored in lb', async () => {
     // sessions: current=1, lastWeek=0
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 1 }]));
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }]));
-    // tonnage: current=1000 kg, lastWeek=0 kg
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: 1000 }]));
+    // tonnage: current=1000.4 lb (column lies — _kg suffix, lb values), lastWeek=0
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: 1000.4 }]));
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ v: 0 }]));
     // PRs
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ pr_count: 0 }]));
 
     const data = await getStatsStripData();
-    // 1000 kg × 2.20462 = 2204.62 → rounded = 2205
-    expect(data.tonnage.currentLb).toBe(2205);
+    expect(data.tonnage.currentLb).toBe(1000);
     expect(data.tonnage.lastWeekLb).toBe(0);
   });
 
