@@ -564,6 +564,8 @@ export interface SessionDayProgress {
 export interface SessionDayExerciseProgress {
   exerciseId: number;
   exerciseName: string;
+  category: ExerciseCategory;
+  measurementType: 'reps' | 'timed' | 'height_reps';
   volumeChangePercent: number | null;
   strengthChangePercent: number | null;
 }

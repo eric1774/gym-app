@@ -487,12 +487,12 @@ export async function getSessionDayExerciseProgress(
       const sessionId = sessionsResult.rows.item(0).id;
       const exercisesResult = await executeSql(
         database,
-        `SELECT ws.exercise_id, e.name AS exercise_name
+        `SELECT ws.exercise_id, e.name AS exercise_name, e.category, e.measurement_type
          FROM workout_sets ws
          INNER JOIN exercises e ON e.id = ws.exercise_id
          WHERE ws.session_id = ?
            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-         GROUP BY ws.exercise_id, e.name
+         GROUP BY ws.exercise_id, e.name, e.category, e.measurement_type
          ORDER BY MIN(ws.set_number)`,
         [sessionId],
       );
@@ -502,6 +502,8 @@ export async function getSessionDayExerciseProgress(
         items.push({
           exerciseId: row.exercise_id,
           exerciseName: row.exercise_name,
+          category: row.category,
+          measurementType: row.measurement_type ?? 'reps',
           volumeChangePercent: null,
           strengthChangePercent: null,
         });
@@ -517,12 +519,12 @@ export async function getSessionDayExerciseProgress(
   // Get all exercises from the current session
   const exercisesResult = await executeSql(
     database,
-    `SELECT ws.exercise_id, e.name AS exercise_name
+    `SELECT ws.exercise_id, e.name AS exercise_name, e.category, e.measurement_type
      FROM workout_sets ws
      INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE ws.session_id = ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-     GROUP BY ws.exercise_id, e.name
+     GROUP BY ws.exercise_id, e.name, e.category, e.measurement_type
      ORDER BY MIN(ws.set_number)`,
     [currentSessionId],
   );
@@ -592,6 +594,8 @@ export async function getSessionDayExerciseProgress(
     result.push({
       exerciseId,
       exerciseName,
+      category: row.category,
+      measurementType: row.measurement_type ?? 'reps',
       volumeChangePercent,
       strengthChangePercent,
     });
