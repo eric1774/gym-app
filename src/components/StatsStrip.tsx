@@ -24,13 +24,19 @@ export function StatsStrip({ data, onPress }: StatsStripProps) {
         base={{ from: colors.surface, to: colors.surface, angleDeg: 0 }}
         overlays={[{
           type: 'radial',
-          cx: '50%', cy: '50%', rx: '95%', ry: '95%',
+          cx: '50%', cy: '50%', rx: '160%', ry: '160%',
           stops: [
-            { offset: 0,    color: '#FFB800', opacity: 0.09 },
-            { offset: 0.25, color: '#FFB800', opacity: 0.05 },
-            { offset: 0.5,  color: '#FFB800', opacity: 0.025 },
-            { offset: 0.75, color: '#FFB800', opacity: 0.008 },
-            { offset: 1,    color: '#FFB800', opacity: 0 },
+            { offset: 0.00, color: '#FFB800', opacity: 0.10 },
+            { offset: 0.10, color: '#FFB800', opacity: 0.085 },
+            { offset: 0.20, color: '#FFB800', opacity: 0.070 },
+            { offset: 0.30, color: '#FFB800', opacity: 0.055 },
+            { offset: 0.40, color: '#FFB800', opacity: 0.040 },
+            { offset: 0.50, color: '#FFB800', opacity: 0.030 },
+            { offset: 0.60, color: '#FFB800', opacity: 0.020 },
+            { offset: 0.70, color: '#FFB800', opacity: 0.012 },
+            { offset: 0.80, color: '#FFB800', opacity: 0.006 },
+            { offset: 0.90, color: '#FFB800', opacity: 0.002 },
+            { offset: 1.00, color: '#FFB800', opacity: 0     },
           ],
         }]}
       />

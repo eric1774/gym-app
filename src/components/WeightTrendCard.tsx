@@ -24,16 +24,19 @@ export function WeightTrendCard({
     <Pressable testID="weight-trend-card" onPress={onPress} style={styles.card}>
       <GradientBackdrop
         borderRadius={14}
-        base={{ from: '#1E2024', to: '#1C2228', angleDeg: 165 }}
+        base={{ from: '#1E2327', to: '#1E2327', angleDeg: 0 }}
         overlays={[{
-          type: 'radial',
-          cx: '95%', cy: '-10%', rx: '115%', ry: '115%',
+          type: 'linear',
+          angleDeg: 135,
           stops: [
-            { offset: 0,    color: '#5B7A95', opacity: 0.16 },
-            { offset: 0.25, color: '#5B7A95', opacity: 0.09 },
-            { offset: 0.5,  color: '#5B7A95', opacity: 0.04 },
-            { offset: 0.75, color: '#5B7A95', opacity: 0.01 },
-            { offset: 1,    color: '#5B7A95', opacity: 0 },
+            { offset: 0.00, color: '#5B7A95', opacity: 0.42 },
+            { offset: 0.15, color: '#5B7A95', opacity: 0.36 },
+            { offset: 0.30, color: '#5B7A95', opacity: 0.30 },
+            { offset: 0.45, color: '#5B7A95', opacity: 0.25 },
+            { offset: 0.60, color: '#5B7A95', opacity: 0.20 },
+            { offset: 0.75, color: '#5B7A95', opacity: 0.16 },
+            { offset: 0.90, color: '#5B7A95', opacity: 0.13 },
+            { offset: 1.00, color: '#5B7A95', opacity: 0.11 },
           ],
         }]}
       />

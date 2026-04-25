@@ -43,18 +43,18 @@ export function HeroWorkoutCard(p: HeroWorkoutCardProps) {
     <View style={styles.card}>
       <GradientBackdrop
         borderRadius={18}
-        base={{ from: '#1E2024', to: '#1A3326', angleDeg: 135 }}
+        base={{ from: '#1E2024', to: '#1A3326', angleDeg: 45 }}
         overlays={[
           {
-            type: 'radial',
-            cx: '0%', cy: '0%', rx: '115%', ry: '115%',
+            type: 'linear',
+            angleDeg: 45,
             stops: [
-              { offset: 0,    color: '#8DC28A', opacity: 0.32 },
-              { offset: 0.2,  color: '#8DC28A', opacity: 0.20 },
-              { offset: 0.4,  color: '#8DC28A', opacity: 0.11 },
-              { offset: 0.6,  color: '#8DC28A', opacity: 0.05 },
-              { offset: 0.8,  color: '#8DC28A', opacity: 0.015 },
-              { offset: 1,    color: '#8DC28A', opacity: 0 },
+              { offset: 0.00, color: '#8DC28A', opacity: 0.45 },
+              { offset: 0.20, color: '#8DC28A', opacity: 0.34 },
+              { offset: 0.40, color: '#8DC28A', opacity: 0.25 },
+              { offset: 0.60, color: '#8DC28A', opacity: 0.18 },
+              { offset: 0.80, color: '#8DC28A', opacity: 0.13 },
+              { offset: 1.00, color: '#8DC28A', opacity: 0.10 },
             ],
           },
         ]}
