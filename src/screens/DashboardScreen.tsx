@@ -208,7 +208,17 @@ export function DashboardScreen() {
     }
   }, [session, nextWorkout, startSessionFromProgramDay, navigation]);
 
-  const handleTrendPress = useCallback(() => {
+  const handleWeightPress = useCallback(() => {
+    const parent = navigation.getParent<NavigationProp<TabParamList>>();
+    if (parent) {
+      parent.navigate('ProteinTab', {
+        screen: 'ProteinHome',
+        params: { initialTab: 2 },
+      });
+    }
+  }, [navigation]);
+
+  const handleVolumePress = useCallback(() => {
     navigation.navigate('ProgressHub');
   }, [navigation]);
 
@@ -262,12 +272,12 @@ export function DashboardScreen() {
             currentSevenDayMA={weightTrend.currentSevenDayMA}
             previousSevenDayMA={weightTrend.previousSevenDayMA}
             dailySeries={weightTrend.dailySeries}
-            onPress={handleTrendPress}
+            onPress={handleWeightPress}
           />
           <VolumeTrendCard
             deltaPercent={volumeTrend.deltaPercent}
             weeklyBars={volumeTrend.weeklyBars}
-            onPress={handleTrendPress}
+            onPress={handleVolumePress}
           />
         </View>
 
