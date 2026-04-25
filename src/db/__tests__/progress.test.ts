@@ -11,6 +11,7 @@ import {
   getStatsStripData,
   getAllExercisesWithProgress,
   getTopMovers,
+  getProgramDayWeeklyTonnage,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -468,6 +469,60 @@ describe('getAllExercisesWithProgress', () => {
 
     const result = await getAllExercisesWithProgress('all', '', 'movers');
     expect(result[0].exerciseName).toBe('Down12'); // |12| > |7|
+  });
+});
+
+// ── getProgramDayWeeklyTonnage ────────────────────────────────────────
+
+describe('getProgramDayWeeklyTonnage', () => {
+  it('returns one row per program day with 4-tuple weeklyTonnageLb', async () => {
+    // Day rows
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 10, name: 'Push Day', exercise_count: 6, last_performed_at: '2026-04-22T00:00:00Z' },
+    ]));
+    // Weekly tonnage for day 10 (4 rows: w-3, w-2, w-1, this)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { week_offset: 3, tonnage: 9500 },
+      { week_offset: 2, tonnage: 13200 },
+      { week_offset: 1, tonnage: 17400 },
+      { week_offset: 0, tonnage: 18450 },
+    ]));
+
+    const result = await getProgramDayWeeklyTonnage(1);
+    expect(result.length).toBe(1);
+    expect(result[0].dayName).toBe('Push Day');
+    expect(result[0].weeklyTonnageLb).toEqual([9500, 13200, 17400, 18450]);
+    expect(result[0].currentWeekTonnageLb).toBe(18450);
+  });
+
+  it('deltaPercent2wk null when fewer than 4 weeks of data', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 10, name: 'Push', exercise_count: 6, last_performed_at: '2026-04-22T00:00:00Z' },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { week_offset: 1, tonnage: 1000 },
+      { week_offset: 0, tonnage: 1100 },
+    ]));
+
+    const result = await getProgramDayWeeklyTonnage(1);
+    expect(result[0].deltaPercent2wk).toBeNull();
+    expect(result[0].weeklyTonnageLb).toEqual([0, 0, 1000, 1100]);
+  });
+
+  it('deltaPercent2wk = (last2wk - prior2wk)/prior2wk * 100 when 4 weeks present', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 10, name: 'Push', exercise_count: 6, last_performed_at: '2026-04-22T00:00:00Z' },
+    ]));
+    // prior 2wk = 9500+13200=22700; last 2wk = 17400+18450=35850 → +57.9%
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { week_offset: 3, tonnage: 9500 },
+      { week_offset: 2, tonnage: 13200 },
+      { week_offset: 1, tonnage: 17400 },
+      { week_offset: 0, tonnage: 18450 },
+    ]));
+
+    const result = await getProgramDayWeeklyTonnage(1);
+    expect(result[0].deltaPercent2wk).toBeCloseTo(57.93, 1);
   });
 });
 

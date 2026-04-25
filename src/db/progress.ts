@@ -10,6 +10,7 @@ import {
   SessionDayProgress,
   SessionDayExerciseProgress,
   ExerciseListItem,
+  ProgramDayWeeklyTonnage,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -1061,4 +1062,117 @@ export async function getTopMovers(
   return all
     .filter(e => e.deltaPercent14d !== null)
     .slice(0, limit);
+}
+
+// ── getProgramDayWeeklyTonnage ───────────────────────────────────────
+
+/**
+ * Weekly tonnage for each day in a program, last 4 weeks.
+ * weekly bins: week_offset 0 = current week (Mon-now), 1 = prior, 2 = etc.
+ * Uses same-point-in-week comparison: "this week" = Mon → now.
+ */
+export async function getProgramDayWeeklyTonnage(
+  programId: number,
+): Promise<ProgramDayWeeklyTonnage[]> {
+  const database = await db;
+
+  // Day rows for this program
+  const daysResult = await executeSql(
+    database,
+    `SELECT pd.id, pd.name,
+            (SELECT COUNT(*) FROM program_day_exercises pde WHERE pde.program_day_id = pd.id) AS exercise_count,
+            (SELECT MAX(wss.completed_at)
+               FROM workout_sessions wss
+               WHERE wss.program_day_id = pd.id AND wss.completed_at IS NOT NULL) AS last_performed_at
+       FROM program_days pd
+       WHERE pd.program_id = ?
+       ORDER BY pd.sort_order ASC`,
+    [programId],
+  );
+
+  const days: ProgramDayWeeklyTonnage[] = [];
+  const now = new Date();
+  const thisWeekStart = getWeekStart(now);
+
+  for (let i = 0; i < daysResult.rows.length; i++) {
+    const row = daysResult.rows.item(i);
+
+    // Compute week boundaries for last 4 weeks
+    const weekBins: { weekOffset: number; startISO: string; endISO: string }[] = [];
+    for (let off = 0; off < 4; off++) {
+      const weekStart = new Date(new Date(thisWeekStart).getTime() - off * 7 * 24 * 60 * 60 * 1000);
+      const weekEndAdj = off === 0
+        ? now
+        : (() => {
+            const elapsedMs = now.getTime() - new Date(thisWeekStart).getTime();
+            return new Date(weekStart.getTime() + elapsedMs);
+          })();
+      weekBins.push({
+        weekOffset: off,
+        startISO: weekStart.toISOString(),
+        endISO: weekEndAdj.toISOString(),
+      });
+    }
+
+    // Build CASE expression with params: [start0, end0, start1, end1, start2, end2, start3, end3, dayId]
+    const params: unknown[] = [];
+    const caseExpr = weekBins.map((b, idx) => {
+      params.push(b.startISO, b.endISO);
+      return `WHEN wss.completed_at >= ? AND wss.completed_at < ? THEN ${idx}`;
+    }).join(' ');
+
+    const tonnageResult = await executeSql(
+      database,
+      `SELECT
+         CASE ${caseExpr} ELSE -1 END AS week_offset,
+         SUM(ws.weight_kg * ws.reps) AS tonnage
+       FROM workout_sets ws
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+       WHERE wss.program_day_id = ?
+         AND wss.completed_at IS NOT NULL
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       GROUP BY week_offset
+       HAVING week_offset >= 0`,
+      [...params, row.id] as (string | number | null)[],
+    );
+
+    const tonnageByOffset: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (let r = 0; r < tonnageResult.rows.length; r++) {
+      const tr = tonnageResult.rows.item(r);
+      tonnageByOffset[tr.week_offset] = tr.tonnage ?? 0;
+    }
+
+    // Build [4wk-ago, 3wk-ago, 2wk-ago, this-wk] = [offset 3, 2, 1, 0]
+    const weeklyTonnageLb: [number, number, number, number] = [
+      tonnageByOffset[3], tonnageByOffset[2], tonnageByOffset[1], tonnageByOffset[0],
+    ];
+    const currentWeekTonnageLb = tonnageByOffset[0];
+
+    // deltaPercent2wk: last 2wk vs prior 2wk; null if either prior week has no data
+    const last2 = tonnageByOffset[0] + tonnageByOffset[1];
+    const prior2 = tonnageByOffset[2] + tonnageByOffset[3];
+    let deltaPercent2wk: number | null = null;
+    if (tonnageByOffset[3] > 0 || tonnageByOffset[2] > 0) {
+      // Has some prior-2wk data; require prior2 > 0 to avoid div-by-zero
+      if (prior2 > 0) {
+        deltaPercent2wk = ((last2 - prior2) / prior2) * 100;
+      }
+    }
+    // Require both weeks of prior data to be non-zero for a meaningful delta
+    if (tonnageByOffset[3] === 0 || tonnageByOffset[2] === 0) {
+      deltaPercent2wk = null;
+    }
+
+    days.push({
+      programDayId: row.id,
+      dayName: row.name,
+      exerciseCount: row.exercise_count ?? 0,
+      lastPerformedAt: row.last_performed_at ?? null,
+      weeklyTonnageLb,
+      currentWeekTonnageLb,
+      deltaPercent2wk,
+    });
+  }
+
+  return days;
 }
