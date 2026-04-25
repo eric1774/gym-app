@@ -225,40 +225,39 @@ describe('getProgramTotalCompleted', () => {
 // ── getNextWorkoutDay ────────────────────────────────────────────────
 
 describe('getNextWorkoutDay', () => {
-  it('Path A: finds next uncompleted day using most-recently-used program via sessions', async () => {
-    // Call 1: SELECT recent program via sessions → {id:1, name:'PPL'}
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 1, name: 'PPL' }]));
-    // getProgramWeekCompletion calls:
-    // Call 2: SELECT program → {current_week: 1}
+  // SQL call sequence (1 active candidate):
+  //  1. main candidates query (program with day_count, last_used)
+  //  2. getProgramTotalCompleted → distinct (day,week) count
+  //  3. getProgramWeekCompletion: SELECT program (start_date, current_week)
+  //  4. getProgramWeekCompletion: SELECT program_days
+  //  5..N. getProgramWeekCompletion: SELECT session for each day
+  //  N+1. SELECT COUNT exercises for chosen day
+
+  it('Path A: finds next uncompleted day using active program', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 1, name: 'PPL', weeks: 6, day_count: 2, last_used: '2026-04-20T10:00:00Z' }]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 5 }])); // 5 < 12 → active
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ start_date: '2026-03-01', current_week: 1 }]));
-    // Call 3: SELECT days → Push(1), Pull(2)
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([{ id: 1, name: 'Push' }, { id: 2, name: 'Pull' }]),
     );
-    // Call 4: session for day 1 (completed)
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 10 }]));
-    // Call 5: session for day 2 (not completed)
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    // Call 6: COUNT exercises for day 2 → 4
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 10 }])); // Push done
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // Pull not done
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 4 }]));
 
     const result = await getNextWorkoutDay();
     expect(result).toEqual({ programId: 1, programName: 'PPL', dayId: 2, dayName: 'Pull', exerciseCount: 4 });
   });
 
-  it('Path B: falls back to activated program when no sessions exist', async () => {
-    // Call 1: SELECT recent via sessions → empty
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    // Call 2: SELECT fallback activated program → {id:2, name:'Backup'}
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 2, name: 'Backup' }]));
-    // getProgramWeekCompletion calls:
-    // Call 3: SELECT program
+  it('Path B: works for activated program with no sessions yet (last_used = null)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 2, name: 'Backup', weeks: 4, day_count: 1, last_used: null }]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }])); // 0 < 4 → active
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ start_date: '2026-03-01', current_week: 1 }]));
-    // Call 4: SELECT days → Day A only
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 3, name: 'Day A' }]));
-    // Call 5: session for day 3 (not completed)
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    // Call 6: COUNT exercises for day 3 → 5
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // Day A not done
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 5 }]));
 
     const result = await getNextWorkoutDay();
@@ -266,48 +265,60 @@ describe('getNextWorkoutDay', () => {
   });
 
   it('Path C: returns null when no activated programs exist', async () => {
-    // Call 1: SELECT recent via sessions → empty
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    // Call 2: SELECT fallback → empty
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-
-    const result = await getNextWorkoutDay();
-    expect(result).toBeNull();
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // empty candidates
+    expect(await getNextWorkoutDay()).toBeNull();
   });
 
   it('Path D: returns first day when all days completed this week', async () => {
-    // Call 1: recent session program → {id:1, name:'PPL'}
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 1, name: 'PPL' }]));
-    // getProgramWeekCompletion:
-    // Call 2: program
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 1, name: 'PPL', weeks: 6, day_count: 2, last_used: '2026-04-20T10:00:00Z' }]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 5 }])); // 5 < 12 → active
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ start_date: '2026-03-01', current_week: 1 }]));
-    // Call 3: days → Push, Pull
     mockExecuteSql.mockResolvedValueOnce(
       mockResultSet([{ id: 1, name: 'Push' }, { id: 2, name: 'Pull' }]),
     );
-    // Call 4: day 1 → completed
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 10 }]));
-    // Call 5: day 2 → completed
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 11 }]));
-    // Call 6: COUNT exercises for day 1 (fallback to first day) → 3
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 10 }])); // Push done
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 11 }])); // Pull done
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 3 }]));
 
     const result = await getNextWorkoutDay();
-    // All days done → falls back to first day (dayStatuses[0])
     expect(result).toEqual({ programId: 1, programName: 'PPL', dayId: 1, dayName: 'Push', exerciseCount: 3 });
   });
 
-  it('returns null when program has no days', async () => {
-    // Call 1: recent session program → {id:1, name:'Empty'}
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ id: 1, name: 'Empty' }]));
-    // getProgramWeekCompletion:
-    // Call 2: program found
+  it('returns null when chosen program has no days', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 1, name: 'Empty', weeks: 4, day_count: 1, last_used: null }]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 0 }])); // active
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ start_date: '2026-03-01', current_week: 1 }]));
-    // Call 3: no days
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // no days
+
+    expect(await getNextWorkoutDay()).toBeNull();
+  });
+
+  it('skips a fully-completed program in favor of an active one with workouts left', async () => {
+    // 2 candidates returned, created_at DESC: completed program (newer) and active program
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        // Completed: 12 weeks × 1 day = 12 target, completed 12 → skipped
+        { id: 5, name: 'Old Done', weeks: 12, day_count: 1, last_used: '2026-04-22T10:00:00Z' },
+        // Active: 6 weeks × 2 days = 12 target, completed 5
+        { id: 6, name: 'New Active', weeks: 6, day_count: 2, last_used: '2026-04-20T10:00:00Z' },
+      ]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 12 }])); // Old Done: 12 ≥ 12 → skip
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 5 }]));  // New Active: 5 < 12 → keep
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ start_date: '2026-03-01', current_week: 1 }]));
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ id: 60, name: 'Push' }, { id: 61, name: 'Pull' }]),
+    );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // Push not done
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // Pull not done
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ cnt: 6 }]));
 
     const result = await getNextWorkoutDay();
-    expect(result).toBeNull();
+    expect(result).toEqual({ programId: 6, programName: 'New Active', dayId: 60, dayName: 'Push', exerciseCount: 6 });
   });
 });
 

@@ -291,53 +291,52 @@ export async function getProgramTotalCompleted(programId: number): Promise<numbe
 export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
   const database = await db;
 
-  // Try to find the most recently used activated program via sessions
-  let programId: number | null = null;
-  let programName: string | null = null;
-
-  const recentResult = await executeSql(
+  // Pull every activated, non-archived program with the data needed to
+  // judge "still running" — same predicate ProgramsScreen uses for its
+  // "Active" tab: completed_count < day_count * weeks.
+  const progRes = await executeSql(
     database,
-    `SELECT DISTINCT p.id, p.name
-     FROM programs p
-     INNER JOIN program_days pd ON pd.program_id = p.id
-     INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
-     WHERE p.start_date IS NOT NULL
-       AND p.archived_at IS NULL
-     ORDER BY ws.started_at DESC
-     LIMIT 1`,
+    `SELECT p.id, p.name, p.weeks,
+            (SELECT COUNT(*) FROM program_days WHERE program_id = p.id) AS day_count,
+            (SELECT MAX(ws.started_at)
+               FROM workout_sessions ws
+               INNER JOIN program_days pd ON pd.id = ws.program_day_id
+              WHERE pd.program_id = p.id) AS last_used
+       FROM programs p
+      WHERE p.start_date IS NOT NULL
+        AND p.archived_at IS NULL
+      ORDER BY p.created_at DESC`,
   );
+  if (progRes.rows.length === 0) { return null; }
 
-  if (recentResult.rows.length > 0) {
-    const row = recentResult.rows.item(0);
-    programId = row.id;
-    programName = row.name;
-  } else {
-    // Fall back to most recently created activated program
-    const fallbackResult = await executeSql(
-      database,
-      'SELECT id, name FROM programs WHERE start_date IS NOT NULL AND archived_at IS NULL ORDER BY created_at DESC LIMIT 1',
-    );
-    if (fallbackResult.rows.length === 0) {
-      return null;
-    }
-    const row = fallbackResult.rows.item(0);
-    programId = row.id;
-    programName = row.name;
-  }
+  type Candidate = { id: number; name: string; lastUsed: string };
+  const candidates: Candidate[] = [];
+  for (let i = 0; i < progRes.rows.length; i++) {
+    const r = progRes.rows.item(i);
+    const dayCount = Number(r.day_count ?? 0);
+    if (dayCount === 0) { continue; }
 
-  if (programId === null || programName === null) {
-    return null;
-  }
+    const completed = await getProgramTotalCompleted(r.id);
+    if (completed >= dayCount * Number(r.weeks)) { continue; }
 
-  const dayStatuses = await getProgramWeekCompletion(programId);
-  if (dayStatuses.length === 0) {
-    return null;
+    candidates.push({
+      id: r.id,
+      name: r.name,
+      lastUsed: (r.last_used as string | null) ?? '',
+    });
   }
+  if (candidates.length === 0) { return null; }
+
+  // Most recently used wins; created_at DESC is the natural tiebreak (stable sort).
+  candidates.sort((a, b) => b.lastUsed.localeCompare(a.lastUsed));
+  const winner = candidates[0];
+
+  const dayStatuses = await getProgramWeekCompletion(winner.id);
+  if (dayStatuses.length === 0) { return null; }
 
   // Find the first unfinished day; if all done, use first day
   const nextDay = dayStatuses.find(d => !d.isCompletedThisWeek) ?? dayStatuses[0];
 
-  // Count exercises for the selected day
   const countResult = await executeSql(
     database,
     'SELECT COUNT(*) AS cnt FROM program_day_exercises WHERE program_day_id = ?',
@@ -346,8 +345,8 @@ export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
   const exerciseCount = countResult.rows.item(0).cnt as number;
 
   return {
-    programId,
-    programName,
+    programId: winner.id,
+    programName: winner.name,
     dayId: nextDay.dayId,
     dayName: nextDay.dayName,
     exerciseCount,
