@@ -4,8 +4,6 @@ import { db, executeSql } from '../database';
 import { mockResultSet } from '@test-utils';
 import {
   getWeeklySnapshot,
-  getMuscleGroupProgress,
-  getExerciseInsights,
   getSessionComparison,
   getSessionSetDetail,
   getStatsStripData,
@@ -81,125 +79,6 @@ describe('getWeeklySnapshot', () => {
     const result = await getWeeklySnapshot();
     expect(result.sessionsThisWeek).toBe(0);
     expect(result.prsThisWeek).toBe(0);
-    expect(result.volumeChangePercent).toBeNull();
-  });
-});
-
-// ── getMuscleGroupProgress ───────────────────────────────────────────
-
-describe('getMuscleGroupProgress', () => {
-  it('returns muscle group progress with volume change and PR flags', async () => {
-    // Q1: this week volume per category
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([
-        { category: 'chest', volume: 600 },
-        { category: 'back', volume: 400 },
-      ]),
-    );
-    // Q2: last week volume per category
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([
-        { category: 'chest', volume: 500 },
-        { category: 'back', volume: 0 },
-      ]),
-    );
-    // Q3: PRs this week per category
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([
-        { category: 'chest' },
-      ]),
-    );
-    // Q4: last trained per category (within 2 weeks)
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([
-        { category: 'chest', last_trained_at: '2026-04-10T10:00:00Z' },
-        { category: 'back', last_trained_at: '2026-04-08T10:00:00Z' },
-      ]),
-    );
-
-    const result = await getMuscleGroupProgress();
-    expect(result).toHaveLength(2);
-
-    const chest = result.find(r => r.category === 'chest');
-    expect(chest).toBeDefined();
-    expect(chest!.hasPR).toBe(true);
-    expect(chest!.volumeChangePercent).toBeCloseTo(20, 1);
-    expect(chest!.lastTrainedAt).toBe('2026-04-10T10:00:00Z');
-
-    const back = result.find(r => r.category === 'back');
-    expect(back).toBeDefined();
-    expect(back!.hasPR).toBe(false);
-    expect(back!.volumeChangePercent).toBeNull();
-  });
-
-  it('returns empty array when no categories trained in last 2 weeks', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
-
-    const result = await getMuscleGroupProgress();
-    expect(result).toEqual([]);
-  });
-});
-
-// ── getExerciseInsights ──────────────────────────────────────────────
-
-describe('getExerciseInsights', () => {
-  it('returns weight and volume change for 1M period', async () => {
-    // Q1: current period best weight + volume
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ best_weight_kg: 100, volume: 2000 }]),
-    );
-    // Q2: previous period best weight + volume
-    mockExecuteSql.mockResolvedValueOnce(
-      mockResultSet([{ best_weight_kg: 80, volume: 1600 }]),
-    );
-
-    const result = await getExerciseInsights(1, '1M');
-    expect(result.periodLabel).toBe('1 month');
-    // weight: (100 - 80) / 80 * 100 = 25%
-    expect(result.weightChangePercent).toBeCloseTo(25, 1);
-    // volume: (2000 - 1600) / 1600 * 100 = 25%
-    expect(result.volumeChangePercent).toBeCloseTo(25, 1);
-  });
-
-  it('returns correct period label for 3M', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: 50, volume: 1000 }]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: 50, volume: 1000 }]));
-
-    const result = await getExerciseInsights(1, '3M');
-    expect(result.periodLabel).toBe('3 months');
-    expect(result.weightChangePercent).toBeCloseTo(0, 1);
-    expect(result.volumeChangePercent).toBeCloseTo(0, 1);
-  });
-
-  it('returns correct period label for 6M', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: null, volume: null }]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: null, volume: null }]));
-
-    const result = await getExerciseInsights(1, '6M');
-    expect(result.periodLabel).toBe('6 months');
-    expect(result.weightChangePercent).toBeNull();
-    expect(result.volumeChangePercent).toBeNull();
-  });
-
-  it('returns correct period label for 1Y', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: 60, volume: 1200 }]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: null, volume: null }]));
-
-    const result = await getExerciseInsights(1, '1Y');
-    expect(result.periodLabel).toBe('1 year');
-    expect(result.weightChangePercent).toBeNull();
-    expect(result.volumeChangePercent).toBeNull();
-  });
-
-  it('returns null changes when no current period data', async () => {
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: null, volume: null }]));
-    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ best_weight_kg: 80, volume: 1600 }]));
-
-    const result = await getExerciseInsights(1, '1M');
-    expect(result.weightChangePercent).toBeNull();
     expect(result.volumeChangePercent).toBeNull();
   });
 });

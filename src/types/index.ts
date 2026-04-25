@@ -133,16 +133,6 @@ export interface CategorySummary {
   measurementType: ExerciseMeasurementType;
 }
 
-export interface CategoryExerciseProgress {
-  exerciseId: number;
-  exerciseName: string;
-  measurementType: ExerciseMeasurementType;
-  sparklinePoints: number[];
-  currentBest: number;
-  previousBest: number | null;
-  lastTrainedAt: string;
-}
-
 export interface ExerciseHistorySession {
   sessionId: number;
   date: string;
@@ -529,19 +519,6 @@ export interface WeeklySnapshot {
   sessionsThisWeek: number;
   prsThisWeek: number;
   volumeChangePercent: number | null; // null if no previous week data
-}
-
-export interface MuscleGroupProgress {
-  category: ExerciseCategory;
-  volumeChangePercent: number | null;
-  hasPR: boolean;
-  lastTrainedAt: string | null;
-}
-
-export interface ExerciseInsights {
-  weightChangePercent: number | null;
-  volumeChangePercent: number | null;
-  periodLabel: string; // e.g. "3 months"
 }
 
 export interface SessionComparison {
