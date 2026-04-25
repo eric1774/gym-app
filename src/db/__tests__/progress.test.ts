@@ -14,6 +14,7 @@ import {
   getProgramDayWeeklyTonnage,
   getPRWatch,
   getStaleExercise,
+  getExerciseChartData,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -601,6 +602,42 @@ describe('getStaleExercise', () => {
     await getStaleExercise(14, 90);
     const params = mockExecuteSql.mock.calls[0][2] as unknown[];
     // Two thresholds passed: minDays cutoff, maxDays cutoff
+    expect(params.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// ── getExerciseChartData ─────────────────────────────────────────────
+
+describe('getExerciseChartData', () => {
+  it('returns chronological session points with bestWeight + volume', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { session_id: 1, date: '2026-01-15T00:00:00Z', best_weight: 175, volume: 1640 },
+      { session_id: 2, date: '2026-02-01T00:00:00Z', best_weight: 180, volume: 1720 },
+      { session_id: 3, date: '2026-02-20T00:00:00Z', best_weight: 195, volume: 2025 },
+    ]));
+    const result = await getExerciseChartData(1, '6M');
+    expect(result.length).toBe(3);
+    expect(result[0].bestWeightLb).toBe(175);
+    expect(result[2].volumeLb).toBe(2025);
+  });
+
+  it('isPR set when bestWeight is running max', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { session_id: 1, date: '2026-01-15T00:00:00Z', best_weight: 175, volume: 1000 },
+      { session_id: 2, date: '2026-02-01T00:00:00Z', best_weight: 170, volume: 1000 },
+      { session_id: 3, date: '2026-02-20T00:00:00Z', best_weight: 180, volume: 1000 },
+    ]));
+    const result = await getExerciseChartData(1, '6M');
+    expect(result[0].isPR).toBe(true);   // first session always PR
+    expect(result[1].isPR).toBe(false);  // 170 < running max 175
+    expect(result[2].isPR).toBe(true);   // 180 > running max 175
+  });
+
+  it('range filter passed as date cutoff', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getExerciseChartData(1, '1M');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toContain(1);
     expect(params.length).toBeGreaterThanOrEqual(2);
   });
 });

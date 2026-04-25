@@ -13,6 +13,7 @@ import {
   ProgramDayWeeklyTonnage,
   PRWatchCandidate,
   StaleExerciseCandidate,
+  ChartPoint,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -1281,4 +1282,56 @@ export async function getStaleExercise(
     daysSinceLastTrained: row.days_since,
     category: row.category,
   };
+}
+
+// ── getExerciseChartData ─────────────────────────────────────────────
+
+/**
+ * Per-session strength + volume points for the dual-axis chart.
+ * Working sets only; warmups excluded. Chronological order.
+ * isPR = running-max best weight at the time of that session.
+ */
+export async function getExerciseChartData(
+  exerciseId: number,
+  range: '1M' | '3M' | '6M' | '1Y',
+): Promise<ChartPoint[]> {
+  const database = await db;
+  const months = range === '1M' ? 1 : range === '3M' ? 3 : range === '6M' ? 6 : 12;
+  const cutoffISO = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - months);
+    return d.toISOString();
+  })();
+
+  const result = await executeSql(
+    database,
+    `SELECT wss.id AS session_id, wss.completed_at AS date,
+            MAX(ws.weight_kg) AS best_weight,
+            SUM(ws.weight_kg * ws.reps) AS volume
+       FROM workout_sets ws
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+       WHERE ws.exercise_id = ?
+         AND wss.completed_at IS NOT NULL
+         AND wss.completed_at >= ?
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       GROUP BY wss.id
+       ORDER BY wss.completed_at ASC`,
+    [exerciseId, cutoffISO],
+  );
+
+  const points: ChartPoint[] = [];
+  let runningMax = 0;
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const isPR = row.best_weight > runningMax;
+    if (isPR) { runningMax = row.best_weight; }
+    points.push({
+      sessionId: row.session_id,
+      date: row.date,
+      bestWeightLb: row.best_weight ?? 0,
+      volumeLb: row.volume ?? 0,
+      isPR,
+    });
+  }
+  return points;
 }
