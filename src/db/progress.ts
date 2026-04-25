@@ -1047,3 +1047,18 @@ export async function getAllExercisesWithProgress(
 
   return items;
 }
+
+// ── getTopMovers ────────────────────────────────────────────────────
+
+const TOP_MOVERS_LIMIT = 3;
+
+/** Top N exercises by absolute % change in best weight over the window. */
+export async function getTopMovers(
+  windowDays: number = TOP_MOVERS_WINDOW_DAYS,
+  limit: number = TOP_MOVERS_LIMIT,
+): Promise<ExerciseListItem[]> {
+  const all = await getAllExercisesWithProgress('all', '', 'movers');
+  return all
+    .filter(e => e.deltaPercent14d !== null)
+    .slice(0, limit);
+}

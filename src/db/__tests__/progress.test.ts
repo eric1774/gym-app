@@ -10,6 +10,7 @@ import {
   getSessionSetDetail,
   getStatsStripData,
   getAllExercisesWithProgress,
+  getTopMovers,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -352,6 +353,38 @@ describe('getSessionSetDetail', () => {
     const result = await getSessionSetDetail(10, 1);
     expect(result).toHaveLength(1);
     expect(result[0].restSeconds).toBeNull();
+  });
+});
+
+// ── getTopMovers ────────────────────────────────────────────────────
+
+describe('getTopMovers', () => {
+  it('returns up to N exercises ranked by |deltaPercent|', async () => {
+    // Mock the underlying getAllExercisesWithProgress queries
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'BiggestMover', category: 'chest', measurement_type: 'reps',
+        last_trained_at: '2026-04-22T00:00:00Z', session_count: 5 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 120 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-22', best: 120 }, { date: '2026-04-15', best: 100 },
+    ]));
+
+    const result = await getTopMovers(14, 3);
+    expect(result.length).toBeLessThanOrEqual(3);
+    expect(result[0].deltaPercent14d).not.toBeNull();
+  });
+
+  it('excludes exercises with null deltaPercent14d', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'OnlyOneSession', category: 'chest', measurement_type: 'reps',
+        last_trained_at: '2026-04-22T00:00:00Z', session_count: 1 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 100 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 100 }]));
+
+    const result = await getTopMovers(14, 3);
+    expect(result.length).toBe(0);
   });
 });
 
