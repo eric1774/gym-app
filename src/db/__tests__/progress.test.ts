@@ -9,6 +9,7 @@ import {
   getSessionComparison,
   getSessionSetDetail,
   getStatsStripData,
+  getAllExercisesWithProgress,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -351,6 +352,89 @@ describe('getSessionSetDetail', () => {
     const result = await getSessionSetDetail(10, 1);
     expect(result).toHaveLength(1);
     expect(result[0].restSeconds).toBeNull();
+  });
+});
+
+// ── getAllExercisesWithProgress ──────────────────────────────────────
+
+describe('getAllExercisesWithProgress', () => {
+  it('returns all exercises sorted by recent when filter=all', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'Bench Press', category: 'chest', measurement_type: 'reps',
+        last_trained_at: '2026-04-22T00:00:00Z', session_count: 12 },
+      { id: 2, name: 'Squat', category: 'legs', measurement_type: 'reps',
+        last_trained_at: '2026-04-20T00:00:00Z', session_count: 8 },
+    ]));
+    // Sparkline + delta query per exercise (2 queries × 2 exercises = 4 more)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-22', best: 195 }, { date: '2026-04-19', best: 190 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-22', best: 195 }, { date: '2026-04-08', best: 185 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-20', best: 275 }, { date: '2026-04-18', best: 270 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-20', best: 275 }, { date: '2026-04-06', best: 265 },
+    ]));
+
+    const result = await getAllExercisesWithProgress('all', '', 'recent');
+    expect(result.length).toBe(2);
+    expect(result[0].exerciseName).toBe('Bench Press');
+    expect(result[0].sparklinePoints.length).toBeGreaterThan(0);
+  });
+
+  it('returns deltaPercent14d=null when fewer than 2 sessions in 14d window', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'X', category: 'chest', measurement_type: 'reps',
+        last_trained_at: '2026-04-22T00:00:00Z', session_count: 1 },
+    ]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 100 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 100 }]));
+
+    const result = await getAllExercisesWithProgress('all', '', 'recent');
+    expect(result[0].deltaPercent14d).toBeNull();
+  });
+
+  it('filters by category when filter set', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getAllExercisesWithProgress('legs', '', 'recent');
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain('category');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toContain('legs');
+  });
+
+  it('case-insensitive name search filter', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getAllExercisesWithProgress('all', 'BENCH', 'recent');
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql.toLowerCase()).toContain('like');
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    expect(params).toContain('%bench%');
+  });
+
+  it('sort=movers ranks by absolute deltaPercent14d', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'Up7', category: 'chest', measurement_type: 'reps',
+        last_trained_at: '2026-04-22T00:00:00Z', session_count: 5 },
+      { id: 2, name: 'Down12', category: 'back', measurement_type: 'reps',
+        last_trained_at: '2026-04-21T00:00:00Z', session_count: 5 },
+    ]));
+    // Up7: 7% gain
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-22', best: 100 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-22', best: 107 }, { date: '2026-04-15', best: 100 },
+    ]));
+    // Down12: -12% drop
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([{ date: '2026-04-21', best: 88 }]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { date: '2026-04-21', best: 88 }, { date: '2026-04-15', best: 100 },
+    ]));
+
+    const result = await getAllExercisesWithProgress('all', '', 'movers');
+    expect(result[0].exerciseName).toBe('Down12'); // |12| > |7|
   });
 });
 

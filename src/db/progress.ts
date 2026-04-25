@@ -9,6 +9,7 @@ import {
   ExerciseCategory,
   SessionDayProgress,
   SessionDayExerciseProgress,
+  ExerciseListItem,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -934,4 +935,115 @@ export async function getSessionSetDetail(
   }
 
   return details;
+}
+
+// ── getAllExercisesWithProgress ──────────────────────────────────────
+
+const SPARKLINE_MAX_POINTS = 8;
+const TOP_MOVERS_WINDOW_DAYS = 14;
+
+/**
+ * All exercises with progress data, optionally filtered/searched.
+ * One base query for exercise rows + 2 queries per exercise for sparkline & delta.
+ */
+export async function getAllExercisesWithProgress(
+  filter: string = 'all',
+  search: string = '',
+  sort: 'movers' | 'recent' | 'name' = 'recent',
+): Promise<ExerciseListItem[]> {
+  const database = await db;
+
+  const whereParts: string[] = [];
+  const params: unknown[] = [];
+  if (filter !== 'all') {
+    whereParts.push('e.category = ?');
+    params.push(filter);
+  }
+  if (search.length > 0) {
+    whereParts.push('LOWER(e.name) LIKE ?');
+    params.push(`%${search.toLowerCase()}%`);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  const baseResult = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category, e.measurement_type,
+            MAX(wss.completed_at) AS last_trained_at,
+            COUNT(DISTINCT wss.id) AS session_count
+       FROM exercises e
+       LEFT JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       LEFT JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       ${whereSql}
+       GROUP BY e.id
+       ORDER BY last_trained_at DESC NULLS LAST`,
+    params as (string | number | null)[],
+  );
+
+  const items: ExerciseListItem[] = [];
+  for (let i = 0; i < baseResult.rows.length; i++) {
+    const row = baseResult.rows.item(i);
+
+    // Sparkline: last up-to-8 sessions, max(weight) per session
+    const sparkResult = await executeSql(
+      database,
+      `SELECT wss.completed_at AS date, MAX(ws.weight_kg) AS best
+         FROM workout_sets ws
+         INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+         WHERE ws.exercise_id = ? AND wss.completed_at IS NOT NULL
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         GROUP BY wss.id
+         ORDER BY wss.completed_at DESC
+         LIMIT ?`,
+      [row.id, SPARKLINE_MAX_POINTS],
+    );
+    const sparklinePoints: number[] = [];
+    for (let s = sparkResult.rows.length - 1; s >= 0; s--) {
+      const v = sparkResult.rows.item(s).best;
+      if (typeof v === 'number') { sparklinePoints.push(v); }
+    }
+
+    // Delta: best in 14d window vs first session in window
+    const cutoff = new Date(Date.now() - TOP_MOVERS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const deltaResult = await executeSql(
+      database,
+      `SELECT wss.completed_at AS date, MAX(ws.weight_kg) AS best
+         FROM workout_sets ws
+         INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+         WHERE ws.exercise_id = ? AND wss.completed_at >= ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         GROUP BY wss.id
+         ORDER BY wss.completed_at ASC`,
+      [row.id, cutoff],
+    );
+    let deltaPercent14d: number | null = null;
+    if (deltaResult.rows.length >= 2) {
+      const first = deltaResult.rows.item(0).best;
+      const last = deltaResult.rows.item(deltaResult.rows.length - 1).best;
+      if (first > 0) {
+        deltaPercent14d = ((last - first) / first) * 100;
+      }
+    }
+
+    items.push({
+      exerciseId: row.id,
+      exerciseName: row.name,
+      category: row.category,
+      measurementType: row.measurement_type ?? 'reps',
+      lastTrainedAt: row.last_trained_at ?? null,
+      sessionCount: row.session_count ?? 0,
+      sparklinePoints,
+      deltaPercent14d,
+    });
+  }
+
+  if (sort === 'movers') {
+    items.sort((a, b) => Math.abs(b.deltaPercent14d ?? 0) - Math.abs(a.deltaPercent14d ?? 0));
+  } else if (sort === 'name') {
+    items.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
+  }
+  // sort='recent' uses base query order (last_trained_at DESC)
+
+  return items;
 }
