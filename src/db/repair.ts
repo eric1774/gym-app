@@ -11,6 +11,7 @@ export interface DiagnosticResult {
     orphanedRecords: DiagnosticCategory;
     emptyData: DiagnosticCategory;
     dataConsistency: DiagnosticCategory;
+    duplicateSessions: DiagnosticCategory;
   };
   totalIssues: number;
 }
@@ -139,7 +140,54 @@ export async function scanDatabase(): Promise<DiagnosticResult> {
     // Skip if tables don't exist
   }
 
-  const totalIssues = orphanCount + emptyCount + consistencyCount;
+  // ── Duplicate Sessions ────────────────────────────────────────────────
+  const duplicateDetails: string[] = [];
+  let duplicateCount = 0;
+
+  try {
+    // Count duplicate-session groups: completed_at values that appear in >1 row
+    const dupGroupsResult = await executeSql(
+      database,
+      `SELECT completed_at, COUNT(*) AS cnt
+         FROM workout_sessions
+         WHERE completed_at IS NOT NULL
+         GROUP BY completed_at
+         HAVING cnt > 1`,
+    );
+    let groupCount = 0;
+    let extraSessions = 0;
+    for (let i = 0; i < dupGroupsResult.rows.length; i++) {
+      const row = dupGroupsResult.rows.item(i);
+      groupCount++;
+      extraSessions += (row.cnt - 1);
+    }
+    duplicateCount = extraSessions;
+    if (extraSessions > 0) {
+      // Count affected workout_sets (rows that will be deleted along with the duplicate sessions)
+      const dupSetsResult = await executeSql(
+        database,
+        `SELECT COUNT(*) AS cnt
+           FROM workout_sets
+           WHERE session_id IN (
+             SELECT s.id FROM workout_sessions s
+              INNER JOIN (
+                SELECT completed_at, MIN(id) AS keep_id
+                  FROM workout_sessions
+                  WHERE completed_at IS NOT NULL
+                  GROUP BY completed_at
+                  HAVING COUNT(*) > 1
+              ) g ON g.completed_at = s.completed_at
+              WHERE s.id <> g.keep_id
+           )`,
+      );
+      const setRows = dupSetsResult.rows.item(0).cnt as number;
+      duplicateDetails.push(`${extraSessions} duplicate session${extraSessions > 1 ? 's' : ''} across ${groupCount} group${groupCount > 1 ? 's' : ''} (${setRows} workout_set rows will be removed)`);
+    }
+  } catch {
+    // Skip if tables don't exist
+  }
+
+  const totalIssues = orphanCount + emptyCount + consistencyCount + duplicateCount;
 
   return {
     categories: {
@@ -157,6 +205,11 @@ export async function scanDatabase(): Promise<DiagnosticResult> {
         label: 'Data Consistency',
         issueCount: consistencyCount,
         details: consistencyDetails,
+      },
+      duplicateSessions: {
+        label: 'Duplicate Sessions',
+        issueCount: duplicateCount,
+        details: duplicateDetails,
       },
     },
     totalIssues,
@@ -279,6 +332,75 @@ export async function fixDatabaseIssues(result: DiagnosticResult): Promise<FixRe
       }
     } catch {
       // Skip if tables don't exist
+    }
+  }
+
+  // ── Fix Duplicate Sessions ────────────────────────────────────────────
+  if (result.categories.duplicateSessions.issueCount > 0) {
+    try {
+      // Compute IDs to delete: every session whose completed_at appears in >1 row, except the lowest id per group.
+      const dupIdsResult = await executeSql(
+        database,
+        `SELECT s.id
+           FROM workout_sessions s
+           INNER JOIN (
+             SELECT completed_at, MIN(id) AS keep_id
+               FROM workout_sessions
+               WHERE completed_at IS NOT NULL
+               GROUP BY completed_at
+               HAVING COUNT(*) > 1
+           ) g ON g.completed_at = s.completed_at
+           WHERE s.id <> g.keep_id`,
+      );
+      const dupIds: number[] = [];
+      for (let i = 0; i < dupIdsResult.rows.length; i++) {
+        dupIds.push(dupIdsResult.rows.item(i).id as number);
+      }
+
+      if (dupIds.length > 0) {
+        // Build placeholder list for IN clause
+        const placeholders = dupIds.map(() => '?').join(',');
+
+        // Delete dependent rows first. Two of the FK columns were declared WITHOUT
+        // ON DELETE CASCADE in the original schema (workout_sets, exercise_sessions),
+        // so explicit DELETE is required regardless of PRAGMA foreign_keys state.
+        await executeSql(
+          database,
+          `DELETE FROM workout_sets WHERE session_id IN (${placeholders})`,
+          dupIds,
+        );
+
+        // Best-effort cleanup of other session-keyed tables that may exist on this install
+        try {
+          await executeSql(
+            database,
+            `DELETE FROM exercise_sessions WHERE session_id IN (${placeholders})`,
+            dupIds,
+          );
+        } catch { /* table may not exist on older installs */ }
+
+        try {
+          await executeSql(
+            database,
+            `DELETE FROM heart_rate_samples WHERE session_id IN (${placeholders})`,
+            dupIds,
+          );
+        } catch { /* table may not exist */ }
+
+        // Finally drop the duplicate session rows themselves
+        const sessionDeleteResult = await executeSql(
+          database,
+          `DELETE FROM workout_sessions WHERE id IN (${placeholders})`,
+          dupIds,
+        );
+
+        if (sessionDeleteResult.rowsAffected > 0) {
+          fixedCount += sessionDeleteResult.rowsAffected;
+          details.push(`Deleted ${sessionDeleteResult.rowsAffected} duplicate session${sessionDeleteResult.rowsAffected > 1 ? 's' : ''} (and their workout_set rows)`);
+        }
+      }
+    } catch (err: any) {
+      details.push(`Duplicate session cleanup failed: ${err?.message ?? 'unknown error'}`);
     }
   }
 
