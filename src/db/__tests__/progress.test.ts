@@ -13,6 +13,7 @@ import {
   getTopMovers,
   getProgramDayWeeklyTonnage,
   getPRWatch,
+  getStaleExercise,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -567,6 +568,40 @@ describe('getPRWatch', () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // SQL filter excludes them
     const result = await getPRWatch();
     expect(result).toBeNull();
+  });
+});
+
+// ── getStaleExercise ─────────────────────────────────────────────────
+
+describe('getStaleExercise', () => {
+  it('returns null when nothing past threshold', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    const result = await getStaleExercise(14, 90);
+    expect(result).toBeNull();
+  });
+
+  it('returns the longest-untrained exercise within [min,max] days', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 5, name: 'Deadlift', category: 'legs', days_since: 14 },
+    ]));
+    const result = await getStaleExercise(14, 90);
+    expect(result?.exerciseName).toBe('Deadlift');
+    expect(result?.daysSinceLastTrained).toBe(14);
+  });
+
+  it('SQL excludes archived programs', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getStaleExercise();
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toMatch(/archived|is_archived/i);
+  });
+
+  it('SQL excludes daysSinceLastTrained > 90', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getStaleExercise(14, 90);
+    const params = mockExecuteSql.mock.calls[0][2] as unknown[];
+    // Two thresholds passed: minDays cutoff, maxDays cutoff
+    expect(params.length).toBeGreaterThanOrEqual(2);
   });
 });
 

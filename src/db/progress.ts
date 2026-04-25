@@ -12,6 +12,7 @@ import {
   ExerciseListItem,
   ProgramDayWeeklyTonnage,
   PRWatchCandidate,
+  StaleExerciseCandidate,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -1232,4 +1233,52 @@ export async function getPRWatch(
   }
 
   return bestCandidate;
+}
+
+// ── getStaleExercise ─────────────────────────────────────────────────
+
+const STALE_MIN_DAYS = 14;
+const STALE_MAX_DAYS = 90;
+
+/**
+ * Longest-untrained exercise that is part of a non-archived program,
+ * with min <= days <= max. Anything older than max is "unused", not "stale".
+ */
+export async function getStaleExercise(
+  minDays: number = STALE_MIN_DAYS,
+  maxDays: number = STALE_MAX_DAYS,
+): Promise<StaleExerciseCandidate | null> {
+  const database = await db;
+  const minCutoffISO = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000).toISOString();
+  const maxCutoffISO = new Date(Date.now() - maxDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const result = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category,
+            MAX(wss.completed_at) AS last_trained_at,
+            CAST((julianday('now') - julianday(MAX(wss.completed_at))) AS INTEGER) AS days_since
+       FROM exercises e
+       INNER JOIN program_day_exercises pde ON pde.exercise_id = e.id
+       INNER JOIN program_days pd ON pd.id = pde.program_day_id
+       INNER JOIN programs p ON p.id = pd.program_id
+       INNER JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       WHERE p.archived_at IS NULL
+       GROUP BY e.id
+       HAVING MAX(wss.completed_at) <= ? AND MAX(wss.completed_at) >= ?
+       ORDER BY days_since DESC
+       LIMIT 1`,
+    [minCutoffISO, maxCutoffISO],
+  );
+
+  if (result.rows.length === 0) { return null; }
+  const row = result.rows.item(0);
+  return {
+    exerciseId: row.id,
+    exerciseName: row.name,
+    daysSinceLastTrained: row.days_since,
+    category: row.category,
+  };
 }
