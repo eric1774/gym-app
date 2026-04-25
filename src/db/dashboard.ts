@@ -302,6 +302,7 @@ export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
      INNER JOIN program_days pd ON pd.program_id = p.id
      INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
      WHERE p.start_date IS NOT NULL
+       AND p.archived_at IS NULL
      ORDER BY ws.started_at DESC
      LIMIT 1`,
   );
@@ -314,7 +315,7 @@ export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
     // Fall back to most recently created activated program
     const fallbackResult = await executeSql(
       database,
-      'SELECT id, name FROM programs WHERE start_date IS NOT NULL ORDER BY created_at DESC LIMIT 1',
+      'SELECT id, name FROM programs WHERE start_date IS NOT NULL AND archived_at IS NULL ORDER BY created_at DESC LIMIT 1',
     );
     if (fallbackResult.rows.length === 0) {
       return null;
