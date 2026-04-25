@@ -12,6 +12,7 @@ import {
   getAllExercisesWithProgress,
   getTopMovers,
   getProgramDayWeeklyTonnage,
+  getPRWatch,
 } from '../progress';
 
 const mockExecuteSql = executeSql as jest.MockedFunction<typeof executeSql>;
@@ -523,6 +524,49 @@ describe('getProgramDayWeeklyTonnage', () => {
 
     const result = await getProgramDayWeeklyTonnage(1);
     expect(result[0].deltaPercent2wk).toBeCloseTo(57.93, 1);
+  });
+});
+
+// ── getPRWatch ───────────────────────────────────────────────────────
+
+describe('getPRWatch', () => {
+  it('returns null when no exercise within threshold', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'Far', category: 'chest', measurement_type: 'reps',
+        current_best: 100, session_count: 5 },
+    ]));
+    const result = await getPRWatch(10);
+    // current_best 100 → next target 105 → distance 5 → within 10, should return
+    expect(result).not.toBeNull();
+    expect(result?.targetLb).toBe(105);
+    expect(result?.distanceLb).toBe(5);
+  });
+
+  it('returns smallest distance candidate when multiple qualify', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([
+      { id: 1, name: 'Bench', category: 'chest', measurement_type: 'reps',
+        current_best: 195, session_count: 12, last_trained_at: '2026-04-22T00:00:00Z' },
+      { id: 2, name: 'Squat', category: 'legs', measurement_type: 'reps',
+        current_best: 273, session_count: 8, last_trained_at: '2026-04-20T00:00:00Z' },
+    ]));
+    // Bench: 195 → 200 → distance 5
+    // Squat: 273 → 275 → distance 2
+    const result = await getPRWatch(10);
+    expect(result?.exerciseName).toBe('Squat');
+    expect(result?.distanceLb).toBe(2);
+  });
+
+  it('excludes timed and height_reps measurement types', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    await getPRWatch();
+    const sql = mockExecuteSql.mock.calls[0][1] as string;
+    expect(sql).toContain("measurement_type = 'reps'");
+  });
+
+  it('returns null when only timed/height_reps exercises exist', async () => {
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([])); // SQL filter excludes them
+    const result = await getPRWatch();
+    expect(result).toBeNull();
   });
 });
 

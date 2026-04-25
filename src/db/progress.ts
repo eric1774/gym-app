@@ -11,6 +11,7 @@ import {
   SessionDayExerciseProgress,
   ExerciseListItem,
   ProgramDayWeeklyTonnage,
+  PRWatchCandidate,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -1175,4 +1176,60 @@ export async function getProgramDayWeeklyTonnage(
   }
 
   return days;
+}
+
+// ── getPRWatch ───────────────────────────────────────────────────────
+
+const PR_WATCH_MAX_LB = 10;
+const PR_WATCH_INCREMENT_LB = 5;
+
+/** Closest exercise to its current PR — within `maxLb`, or null. */
+export async function getPRWatch(
+  maxLb: number = PR_WATCH_MAX_LB,
+): Promise<PRWatchCandidate | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category,
+            MAX(ws.weight_kg) AS current_best,
+            COUNT(DISTINCT wss.id) AS session_count,
+            MAX(wss.completed_at) AS last_trained_at
+       FROM exercises e
+       INNER JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       WHERE e.measurement_type = 'reps'
+       GROUP BY e.id
+       HAVING session_count >= 3 AND current_best > 0`,
+    [],
+  );
+
+  let bestCandidate: PRWatchCandidate | null = null;
+  let bestRecency: string = '';
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const currentBest = row.current_best;
+    const target = Math.ceil((currentBest + 1) / PR_WATCH_INCREMENT_LB) * PR_WATCH_INCREMENT_LB;
+    const distance = target - currentBest;
+    if (distance <= 0 || distance > maxLb) { continue; }
+
+    const candidate: PRWatchCandidate = {
+      exerciseId: row.id,
+      exerciseName: row.name,
+      currentBestLb: currentBest,
+      targetLb: target,
+      distanceLb: distance,
+    };
+
+    if (bestCandidate === null
+        || distance < bestCandidate.distanceLb
+        || (distance === bestCandidate.distanceLb && row.last_trained_at > bestRecency)) {
+      bestCandidate = candidate;
+      bestRecency = row.last_trained_at ?? '';
+    }
+  }
+
+  return bestCandidate;
 }
