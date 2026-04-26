@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { colors } from '../theme/colors';
-import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
+import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { getDaySessionDetails } from '../db/calendar';
 import { deleteSession } from '../db/sessions';
@@ -64,10 +64,6 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function formatVolume(volume: number): string {
-  return volume.toLocaleString('en-US') + ' lbs';
 }
 
 // ---------- Trash Icon ----------
