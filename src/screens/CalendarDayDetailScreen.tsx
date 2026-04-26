@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { colors } from '../theme/colors';
-import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+import { fontSize, weightSemiBold } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { getDaySessionDetails } from '../db/calendar';
 import { deleteSession } from '../db/sessions';
@@ -494,20 +494,21 @@ export function CalendarDayDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <MintRadial />
+
       {/* Screen header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backPill}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backArrow}>{'<'}</Text>
+          <Text style={styles.backArrow}>{'‹'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerDate} numberOfLines={1} adjustsFontSizeToFit>
           {formattedDate}
         </Text>
-        {/* Spacer to center the date */}
-        <View style={styles.backButton} />
+        <View style={styles.backPill} />
       </View>
 
       {/* Swipe hint */}
@@ -563,23 +564,28 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  backButton: {
-    minWidth: 44,
-    minHeight: 44,
+  backPill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
-    fontSize: fontSize.lg,
-    color: colors.primary,
-    fontWeight: weightBold,
+    fontSize: 14,
+    color: colors.textSoft,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   headerDate: {
     flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 
   // Swipe hint banner
@@ -588,9 +594,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   swipeHintText: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
-    opacity: 0.6,
+    fontSize: 10.5,
+    color: colors.secondaryDim,
+    fontStyle: 'italic',
+    letterSpacing: 0.2,
   },
 
   // Loading / empty
