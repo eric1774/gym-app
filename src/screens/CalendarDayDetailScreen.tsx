@@ -38,7 +38,7 @@ const DELETE_ZONE_WIDTH = 80;
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'long',
+    weekday: 'short',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
