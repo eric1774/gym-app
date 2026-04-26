@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,6 +18,7 @@ import { ChartPoint, ExerciseHistorySession } from '../types';
 import { StrengthVolumeChart } from '../components/progress/StrengthVolumeChart';
 import { ChartInspectCallout } from '../components/progress/ChartInspectCallout';
 import { SessionHistoryRow } from '../components/progress/SessionHistoryRow';
+import { ConfirmSheet } from '../components/ConfirmSheet';
 
 type ExerciseDetailParams = {
   exerciseId: number;
@@ -54,6 +54,8 @@ export function ExerciseDetailScreen() {
   const [chartPoints, setChartPoints] = useState<ChartPoint[]>([]);
   const [historyData, setHistoryData] = useState<ExerciseHistorySession[]>([]);
   const [inspectedPoint, setInspectedPoint] = useState<ChartPoint | null>(null);
+  const [actionSheetSession, setActionSheetSession] = useState<ExerciseHistorySession | null>(null);
+  const [deleteSheetSessionId, setDeleteSheetSessionId] = useState<number | null>(null);
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
@@ -97,31 +99,35 @@ export function ExerciseDetailScreen() {
     }
   }
 
-  const confirmDeleteHistory = useCallback((sessionId: number) => {
-    Alert.alert('Delete session?', 'This will remove all sets for this session.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        try { await deleteExerciseHistorySession(sessionId); } catch (err) { console.warn('Delete failed:', err); }
-        setHistoryData(prev => prev.filter(s => s.sessionId !== sessionId));
-      }},
-    ]);
-  }, []);
-
   const handleLongPress = useCallback((sessionId: number) => {
     const session = historyData.find(s => s.sessionId === sessionId);
     if (!session) { return; }
-    Alert.alert(
-      formatDateReadable(session.date),
-      undefined,
-      [
-        { text: 'View Full Workout', onPress: () => navigation.navigate('SessionBreakdown', {
-          sessionId, exerciseId, exerciseName, sessionDate: session.date,
-        })},
-        { text: 'Delete', style: 'destructive', onPress: () => confirmDeleteHistory(sessionId) },
-        { text: 'Cancel', style: 'cancel' },
-      ],
-    );
-  }, [historyData, exerciseId, exerciseName, navigation, confirmDeleteHistory]);
+    setActionSheetSession(session);
+  }, [historyData]);
+
+  const handleViewFullWorkout = useCallback(() => {
+    const session = actionSheetSession;
+    if (!session) { return; }
+    navigation.navigate('SessionBreakdown', {
+      sessionId: session.sessionId,
+      exerciseId,
+      exerciseName,
+      sessionDate: session.date,
+    });
+  }, [actionSheetSession, exerciseId, exerciseName, navigation]);
+
+  const handleRequestDelete = useCallback(() => {
+    const session = actionSheetSession;
+    if (!session) { return; }
+    setDeleteSheetSessionId(session.sessionId);
+  }, [actionSheetSession]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    const sessionId = deleteSheetSessionId;
+    if (sessionId == null) { return; }
+    try { await deleteExerciseHistorySession(sessionId, exerciseId); } catch (err) { console.warn('Delete failed:', err); }
+    setHistoryData(prev => prev.filter(s => s.sessionId !== sessionId));
+  }, [deleteSheetSessionId, exerciseId]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -193,6 +199,27 @@ export function ExerciseDetailScreen() {
           })
         )}
       </ScrollView>
+
+      <ConfirmSheet
+        visible={actionSheetSession !== null}
+        title={actionSheetSession ? formatDateReadable(actionSheetSession.date) : ''}
+        confirmLabel="View Full Workout"
+        destructive={false}
+        secondaryLabel="Delete"
+        onConfirm={handleViewFullWorkout}
+        onSecondary={handleRequestDelete}
+        onClose={() => setActionSheetSession(null)}
+      />
+
+      <ConfirmSheet
+        visible={deleteSheetSessionId !== null}
+        title="Delete session?"
+        message="This will remove all sets for this session."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={handleConfirmDelete}
+        onClose={() => setDeleteSheetSessionId(null)}
+      />
     </SafeAreaView>
   );
 }
