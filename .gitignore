@@ -78,7 +78,11 @@ tmp/
 .agent/
 .agents/
 .claude/worktrees/
+.claude/*.lock
 .scannerwork/
 android/.scannerwork/
 android/app/.cxx/
 .superpowers/
+
+# Local-only gymtrack data import / fixtures
+.gymtrack-*
