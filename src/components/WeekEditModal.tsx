@@ -82,7 +82,7 @@ export function WeekEditModal({
             multiline
             numberOfLines={4}
             textAlignVertical="top"
-            maxLength={200}
+            maxLength={1000}
           />
 
           <TouchableOpacity
