@@ -29,6 +29,8 @@ const PADDING = { top: 12, bottom: 26, left: 36, right: 42 };
 const BAR_OVER_GOAL = 'rgba(141,194,138,0.7)';   // mint — cal > goal (hit target)
 const BAR_UNDER_GOAL = 'rgba(240,184,48,0.6)';   // warm amber — cal <= goal (under-fed)
 const GOAL_LINE = 'rgba(244,167,107,0.35)';      // faint orange for goal reference
+const WEIGHT_LINE = '#5B9BF0';                   // sky blue — distinct from mint cal bars
+const WEIGHT_LINE_FAINT = 'rgba(91,155,240,0.55)'; // raw daily readings (texture under MA)
 
 function toTime(date: string): number {
   return new Date(date + 'T12:00:00Z').getTime();
@@ -306,25 +308,40 @@ export function OverlayChart({
           </SvgText>
         ))}
 
-        {/* 8. Raw weight line — faint (texture) */}
+        {/* 8. Raw weight line — subtle texture under the MA */}
         {weights.length >= 2 && (
           <Path
             d={weightPath}
-            stroke="rgba(141,194,138,0.35)"
-            strokeWidth={1.2}
+            stroke={WEIGHT_LINE_FAINT}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
         )}
 
-        {/* 9. 7-day MA line — bold (main signal) */}
+        {/* 9. 7-day MA line — bold sky blue, the primary weight signal */}
         {maPoints.length >= 2 && (
           <Path
             d={maPath}
-            stroke={colors.accent}
-            strokeWidth={2.5}
+            stroke={WEIGHT_LINE}
+            strokeWidth={3.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
         )}
+
+        {/* 9b. Anchor dots on the MA line — give the curve "evidence" of real readings */}
+        {maPoints.length >= 2 && maPoints.map((p, i) => (
+          <Circle
+            key={`ma-dot-${i}`}
+            cx={timeToX(p.t)}
+            cy={p.y}
+            r={2.25}
+            fill={WEIGHT_LINE}
+          />
+        ))}
 
         {/* 10. BF% gold dots — positioned on the weight line */}
         {bfDots.map((dot, i) => (
@@ -398,10 +415,10 @@ const legendStyles = StyleSheet.create({
     fontWeight: weightSemiBold,
   },
   weightLine: {
-    width: 12,
-    height: 2,
-    backgroundColor: colors.accent,
-    borderRadius: 1,
+    width: 14,
+    height: 3,
+    backgroundColor: '#5B9BF0',
+    borderRadius: 1.5,
   },
   calSwatchRow: {
     flexDirection: 'row',
