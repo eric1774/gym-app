@@ -72,5 +72,5 @@ const styles = StyleSheet.create({
   unit: { color: colors.secondary, fontSize: fontSize.xs, fontWeight: '500' },
   delta: { color: colors.textSoft, fontSize: fontSize.xs, fontWeight: weightSemiBold, marginTop: 2 },
   barsBlock: { marginTop: spacing.sm, paddingTop: 7, borderTopWidth: 1, borderTopColor: colors.border },
-  axisLabel: { color: colors.secondary, fontSize: 8, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 4 },
+  axisLabel: { color: colors.secondary, fontSize: 9, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: spacing.sm },
 });
