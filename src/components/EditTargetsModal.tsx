@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -155,6 +156,10 @@ export function EditTargetsModal({
         style={styles.keyboardAvoid}>
         <Pressable style={styles.overlay} onPress={handleClose} />
         <View style={styles.sheet}>
+         <ScrollView
+           contentContainerStyle={styles.scrollContent}
+           keyboardShouldPersistTaps="handled"
+           showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{exerciseName}</Text>
 
           <Text style={styles.label}>Target Sets</Text>
@@ -246,6 +251,7 @@ export function EditTargetsModal({
           <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
+         </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -265,6 +271,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: '88%',
+  },
+  scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl,
     paddingHorizontal: spacing.base,
