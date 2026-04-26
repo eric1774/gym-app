@@ -25,8 +25,9 @@ export interface MintRadialProps {
  * Used at the top-left of CalendarScreen and CalendarDayDetailScreen,
  * and reused (with tint=prGold, corner='tr') inside the PR callout.
  *
- * Wraps GradientBackdrop with a single radial overlay anchored just
- * outside the visible square so the brightest pixel sits in the corner.
+ * The radial is centered inside the wrapper box so the brightest pixel
+ * falls within the visible area of the parent (the wrapper is offset
+ * partly outside the parent for soft falloff at the edges).
  */
 export function MintRadial({
   size = 280,
@@ -46,10 +47,6 @@ export function MintRadial({
     ...(corner === 'tl' ? { left } : { right }),
   };
 
-  // Radial center sits just outside the wrapper toward the anchored corner
-  // so the brightest pixel falls at the corner of the parent container.
-  const cx = corner === 'tl' ? '15%' : '85%';
-
   return (
     <View pointerEvents="none" style={wrapperStyle} testID={testID}>
       <GradientBackdrop
@@ -58,11 +55,11 @@ export function MintRadial({
         overlays={[
           {
             type: 'radial',
-            cx, cy: '15%',
+            cx: '50%', cy: '50%',
             rx: '70%', ry: '70%',
             stops: [
-              { offset: 0, color: tint, opacity: 0.35 },
-              { offset: 0.4, color: tint, opacity: 0.10 },
+              { offset: 0, color: tint, opacity: 0.40 },
+              { offset: 0.4, color: tint, opacity: 0.12 },
               { offset: 0.7, color: tint, opacity: 0 },
             ],
           },

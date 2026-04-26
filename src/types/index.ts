@@ -325,6 +325,8 @@ export interface CalendarDaySession {
   date: string;
   /** Number of completed sessions on this date */
   sessionCount: number;
+  /** True if any non-warmup set on this date set a new max for its (exercise, reps) pair. */
+  hasPR: boolean;
 }
 
 /** Detailed session info for the day detail screen. */

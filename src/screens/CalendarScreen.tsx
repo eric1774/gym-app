@@ -37,6 +37,7 @@ export function CalendarScreen() {
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [workoutDays, setWorkoutDays] = useState<Set<string>>(new Set());
+  const [prDays, setPRDays] = useState<Set<string>>(new Set());
   const [firstSessionDate, setFirstSessionDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +53,7 @@ export function CalendarScreen() {
           ]);
           if (!cancelled) {
             setWorkoutDays(new Set(days.map(d => d.date)));
+            setPRDays(new Set(days.filter(d => d.hasPR).map(d => d.date)));
             setFirstSessionDate(firstDate);
             setLoading(false);
           }
@@ -131,9 +133,7 @@ export function CalendarScreen() {
     const isToday = dateStr === todayStr;
     const hasWorkout = workoutDays.has(dateStr);
     const isFuture = isCurrentMonth && day > today.getDate();
-    // PR detection lives in day-detail; the calendar grid only shows mint dots
-    // (PR rings would require additional per-day data — out of scope).
-    const isPR = false;
+    const isPR = prDays.has(dateStr);
 
     const dotSize = Math.min(cellSize - 8, 38);
     const dotStyle: any = {
@@ -156,6 +156,7 @@ export function CalendarScreen() {
 
     const todayHaloStyle = isToday && hasWorkout ? styles.todayHalo : null;
     const prRingStyle = isPR ? styles.prRing : null;
+    const cornerPipSize = 7;
 
     if (hasWorkout) {
       return (
@@ -166,20 +167,41 @@ export function CalendarScreen() {
           activeOpacity={0.7}
         >
           {todayHaloStyle && (
-            <View
-              style={[
-                todayHaloStyle,
-                { width: dotSize + 8, height: dotSize + 8, borderRadius: (dotSize + 8) / 2 },
-              ]}
-            />
+            <>
+              <View
+                style={[
+                  styles.todayGlow,
+                  { width: dotSize + 18, height: dotSize + 18, borderRadius: (dotSize + 18) / 2 },
+                ]}
+              />
+              <View
+                style={[
+                  todayHaloStyle,
+                  { width: dotSize + 8, height: dotSize + 8, borderRadius: (dotSize + 8) / 2 },
+                ]}
+              />
+            </>
           )}
           <View style={[dotStyle, prRingStyle]}>
             <Text style={[styles.dayText, { color: textColor }]}>{day}</Text>
           </View>
+          {isPR && (
+            <View
+              style={[
+                styles.prCornerPip,
+                {
+                  width: cornerPipSize,
+                  height: cornerPipSize,
+                  borderRadius: cornerPipSize / 2,
+                  top: (cellSize - dotSize) / 2 - 1,
+                  right: (cellSize - dotSize) / 2 - 1,
+                },
+              ]}
+            />
+          )}
         </TouchableOpacity>
       );
     }
-
     return (
       <View
         key={dateStr}
@@ -339,9 +361,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: colors.accentGlow,
   },
+  todayGlow: {
+    position: 'absolute',
+    backgroundColor: 'rgba(141,194,138,0.10)',
+  },
   prRing: {
     borderWidth: 2,
-    borderColor: colors.prGold,
+    borderColor: 'rgba(255,184,0,0.65)',
+  },
+  prCornerPip: {
+    position: 'absolute',
+    backgroundColor: colors.prGold,
+    borderWidth: 1,
+    borderColor: colors.background,
   },
   loadingContainer: {
     flex: 1,

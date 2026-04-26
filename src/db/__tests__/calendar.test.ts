@@ -32,6 +32,9 @@ describe('getWorkoutDaysForMonth', () => {
         { id: 3, completed_at: '2026-03-10T15:00:00Z' },
       ]),
     );
+    // PR computation: prior maxes + month sets (both empty for this test)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
     mockGetLocalDateString.mockImplementation((d: Date) => {
       const iso = d.toISOString();
       if (iso.startsWith('2026-03-05')) { return '2026-03-05'; }
@@ -42,8 +45,8 @@ describe('getWorkoutDaysForMonth', () => {
     const result = await getWorkoutDaysForMonth(2026, 3);
 
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ date: '2026-03-05', sessionCount: 2 });
-    expect(result[1]).toEqual({ date: '2026-03-10', sessionCount: 1 });
+    expect(result[0]).toEqual({ date: '2026-03-05', sessionCount: 2, hasPR: false });
+    expect(result[1]).toEqual({ date: '2026-03-10', sessionCount: 1, hasPR: false });
   });
 
   it('returns results sorted ascending by date', async () => {
@@ -53,6 +56,8 @@ describe('getWorkoutDaysForMonth', () => {
         { id: 2, completed_at: '2026-03-05T10:00:00Z' },
       ]),
     );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
     mockGetLocalDateString
       .mockReturnValueOnce('2026-03-20')
       .mockReturnValueOnce('2026-03-05');
@@ -71,6 +76,8 @@ describe('getWorkoutDaysForMonth', () => {
         { id: 2, completed_at: '2026-03-15T10:00:00Z' }, // safely in March
       ]),
     );
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
     mockGetLocalDateString
       .mockReturnValueOnce('2026-02-28') // falls outside March → excluded
       .mockReturnValueOnce('2026-03-15'); // included
@@ -83,10 +90,67 @@ describe('getWorkoutDaysForMonth', () => {
 
   it('returns empty array when no completed sessions', async () => {
     mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
 
     const result = await getWorkoutDaysForMonth(2026, 3);
 
     expect(result).toEqual([]);
+  });
+
+  it('flags hasPR=true for dates where a non-warmup set strictly exceeds the prior (exId,reps) max', async () => {
+    // Two completed sessions in March: one normal day, one with a PR.
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { id: 1, completed_at: '2026-03-05T18:00:00Z' },
+        { id: 2, completed_at: '2026-03-12T18:00:00Z' },
+      ]),
+    );
+    // Prior maxes (before March): exercise 1 at 8 reps maxed at 100kg
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([{ exercise_id: 1, reps: 8, max_weight: 100 }]),
+    );
+    // Month sets: Mar 5 hits 100 (matches max, NOT a PR), Mar 12 hits 105 (PR)
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 1, reps: 8, weight_kg: 100, set_number: 1, completed_at: '2026-03-05T18:00:00Z' },
+        { exercise_id: 1, reps: 8, weight_kg: 105, set_number: 1, completed_at: '2026-03-12T18:00:00Z' },
+      ]),
+    );
+    mockGetLocalDateString.mockImplementation((d: Date) => {
+      const iso = d.toISOString();
+      if (iso.startsWith('2026-03-05')) { return '2026-03-05'; }
+      if (iso.startsWith('2026-03-12')) { return '2026-03-12'; }
+      return '';
+    });
+
+    const result = await getWorkoutDaysForMonth(2026, 3);
+
+    expect(result).toHaveLength(2);
+    expect(result.find(d => d.date === '2026-03-05')?.hasPR).toBe(false);
+    expect(result.find(d => d.date === '2026-03-12')?.hasPR).toBe(true);
+  });
+
+  it('does not flag hasPR for first-ever performance at a rep count (no baseline)', async () => {
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { id: 1, completed_at: '2026-03-05T18:00:00Z' },
+      ]),
+    );
+    // No prior maxes — first time lifting at this (exercise, reps)
+    mockExecuteSql.mockResolvedValueOnce(mockResultSet([]));
+    // One non-warmup set in the month
+    mockExecuteSql.mockResolvedValueOnce(
+      mockResultSet([
+        { exercise_id: 1, reps: 5, weight_kg: 200, set_number: 1, completed_at: '2026-03-05T18:00:00Z' },
+      ]),
+    );
+    mockGetLocalDateString.mockReturnValue('2026-03-05');
+
+    const result = await getWorkoutDaysForMonth(2026, 3);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].hasPR).toBe(false);
   });
 });
 
