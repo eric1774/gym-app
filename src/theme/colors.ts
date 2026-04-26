@@ -27,6 +27,18 @@ export const colors = {
   hrZone3: '#FACC15',             // HR zone 3 (tempo) — yellow
   hrZone4: '#E8845C',             // HR zone 4 (threshold) — orange
   hrZone5: '#E0697E',             // HR zone 5 (anaerobic) — red
+
+  // v6 extensions (2026-04-23)
+  textSoft: '#BDC3CB',                         // Soft slate — neutral data text
+  slate: '#5B7A95',                            // Cool slate accent for data zones
+  coral: '#E8845C',                            // Coral — streaks (matches existing hrZone4)
+  slateGlow: 'rgba(91,122,149,0.14)',          // Trend card radial overlay
+  slateBorder: 'rgba(91,122,149,0.16)',        // Trend card border
+  mintRadial: 'rgba(141,194,138,0.35)',        // Hero action card top-left mint glow
+  coralBorder: 'rgba(232,132,92,0.30)',        // Streak chip border / rest-day pill
+  coralFill: 'rgba(232,132,92,0.10)',          // Streak chip subtle fill
+  goldGlow: 'rgba(255,184,0,0.08)',            // Achievement card ambient glow
+  goldBorder: 'rgba(255,184,0,0.15)',          // Achievement card border
 } as const;
 
 export type ColorKey = keyof typeof colors;

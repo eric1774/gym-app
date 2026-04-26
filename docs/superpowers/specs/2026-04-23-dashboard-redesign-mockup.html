@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Direction B v6 — Honest time windows</title>
+  <style>
+    :root {
+      --bg: #0e0f10;
+      --canvas: #151718;
+      --surface: #1E2024;
+      --surface-2: #24272C;
+      --border: rgba(255,255,255,0.06);
+      --border-strong: rgba(255,255,255,0.14);
+      --text: #FFFFFF;
+      --text-soft: #BDC3CB;
+      --muted: #8E9298;
+      --dim: #6A6E74;
+      --mint: #8DC28A;
+      --mint-glow: rgba(141,194,138,0.15);
+      --gold: #FFB800;
+      --coral: #E8845C;
+      --coral-dim: rgba(232,132,92,0.30);
+      --water: #4A8DB7;
+      --slate: #5B7A95;
+      --on-accent: #1A1A1A;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+    h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin: 0 0 4px; }
+    .subtitle { color: var(--muted); font-size: 14px; margin: 0 0 24px; line-height: 1.5; }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(320px, 400px) 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 780px) { .split { grid-template-columns: 1fr; } }
+
+    .phone {
+      width: 100%; max-width: 390px; margin: 0 auto;
+      aspect-ratio: 9 / 19.5;
+      background: var(--canvas);
+      border-radius: 34px; overflow: hidden;
+      position: relative;
+      border: 6px solid #2a2c30;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .phone-content {
+      position: absolute; inset: 0;
+      padding: 18px 14px 0;
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: hidden;
+    }
+    .statusbar {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; font-weight: 600; color: var(--text);
+      padding: 0 6px; opacity: 0.85;
+    }
+    .head { display: flex; justify-content: space-between; align-items: center; }
+    .greet { font-size: 13px; color: var(--muted); }
+    .greet strong { color: var(--text); font-weight: 700; }
+    .gear {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--surface); display: grid; place-items: center;
+      color: var(--muted); font-size: 13px;
+      border: 1px solid var(--border);
+    }
+
+    .streak {
+      background:
+        radial-gradient(ellipse at left, rgba(232,132,92,0.10) 0%, transparent 65%),
+        var(--surface);
+      border: 1px solid var(--coral-dim);
+      border-radius: 999px;
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .streak-text { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+    .streak-num { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+    .streak-num em { font-style: normal; color: var(--coral); font-weight: 800; }
+    .streak-sub { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .streak-bars { display: flex; gap: 3px; align-items: center; flex-shrink: 0; }
+    .streak-bars .bar { width: 4px; height: 16px; border-radius: 999px; background: var(--coral); }
+    .streak-bars .bar.rest { height: 9px; background: rgba(232,132,92,0.30); }
+
+    .label {
+      font-size: 9px; color: var(--muted);
+      letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase;
+    }
+    .num-xl { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; }
+    .unit { font-size: 10px; color: var(--muted); font-weight: 500; }
+
+    .hero {
+      background:
+        radial-gradient(ellipse at top left, rgba(141,194,138,0.35) 0%, rgba(141,194,138,0) 55%),
+        linear-gradient(135deg, #1E2024 0%, #1A3326 100%);
+      border: 1px solid rgba(141,194,138,0.3);
+      border-radius: 18px; padding: 16px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ""; position: absolute;
+      top: -30%; right: -20%; width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(141,194,138,0.2) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 9px; letter-spacing: 1.5px; font-weight: 700; color: var(--mint);
+    }
+    .hero-label .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--mint); box-shadow: 0 0 8px var(--mint);
+    }
+    .hero-title { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; margin-top: 6px; }
+    .hero-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .hero-last { font-size: 10px; color: rgba(141,194,138,0.85); margin-top: 8px; font-weight: 500; }
+    .hero-last strong { color: var(--mint); font-weight: 700; }
+    .hero-row { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 10px; }
+    .chips { display: flex; gap: 5px; flex-wrap: wrap; flex: 1; min-width: 0; }
+    .chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 4px 9px; border-radius: 7px;
+      font-size: 10px; font-weight: 600; color: var(--text); white-space: nowrap;
+    }
+    .chip.more { background: transparent; color: var(--muted); border-color: transparent; }
+    .start-btn {
+      background: var(--mint); color: var(--on-accent);
+      padding: 10px 18px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+      box-shadow: 0 4px 16px rgba(141,194,138,0.35);
+      white-space: nowrap; border: 0;
+    }
+
+    /* Trends — windows now correct */
+    .trend-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .trend-card {
+      background:
+        radial-gradient(ellipse at top right, rgba(91,122,149,0.14) 0%, transparent 65%),
+        linear-gradient(165deg, #1E2024 0%, #1C2228 100%);
+      border: 1px solid rgba(91,122,149,0.16);
+      border-radius: 14px; padding: 12px;
+      position: relative; overflow: hidden;
+    }
+    .trend-card .top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .trend-card .chev { color: var(--muted); font-size: 14px; opacity: 0.6; }
+    .trend-card .num-row { display: flex; align-items: baseline; gap: 4px; margin-top: 6px; }
+    .trend-card .delta {
+      font-size: 10px; font-weight: 600; color: var(--text-soft);
+      margin-top: 2px;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .trend-card .delta .arrow {
+      display: inline-block; width: 0; height: 0;
+    }
+    .trend-card .delta.down .arrow {
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-top: 4px solid var(--text-soft);
+    }
+    .trend-card .delta.up .arrow {
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-bottom: 4px solid var(--text-soft);
+    }
+    .trend-card svg { display: block; margin-top: 6px; }
+
+    /* Rings */
+    .rings {
+      background: var(--surface);
+      border-radius: 16px; border: 1px solid var(--border);
+      padding: 12px 10px 10px;
+    }
+    .rings-head { display: flex; justify-content: space-between; padding: 0 4px 8px; }
+    .rings-total { font-size: 9px; color: var(--muted); font-weight: 600; }
+    .rings-row { display: flex; justify-content: space-around; align-items: flex-start; }
+    .ring-col {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 6px 4px; border-radius: 10px;
+    }
+    .ring-svg { position: relative; width: 48px; height: 48px; }
+    .ring-pct {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      font-size: 11px; font-weight: 700; color: var(--text);
+    }
+    .ring-name { font-size: 10px; color: var(--text); font-weight: 700; margin-top: 4px; }
+    .ring-rem { font-size: 9px; color: var(--muted); font-weight: 500; }
+
+    /* Stats */
+    .stats {
+      background:
+        radial-gradient(ellipse at center, rgba(255,184,0,0.08) 0%, transparent 70%),
+        var(--surface);
+      border: 1px solid rgba(255,184,0,0.15);
+      border-radius: 16px;
+      padding: 12px 6px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.15fr;
+      align-items: center;
+    }
+    .stats .stat { text-align: center; padding: 0 4px; }
+    .stats .stat .v {
+      font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+      display: inline-flex; align-items: baseline; gap: 2px;
+    }
+    .stats .stat .v.gold { color: var(--gold); text-shadow: 0 0 12px rgba(255,184,0,0.3); }
+    .stats .stat .v.soft { color: var(--text-soft); }
+    .stats .stat .v .vu { font-size: 10px; color: var(--muted); font-weight: 500; }
+    .stats .stat .delta {
+      font-size: 9px; font-weight: 600; color: var(--text-soft);
+      margin-top: 3px;
+      display: inline-flex; align-items: center; gap: 3px;
+      justify-content: center; width: 100%;
+    }
+    .stats .stat .delta .arrow { display: inline-block; width: 0; height: 0; }
+    .stats .stat .delta.up .arrow {
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-bottom: 4px solid var(--text-soft);
+    }
+    .stats .stat .delta.down .arrow {
+      border-left: 3px solid transparent;
+      border-right: 3px solid transparent;
+      border-top: 4px solid var(--text-soft);
+    }
+    .stats .stat .l {
+      font-size: 9px; color: var(--muted); margin-top: 4px;
+      letter-spacing: 1px; text-transform: uppercase; font-weight: 600;
+    }
+    .stats .divider { width: 1px; height: 36px; background: var(--border); justify-self: center; }
+
+    /* Notes */
+    .notes { padding-top: 4px; }
+    .note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .note h4 {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      margin: 0 0 8px;
+      display: flex; align-items: center; gap: 8px;
+      color: var(--slate);
+    }
+    .note h4 .num {
+      background: var(--slate); color: var(--canvas);
+      width: 18px; height: 18px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 10px; font-weight: 700;
+    }
+    .note p { font-size: 13px; line-height: 1.5; color: var(--text); margin: 0; }
+    .note p code {
+      background: var(--surface-2);
+      padding: 1px 6px; border-radius: 4px;
+      font-size: 12px; color: var(--coral);
+    }
+    .note p strong { color: var(--text); font-weight: 700; }
+    .note .small {
+      font-size: 11px; color: var(--muted); margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* Card close-up */
+    .closeup {
+      background: var(--canvas);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+    .closeup .label-row {
+      font-size: 10px; color: var(--muted); letter-spacing: 1.2px;
+      font-weight: 700; text-transform: uppercase; margin-bottom: 12px;
+    }
+    .closeup-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .formula {
+      font-family: ui-monospace, "SF Mono", monospace;
+      font-size: 11px; color: var(--text-soft);
+      background: var(--surface-2);
+      padding: 8px 10px; border-radius: 6px;
+      line-height: 1.6; margin-top: 10px;
+      border-left: 2px solid var(--slate);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Direction B — v6 (Time Windows Locked)</h1>
+    <p class="subtitle">Trend cards now use industry-standard windows: <strong>weight = 7d moving avg vs prior 7d avg</strong> (signal extracted from daily noise), <strong>volume = 4-week mesocycle vs prior 4 weeks</strong>. Stats strip uses <strong>same-point-in-week comparison (Option B)</strong>.</p>
+
+    <div class="split">
+
+      <div class="phone">
+        <div class="phone-content">
+          <div class="statusbar"><span>9:41</span><span>● ●●● 100%</span></div>
+
+          <div class="head">
+            <div class="greet">Good morning, <strong>Eric</strong></div>
+            <div class="gear">⚙</div>
+          </div>
+
+          <div class="streak">
+            <div class="streak-text">
+              <span class="streak-num"><em>7</em>-day streak</span>
+              <span class="streak-sub">Rest days included</span>
+            </div>
+            <div class="streak-bars">
+              <div class="bar"></div>
+              <div class="bar rest"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+              <div class="bar rest"></div>
+              <div class="bar"></div>
+              <div class="bar"></div>
+            </div>
+          </div>
+
+          <div class="hero">
+            <div class="hero-label"><span class="dot"></span>UP NEXT · WEEK 3 · DAY 4</div>
+            <div class="hero-title">Push Day</div>
+            <div class="hero-meta">6 exercises · est. 52 min · Hypertrophy 5×5</div>
+            <div class="hero-last">Last time: <strong>Bench 185×5</strong> · you added 10 lb</div>
+            <div class="hero-row">
+              <div class="chips">
+                <span class="chip">Bench</span>
+                <span class="chip">OHP</span>
+                <span class="chip">Dips</span>
+                <span class="chip more">+3 more</span>
+              </div>
+              <button class="start-btn">START ▶</button>
+            </div>
+          </div>
+
+          <!-- TRENDS — corrected windows -->
+          <div class="trend-two">
+            <div class="trend-card">
+              <div class="top">
+                <span class="label">WEIGHT</span>
+                <span class="chev">›</span>
+              </div>
+              <div class="num-row">
+                <span class="num-xl">184.2</span><span class="unit">lb</span>
+              </div>
+              <div class="delta down"><span class="arrow"></span>0.4 lb · 7d avg</div>
+              <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="g-w" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#8DC28A" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#8DC28A" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <!-- 30 daily points showing noisy raw + smooth MA -->
+                <path d="M0,8 L4,12 L8,6 L12,14 L16,9 L20,16 L24,11 L28,18 L32,13 L36,20 L40,15 L44,22 L48,17 L52,24 L56,19 L60,26 L64,21 L68,28 L72,23 L76,25 L80,20 L84,26 L88,22 L92,24 L96,21 L100,23 L104,20 L108,22 L112,21 L116,19 L120,20 L120,32 L0,32 Z" fill="url(#g-w)" opacity="0.6"/>
+                <path d="M0,8 L4,12 L8,6 L12,14 L16,9 L20,16 L24,11 L28,18 L32,13 L36,20 L40,15 L44,22 L48,17 L52,24 L56,19 L60,26 L64,21 L68,28 L72,23 L76,25 L80,20 L84,26 L88,22 L92,24 L96,21 L100,23 L104,20 L108,22 L112,21 L116,19 L120,20" stroke="rgba(141,194,138,0.45)" stroke-width="1" fill="none" stroke-linecap="round"/>
+                <!-- Smoothed 7d MA on top -->
+                <path d="M0,11 L10,12 L20,13 L30,14 L40,15 L50,17 L60,19 L70,21 L80,22 L90,22.5 L100,22 L110,21 L120,20" stroke="#8DC28A" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+                <circle cx="120" cy="20" r="2.5" fill="#8DC28A"/>
+              </svg>
+            </div>
+            <div class="trend-card">
+              <div class="top">
+                <span class="label">VOLUME · 4 WK</span>
+                <span class="chev">›</span>
+              </div>
+              <div class="num-row">
+                <span class="num-xl">+12</span><span class="unit">%</span>
+              </div>
+              <div class="delta up"><span class="arrow"></span>vs prior 4 wk</div>
+              <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="g-v" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#8DC28A" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#8DC28A" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <!-- 4 weekly bars -->
+                <rect x="6"  y="22" width="22" height="10" fill="url(#g-v)"/>
+                <rect x="34" y="18" width="22" height="14" fill="url(#g-v)"/>
+                <rect x="62" y="14" width="22" height="18" fill="url(#g-v)"/>
+                <rect x="90" y="8"  width="22" height="24" fill="url(#g-v)"/>
+                <line x1="17" y1="22" x2="45" y2="18" stroke="#8DC28A" stroke-width="1.4"/>
+                <line x1="45" y1="18" x2="73" y2="14" stroke="#8DC28A" stroke-width="1.4"/>
+                <line x1="73" y1="14" x2="101" y2="8" stroke="#8DC28A" stroke-width="1.4"/>
+                <circle cx="17"  cy="22" r="2" fill="#8DC28A"/>
+                <circle cx="45"  cy="18" r="2" fill="#8DC28A"/>
+                <circle cx="73"  cy="14" r="2" fill="#8DC28A"/>
+                <circle cx="101" cy="8"  r="2.5" fill="#8DC28A"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="rings">
+            <div class="rings-head">
+              <span class="label">TODAY'S NUTRITION</span>
+              <span class="rings-total">1,420 / 2,400 kcal</span>
+            </div>
+            <div class="rings-row">
+              <div class="ring-col" style="background: rgba(141,194,138,0.06);">
+                <div class="ring-svg">
+                  <svg viewBox="0 0 36 36" width="48" height="48">
+                    <circle cx="18" cy="18" r="14" stroke="#2A2D32" stroke-width="3.5" fill="none"/>
+                    <circle cx="18" cy="18" r="14" stroke="#8DC28A" stroke-width="3.5" fill="none" stroke-dasharray="65 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                  </svg>
+                  <div class="ring-pct">65%</div>
+                </div>
+                <div class="ring-name">Protein</div>
+                <div class="ring-rem">56g left</div>
+              </div>
+              <div class="ring-col" style="background: rgba(255,184,0,0.06);">
+                <div class="ring-svg">
+                  <svg viewBox="0 0 36 36" width="48" height="48">
+                    <circle cx="18" cy="18" r="14" stroke="#2A2D32" stroke-width="3.5" fill="none"/>
+                    <circle cx="18" cy="18" r="14" stroke="#FFB800" stroke-width="3.5" fill="none" stroke-dasharray="48 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                  </svg>
+                  <div class="ring-pct">48%</div>
+                </div>
+                <div class="ring-name">Carbs</div>
+                <div class="ring-rem">142g left</div>
+              </div>
+              <div class="ring-col" style="background: rgba(232,132,92,0.06);">
+                <div class="ring-svg">
+                  <svg viewBox="0 0 36 36" width="48" height="48">
+                    <circle cx="18" cy="18" r="14" stroke="#2A2D32" stroke-width="3.5" fill="none"/>
+                    <circle cx="18" cy="18" r="14" stroke="#E8845C" stroke-width="3.5" fill="none" stroke-dasharray="72 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                  </svg>
+                  <div class="ring-pct">72%</div>
+                </div>
+                <div class="ring-name">Fat</div>
+                <div class="ring-rem">21g left</div>
+              </div>
+              <div class="ring-col" style="background: rgba(74,141,183,0.06);">
+                <div class="ring-svg">
+                  <svg viewBox="0 0 36 36" width="48" height="48">
+                    <circle cx="18" cy="18" r="14" stroke="#2A2D32" stroke-width="3.5" fill="none"/>
+                    <circle cx="18" cy="18" r="14" stroke="#4A8DB7" stroke-width="3.5" fill="none" stroke-dasharray="40 100" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                  </svg>
+                  <div class="ring-pct">40%</div>
+                </div>
+                <div class="ring-name">Water</div>
+                <div class="ring-rem">38oz left</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="v soft">3</div>
+              <div class="delta up"><span class="arrow"></span>1 vs last wk</div>
+              <div class="l">Sessions</div>
+            </div>
+            <div class="divider"></div>
+            <div class="stat">
+              <div class="v gold">2</div>
+              <div class="delta up"><span class="arrow"></span>1 vs last wk</div>
+              <div class="l">PRs</div>
+            </div>
+            <div class="divider"></div>
+            <div class="stat">
+              <div class="v soft">24.5<span class="vu">K&nbsp;lb</span></div>
+              <div class="delta up"><span class="arrow"></span>2.1K vs last wk</div>
+              <div class="l">Tonnage</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="notes">
+
+        <div class="closeup">
+          <div class="label-row">TREND CARDS · CLOSE-UP</div>
+          <div class="closeup-grid">
+            <div class="trend-card">
+              <div class="top"><span class="label">WEIGHT</span><span class="chev">›</span></div>
+              <div class="num-row"><span class="num-xl">184.2</span><span class="unit">lb</span></div>
+              <div class="delta down"><span class="arrow"></span>0.4 lb · 7d avg</div>
+              <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="g-w2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#8DC28A" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#8DC28A" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M0,8 L4,12 L8,6 L12,14 L16,9 L20,16 L24,11 L28,18 L32,13 L36,20 L40,15 L44,22 L48,17 L52,24 L56,19 L60,26 L64,21 L68,28 L72,23 L76,25 L80,20 L84,26 L88,22 L92,24 L96,21 L100,23 L104,20 L108,22 L112,21 L116,19 L120,20 L120,32 L0,32 Z" fill="url(#g-w2)" opacity="0.6"/>
+                <path d="M0,8 L4,12 L8,6 L12,14 L16,9 L20,16 L24,11 L28,18 L32,13 L36,20 L40,15 L44,22 L48,17 L52,24 L56,19 L60,26 L64,21 L68,28 L72,23 L76,25 L80,20 L84,26 L88,22 L92,24 L96,21 L100,23 L104,20 L108,22 L112,21 L116,19 L120,20" stroke="rgba(141,194,138,0.45)" stroke-width="1" fill="none" stroke-linecap="round"/>
+                <path d="M0,11 L10,12 L20,13 L30,14 L40,15 L50,17 L60,19 L70,21 L80,22 L90,22.5 L100,22 L110,21 L120,20" stroke="#8DC28A" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+                <circle cx="120" cy="20" r="2.5" fill="#8DC28A"/>
+              </svg>
+            </div>
+            <div class="trend-card">
+              <div class="top"><span class="label">VOLUME · 4 WK</span><span class="chev">›</span></div>
+              <div class="num-row"><span class="num-xl">+12</span><span class="unit">%</span></div>
+              <div class="delta up"><span class="arrow"></span>vs prior 4 wk</div>
+              <svg width="100%" height="32" viewBox="0 0 120 32" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="g-v2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#8DC28A" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#8DC28A" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <rect x="6"  y="22" width="22" height="10" fill="url(#g-v2)"/>
+                <rect x="34" y="18" width="22" height="14" fill="url(#g-v2)"/>
+                <rect x="62" y="14" width="22" height="18" fill="url(#g-v2)"/>
+                <rect x="90" y="8"  width="22" height="24" fill="url(#g-v2)"/>
+                <line x1="17" y1="22" x2="45" y2="18" stroke="#8DC28A" stroke-width="1.4"/>
+                <line x1="45" y1="18" x2="73" y2="14" stroke="#8DC28A" stroke-width="1.4"/>
+                <line x1="73" y1="14" x2="101" y2="8" stroke="#8DC28A" stroke-width="1.4"/>
+                <circle cx="17"  cy="22" r="2" fill="#8DC28A"/>
+                <circle cx="45"  cy="18" r="2" fill="#8DC28A"/>
+                <circle cx="73"  cy="14" r="2" fill="#8DC28A"/>
+                <circle cx="101" cy="8"  r="2.5" fill="#8DC28A"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <h4><span class="num">1</span>Weight card — 30d sparkline + 7d MA delta</h4>
+          <p>Sparkline shows <strong>30 days of daily readings</strong> (faint thin line) overlaid with a <strong>thicker 7-day moving-average curve</strong> in mint. The mint curve is what's "real" — daily lines are noise.</p>
+          <div class="formula">
+big number = today's logged weight (e.g. 184.2 lb)
+delta      = current 7d MA  −  7d MA from 7 days ago
+sparkline  = 30 days raw + 30 days MA
+chevron    = open weight detail screen
+          </div>
+          <p class="small">In the mockup: today = 184.2 lb. Last 7-day average = 184.4 lb. The 7-day average from 7 days ago = 184.8 lb. <strong>Delta = ↓ 0.4 lb</strong> — true week-over-week change with noise filtered out.</p>
+        </div>
+
+        <div class="note">
+          <h4><span class="num">2</span>Volume card — 4-week mesocycle bars</h4>
+          <p>Sparkline now uses <strong>4 weekly bars</strong> (not a smooth line) — each bar is one week's total tonnage, with a connecting line on top showing the trend. More honest visualization for sparse weekly data than a faked line chart.</p>
+          <div class="formula">
+big number = (last 4wk volume − prior 4wk volume) / prior 4wk × 100
+delta      = "vs prior 4 wk" (the comparison is the metric)
+sparkline  = each of the last 4 weeks, week-by-week
+chevron    = open volume detail screen
+          </div>
+        </div>
+
+        <div class="note">
+          <h4><span class="num">3</span>Stats strip — same-point-in-week (Option B)</h4>
+          <p>Tuesday morning? Sessions compares <strong>Mon-Tue this week vs Mon-Tue last week</strong>. Once Sunday rolls over, becomes full-week vs full-week automatically. No more partial-week gaslighting.</p>
+          <div class="formula">
+sessions  = count(workouts, this Mon → now) vs (last Mon → equivalent point)
+PRs       = same comparison window
+tonnage   = sum(weight × reps, same windows)
+arrow     = neutral slate, never green/red
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

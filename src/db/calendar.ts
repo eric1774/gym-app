@@ -7,6 +7,13 @@ import { getLocalDateString } from '../utils/dates';
  * completed workout. Uses a UTC date range with a 1-day buffer on each side
  * to handle timezone offset edge cases, then filters in JS using local dates.
  *
+ * Each result also flags `hasPR` — true if any non-warmup set on that date
+ * set a new max for its (exercise_id, reps) pair vs. the chronologically
+ * preceding history. PR detection is computed via a single chronological
+ * pass over (a) all sets prior to the month aggregated as a per-(exId,reps)
+ * running max baseline, then (b) all sets within the month range, walking
+ * forward and updating the running max as each new max appears.
+ *
  * @param year  Full year (e.g. 2026)
  * @param month 1-indexed month (1=January, 12=December)
  */
@@ -47,13 +54,89 @@ export async function getWorkoutDaysForMonth(
     }
   }
 
+  const prDates = await computePRDatesForMonth(database, startStr, year, month);
+
   const days: CalendarDaySession[] = [];
   for (const [date, sessionCount] of countsByDate) {
-    days.push({ date, sessionCount });
+    days.push({ date, sessionCount, hasPR: prDates.has(date) });
   }
   // Sort by date ascending
   days.sort((a, b) => a.date.localeCompare(b.date));
   return days;
+}
+
+/**
+ * Identifies which dates within the target month had at least one PR set.
+ * Pulls per-(exercise, reps) running maxes from before the range, then walks
+ * the month's non-warmup sets in chronological order, marking dates whose
+ * sets strictly exceeded the running max at the time of insertion.
+ */
+async function computePRDatesForMonth(
+  database: Awaited<typeof db>,
+  rangeStartStr: string,
+  year: number,
+  month: number,
+): Promise<Set<string>> {
+  // Prior maxima per (exercise, reps) for everything that completed before
+  // the wide range start. This becomes the starting baseline for the walk.
+  const priorMaxResult = await executeSql(
+    database,
+    `SELECT ws.exercise_id, ws.reps, MAX(ws.weight_kg) AS max_weight
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE ws.is_warmup = 0
+       AND wss.completed_at IS NOT NULL
+       AND wss.completed_at < ?
+     GROUP BY ws.exercise_id, ws.reps`,
+    [rangeStartStr],
+  );
+
+  const runningMax = new Map<string, number>();
+  for (let i = 0; i < priorMaxResult.rows.length; i++) {
+    const row = priorMaxResult.rows.item(i);
+    runningMax.set(`${row.exercise_id}|${row.reps}`, row.max_weight);
+  }
+
+  // All non-warmup sets within the range, ordered chronologically so the
+  // running-max walk reflects the same temporal rule as the active-workout
+  // PR check.
+  const rangeEnd = new Date(year, month, 2);
+  const endStr = `${rangeEnd.getFullYear()}-${String(rangeEnd.getMonth() + 1).padStart(2, '0')}-${String(rangeEnd.getDate()).padStart(2, '0')}`;
+
+  const monthSetsResult = await executeSql(
+    database,
+    `SELECT ws.exercise_id, ws.reps, ws.weight_kg, ws.set_number, wss.completed_at
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE ws.is_warmup = 0
+       AND wss.completed_at IS NOT NULL
+       AND wss.completed_at >= ?
+       AND wss.completed_at < ?
+     ORDER BY wss.completed_at ASC, ws.set_number ASC`,
+    [rangeStartStr, endStr],
+  );
+
+  const prDates = new Set<string>();
+  for (let i = 0; i < monthSetsResult.rows.length; i++) {
+    const row = monthSetsResult.rows.item(i);
+    const key = `${row.exercise_id}|${row.reps}`;
+    const prior = runningMax.get(key);
+
+    // First-ever performance at this rep count is not a PR (no baseline to beat).
+    if (prior !== undefined && row.weight_kg > prior) {
+      const localDate = getLocalDateString(new Date(row.completed_at));
+      const [rowYear, rowMonth] = localDate.split('-').map(Number);
+      if (rowYear === year && rowMonth === month) {
+        prDates.add(localDate);
+      }
+    }
+
+    if (prior === undefined || row.weight_kg > prior) {
+      runningMax.set(key, row.weight_kg);
+    }
+  }
+
+  return prDates;
 }
 
 /**

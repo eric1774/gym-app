@@ -25,39 +25,44 @@ function formatDelta(value: number | null): { text: string; color: string } {
   }
   const rounded = Math.round(value);
   if (rounded >= 0) {
-    return { text: `+${rounded}%`, color: colors.accent };
+    return { text: `\u25b2 ${rounded}%`, color: colors.textSoft };
   }
-  return { text: `\u2212${Math.abs(rounded)}%`, color: colors.danger };
+  return { text: `\u25bc ${Math.abs(rounded)}%`, color: colors.textSoft };
 }
 
 interface ExerciseRowProps {
   exercise: SessionDayExerciseProgress;
+  onPress: () => void;
 }
 
-function ExerciseRow({ exercise }: ExerciseRowProps) {
+function ExerciseRow({ exercise, onPress }: ExerciseRowProps) {
   const vol = formatDelta(exercise.volumeChangePercent);
   const str = formatDelta(exercise.strengthChangePercent);
+  const volNeg = (exercise.volumeChangePercent ?? 0) < 0;
+  const strNeg = (exercise.strengthChangePercent ?? 0) < 0;
 
   return (
-    <View style={styles.exerciseRow}>
-      <Text style={styles.exerciseName} numberOfLines={1}>
-        {exercise.exerciseName}
-      </Text>
+    <TouchableOpacity testID="sd-exercise-row" style={styles.exerciseRow} activeOpacity={0.7} onPress={onPress}>
+      <Text style={styles.exerciseName} numberOfLines={1}>{exercise.exerciseName}</Text>
       <View style={styles.deltaRow}>
         <View style={styles.deltaItem}>
           <Text style={styles.deltaLabel}>Vol</Text>
-          <View style={[styles.deltaBadge, { backgroundColor: vol.color + '1A' }]}>
-            <Text style={[styles.deltaValue, { color: vol.color }]}>{vol.text}</Text>
+          <View style={[styles.deltaBadge, { backgroundColor: 'rgba(91,122,149,0.10)' }]}>
+            <Text testID={volNeg ? 'delta-negative' : 'delta'} style={[styles.deltaValue, { color: vol.color }]}>
+              {vol.text}
+            </Text>
           </View>
         </View>
         <View style={styles.deltaItem}>
           <Text style={styles.deltaLabel}>Str</Text>
-          <View style={[styles.deltaBadge, { backgroundColor: str.color + '1A' }]}>
-            <Text style={[styles.deltaValue, { color: str.color }]}>{str.text}</Text>
+          <View style={[styles.deltaBadge, { backgroundColor: 'rgba(91,122,149,0.10)' }]}>
+            <Text testID={strNeg ? 'delta-negative' : 'delta'} style={[styles.deltaValue, { color: str.color }]}>
+              {str.text}
+            </Text>
           </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -107,7 +112,14 @@ export function SessionDayProgressScreen() {
           </View>
         ) : (
           exercises.map(exercise => (
-            <ExerciseRow key={exercise.exerciseId} exercise={exercise} />
+            <ExerciseRow key={exercise.exerciseId} exercise={exercise} onPress={() =>
+              navigation.navigate('ExerciseDetail', {
+                exerciseId: exercise.exerciseId,
+                exerciseName: exercise.exerciseName,
+                measurementType: exercise.measurementType,
+                category: exercise.category,
+              })
+            } />
           ))
         )}
       </ScrollView>

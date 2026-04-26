@@ -133,16 +133,6 @@ export interface CategorySummary {
   measurementType: ExerciseMeasurementType;
 }
 
-export interface CategoryExerciseProgress {
-  exerciseId: number;
-  exerciseName: string;
-  measurementType: ExerciseMeasurementType;
-  sparklinePoints: number[];
-  currentBest: number;
-  previousBest: number | null;
-  lastTrainedAt: string;
-}
-
 export interface ExerciseHistorySession {
   sessionId: number;
   date: string;
@@ -335,6 +325,8 @@ export interface CalendarDaySession {
   date: string;
   /** Number of completed sessions on this date */
   sessionCount: number;
+  /** True if any non-warmup set on this date set a new max for its (exercise, reps) pair. */
+  hasPR: boolean;
 }
 
 /** Detailed session info for the day detail screen. */
@@ -531,19 +523,6 @@ export interface WeeklySnapshot {
   volumeChangePercent: number | null; // null if no previous week data
 }
 
-export interface MuscleGroupProgress {
-  category: ExerciseCategory;
-  volumeChangePercent: number | null;
-  hasPR: boolean;
-  lastTrainedAt: string | null;
-}
-
-export interface ExerciseInsights {
-  weightChangePercent: number | null;
-  volumeChangePercent: number | null;
-  periodLabel: string; // e.g. "3 months"
-}
-
 export interface SessionComparison {
   currentSets: ExerciseHistorySet[];
   comparisonSets: ExerciseHistorySet[];
@@ -564,6 +543,8 @@ export interface SessionDayProgress {
 export interface SessionDayExerciseProgress {
   exerciseId: number;
   exerciseName: string;
+  category: ExerciseCategory;
+  measurementType: 'reps' | 'timed' | 'height_reps';
   volumeChangePercent: number | null;
   strengthChangePercent: number | null;
 }
@@ -677,3 +658,49 @@ export interface BodyMetric {
 }
 
 export type BodyCompScope = 'month' | 'week' | 'day';
+
+// ── Progress Hub redesign (2026-04-25) ────────────────────────────────
+
+export interface ExerciseListItem {
+  exerciseId: number;
+  exerciseName: string;
+  category: ExerciseCategory;
+  measurementType: 'reps' | 'timed' | 'height_reps';
+  lastTrainedAt: string | null;          // ISO; null if never trained
+  sessionCount: number;
+  sparklinePoints: number[];             // last up-to-8 best-weight values
+  deltaPercent14d: number | null;        // null if <2 sessions in 14d window
+}
+
+export interface ProgramDayWeeklyTonnage {
+  programDayId: number;
+  dayName: string;
+  exerciseCount: number;
+  lastPerformedAt: string | null;
+  weeklyTonnageLb: [number, number, number, number]; // [4wk, 3wk, 2wk, this wk]
+  currentWeekTonnageLb: number;          // = weeklyTonnageLb[3]
+  deltaPercent2wk: number | null;        // last 2wk vs prior 2wk; null if insufficient
+}
+
+export interface PRWatchCandidate {
+  exerciseId: number;
+  exerciseName: string;
+  currentBestLb: number;
+  targetLb: number;
+  distanceLb: number;
+}
+
+export interface StaleExerciseCandidate {
+  exerciseId: number;
+  exerciseName: string;
+  daysSinceLastTrained: number;
+  category: ExerciseCategory;
+}
+
+export interface ChartPoint {
+  sessionId: number;
+  date: string;             // ISO
+  bestWeightLb: number;     // top working set weight
+  volumeLb: number;         // sum(weight × reps), working sets only (excludes warmups)
+  isPR: boolean;
+}

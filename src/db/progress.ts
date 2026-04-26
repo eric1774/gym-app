@@ -1,13 +1,17 @@
+import type { SQLiteDatabase } from 'react-native-sqlite-storage';
 import { db, executeSql } from './database';
 import {
   WeeklySnapshot,
-  MuscleGroupProgress,
-  ExerciseInsights,
   SessionComparison,
   ExerciseHistorySet,
   ExerciseCategory,
   SessionDayProgress,
   SessionDayExerciseProgress,
+  ExerciseListItem,
+  ProgramDayWeeklyTonnage,
+  PRWatchCandidate,
+  StaleExerciseCandidate,
+  ChartPoint,
 } from '../types';
 
 export interface SessionSetDetail {
@@ -129,141 +133,6 @@ export async function getWeeklySnapshot(): Promise<WeeklySnapshot> {
   }
 
   return { sessionsThisWeek, prsThisWeek, volumeChangePercent };
-}
-
-// ── getMuscleGroupProgress ───────────────────────────────────────────
-
-/**
- * For each muscle group category with recent training data (within last 2 weeks),
- * return volume change vs previous week and PR flags.
- */
-export async function getMuscleGroupProgress(): Promise<MuscleGroupProgress[]> {
-  const database = await db;
-  const now = new Date();
-  const weekStart = getWeekStart(now);
-  const prevWeekStart = getPreviousWeekStart(now);
-  const nextWeekStart = getWeekStart(new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000));
-  const twoWeeksAgo = new Date(new Date(prevWeekStart).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  // This week's volume per category
-  const thisWeekResult = await executeSql(
-    database,
-    `SELECT mg.parent_category AS category, SUM(ws.weight_kg * ws.reps) AS volume
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
-     INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-     INNER JOIN exercises e ON e.id = ws.exercise_id
-     WHERE wss.completed_at >= ?
-       AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-       AND emg.is_primary = 1
-       AND mg.parent_category != 'stretching'
-       AND e.measurement_type != 'height_reps'
-     GROUP BY mg.parent_category`,
-    [weekStart, nextWeekStart],
-  );
-
-  // Last week's volume per category
-  const lastWeekResult = await executeSql(
-    database,
-    `SELECT mg.parent_category AS category, SUM(ws.weight_kg * ws.reps) AS volume
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
-     INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-     INNER JOIN exercises e ON e.id = ws.exercise_id
-     WHERE wss.completed_at >= ?
-       AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-       AND emg.is_primary = 1
-       AND mg.parent_category != 'stretching'
-       AND e.measurement_type != 'height_reps'
-     GROUP BY mg.parent_category`,
-    [prevWeekStart, weekStart],
-  );
-
-  // PRs this week per category
-  const prResult = await executeSql(
-    database,
-    `SELECT DISTINCT mg.parent_category AS category
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
-     INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-     WHERE wss.completed_at >= ?
-       AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-       AND emg.is_primary = 1
-       AND mg.parent_category != 'stretching'
-       AND ws.weight_kg > (
-         SELECT COALESCE(MAX(ws2.weight_kg), 0)
-         FROM workout_sets ws2
-         INNER JOIN workout_sessions wss2 ON wss2.id = ws2.session_id
-         WHERE ws2.exercise_id = ws.exercise_id
-           AND wss2.completed_at < ?
-           AND (ws2.is_warmup IS NULL OR ws2.is_warmup = 0)
-       )`,
-    [weekStart, nextWeekStart, weekStart],
-  );
-
-  // Last trained per category (within last 2 weeks to determine "recently trained")
-  const lastTrainedResult = await executeSql(
-    database,
-    `SELECT mg.parent_category AS category, MAX(wss.completed_at) AS last_trained_at
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     INNER JOIN exercise_muscle_groups emg ON emg.exercise_id = ws.exercise_id
-     INNER JOIN muscle_groups mg ON mg.id = emg.muscle_group_id
-     WHERE wss.completed_at >= ?
-       AND emg.is_primary = 1
-       AND mg.parent_category != 'stretching'
-     GROUP BY mg.parent_category`,
-    [twoWeeksAgo],
-  );
-
-  // Build lookup maps
-  const thisWeekVolume = new Map<string, number>();
-  for (let i = 0; i < thisWeekResult.rows.length; i++) {
-    const row = thisWeekResult.rows.item(i);
-    thisWeekVolume.set(row.category, row.volume ?? 0);
-  }
-
-  const lastWeekVolume = new Map<string, number>();
-  for (let i = 0; i < lastWeekResult.rows.length; i++) {
-    const row = lastWeekResult.rows.item(i);
-    lastWeekVolume.set(row.category, row.volume ?? 0);
-  }
-
-  const prCategories = new Set<string>();
-  for (let i = 0; i < prResult.rows.length; i++) {
-    prCategories.add(prResult.rows.item(i).category);
-  }
-
-  // Build result from categories with recent data
-  const result: MuscleGroupProgress[] = [];
-  for (let i = 0; i < lastTrainedResult.rows.length; i++) {
-    const row = lastTrainedResult.rows.item(i);
-    const category = row.category as string;
-    const lastTrainedAt: string | null = row.last_trained_at ?? null;
-
-    const thisVol = thisWeekVolume.get(category) ?? 0;
-    const prevVol = lastWeekVolume.get(category) ?? 0;
-
-    let volumeChangePercent: number | null = null;
-    if (prevVol > 0 && thisVol > 0) {
-      volumeChangePercent = ((thisVol - prevVol) / prevVol) * 100;
-    }
-
-    result.push({
-      category: category as ExerciseCategory,
-      volumeChangePercent,
-      hasPR: prCategories.has(category),
-      lastTrainedAt,
-    });
-  }
-
-  return result;
 }
 
 // ── getSessionDayProgress ───────────────────────────────────────────
@@ -481,12 +350,12 @@ export async function getSessionDayExerciseProgress(
       const sessionId = sessionsResult.rows.item(0).id;
       const exercisesResult = await executeSql(
         database,
-        `SELECT ws.exercise_id, e.name AS exercise_name
+        `SELECT ws.exercise_id, e.name AS exercise_name, e.category, e.measurement_type
          FROM workout_sets ws
          INNER JOIN exercises e ON e.id = ws.exercise_id
          WHERE ws.session_id = ?
            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-         GROUP BY ws.exercise_id, e.name
+         GROUP BY ws.exercise_id, e.name, e.category, e.measurement_type
          ORDER BY MIN(ws.set_number)`,
         [sessionId],
       );
@@ -496,6 +365,8 @@ export async function getSessionDayExerciseProgress(
         items.push({
           exerciseId: row.exercise_id,
           exerciseName: row.exercise_name,
+          category: row.category,
+          measurementType: row.measurement_type ?? 'reps',
           volumeChangePercent: null,
           strengthChangePercent: null,
         });
@@ -511,12 +382,12 @@ export async function getSessionDayExerciseProgress(
   // Get all exercises from the current session
   const exercisesResult = await executeSql(
     database,
-    `SELECT ws.exercise_id, e.name AS exercise_name
+    `SELECT ws.exercise_id, e.name AS exercise_name, e.category, e.measurement_type
      FROM workout_sets ws
      INNER JOIN exercises e ON e.id = ws.exercise_id
      WHERE ws.session_id = ?
        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
-     GROUP BY ws.exercise_id, e.name
+     GROUP BY ws.exercise_id, e.name, e.category, e.measurement_type
      ORDER BY MIN(ws.set_number)`,
     [currentSessionId],
   );
@@ -586,6 +457,8 @@ export async function getSessionDayExerciseProgress(
     result.push({
       exerciseId,
       exerciseName,
+      category: row.category,
+      measurementType: row.measurement_type ?? 'reps',
       volumeChangePercent,
       strengthChangePercent,
     });
@@ -594,95 +467,12 @@ export async function getSessionDayExerciseProgress(
   return result;
 }
 
-// ── getExerciseInsights ──────────────────────────────────────────────
-
-const PERIOD_MONTHS: Record<'1M' | '3M' | '6M' | '1Y', number> = {
-  '1M': 1,
-  '3M': 3,
-  '6M': 6,
-  '1Y': 12,
-};
-
-const PERIOD_LABELS: Record<'1M' | '3M' | '6M' | '1Y', string> = {
-  '1M': '1 month',
-  '3M': '3 months',
-  '6M': '6 months',
-  '1Y': '1 year',
-};
-
-/**
- * Compare current period's best weight and total volume to the previous
- * equivalent period for an exercise.
- */
-export async function getExerciseInsights(
-  exerciseId: number,
-  timeRange: '1M' | '3M' | '6M' | '1Y',
-): Promise<ExerciseInsights> {
-  const database = await db;
-  const periodLabel = PERIOD_LABELS[timeRange];
-  const months = PERIOD_MONTHS[timeRange];
-
-  const now = new Date();
-  const periodStart = new Date(now);
-  periodStart.setMonth(periodStart.getMonth() - months);
-  const prevPeriodStart = new Date(periodStart);
-  prevPeriodStart.setMonth(prevPeriodStart.getMonth() - months);
-
-  // Current period: best weight + total volume for non-warmup sets
-  const currentResult = await executeSql(
-    database,
-    `SELECT MAX(ws.weight_kg) AS best_weight_kg,
-            SUM(ws.weight_kg * ws.reps) AS volume
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     WHERE ws.exercise_id = ?
-       AND wss.completed_at >= ?
-       AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
-    [exerciseId, periodStart.toISOString(), now.toISOString()],
-  );
-
-  // Previous period
-  const prevResult = await executeSql(
-    database,
-    `SELECT MAX(ws.weight_kg) AS best_weight_kg,
-            SUM(ws.weight_kg * ws.reps) AS volume
-     FROM workout_sets ws
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     WHERE ws.exercise_id = ?
-       AND wss.completed_at >= ?
-       AND wss.completed_at < ?
-       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)`,
-    [exerciseId, prevPeriodStart.toISOString(), periodStart.toISOString()],
-  );
-
-  const currentRow = currentResult.rows.item(0);
-  const prevRow = prevResult.rows.item(0);
-
-  const currentWeightKg: number | null = currentRow.best_weight_kg ?? null;
-  const currentVolume: number | null = currentRow.volume ?? null;
-  const prevWeightKg: number | null = prevRow.best_weight_kg ?? null;
-  const prevVolume: number | null = prevRow.volume ?? null;
-
-  let weightChangePercent: number | null = null;
-  if (currentWeightKg !== null && prevWeightKg !== null && prevWeightKg > 0) {
-    weightChangePercent = ((currentWeightKg - prevWeightKg) / prevWeightKg) * 100;
-  }
-
-  let volumeChangePercent: number | null = null;
-  if (currentVolume !== null && prevVolume !== null && prevVolume > 0) {
-    volumeChangePercent = ((currentVolume - prevVolume) / prevVolume) * 100;
-  }
-
-  return { weightChangePercent, volumeChangePercent, periodLabel };
-}
-
 // ── getSessionComparison ─────────────────────────────────────────────
 
 function mapSets(rows: Record<string, unknown>[]): ExerciseHistorySet[] {
   return rows.map(row => ({
     setNumber: row.set_number as number,
-    weightLbs: (row.weight_kg as number) * 2.20462,
+    weightLbs: row.weight_kg as number,
     reps: row.reps as number,
     isWarmup: row.is_warmup === 1,
   }));
@@ -791,6 +581,102 @@ export async function getSessionComparison(
   };
 }
 
+// ── getStatsStripData ────────────────────────────────────────────────
+
+export interface StatsStripData {
+  sessions: { current: number; lastWeek: number };
+  prs: { current: number; lastWeek: number };
+  tonnage: { currentLb: number; lastWeekLb: number };
+}
+
+/**
+ * Same-point-in-week comparison for dashboard stats strip.
+ *
+ * On Tuesday at 10am:
+ *   current  = Mon 00:00 → now (this week)
+ *   lastWeek = Mon 00:00 last week → (Mon last week + elapsed since this Monday)
+ *
+ * This means we compare Mon-Tue-10am this week to Mon-Tue-10am last week — apples to apples.
+ * Once Sunday rolls over, current = full week, lastWeek = full prior week automatically.
+ */
+export async function getStatsStripData(): Promise<StatsStripData> {
+  const database = await db;
+  const now = new Date();
+  const thisStart = getWeekStart(now);
+  const elapsedMs = now.getTime() - new Date(thisStart).getTime();
+  const lastStart = new Date(getPreviousWeekStart(now));
+  const lastEnd = new Date(lastStart.getTime() + elapsedMs);
+
+  const [sCur, sLast] = await Promise.all([
+    countSessions_(database, thisStart, now.toISOString()),
+    countSessions_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+  const [tCur, tLast] = await Promise.all([
+    sumTonnageKg_(database, thisStart, now.toISOString()),
+    sumTonnageKg_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+  const [pCur, pLast] = await Promise.all([
+    countPRs_(database, thisStart, now.toISOString()),
+    countPRs_(database, lastStart.toISOString(), lastEnd.toISOString()),
+  ]);
+
+  return {
+    sessions: { current: sCur, lastWeek: sLast },
+    prs: { current: pCur, lastWeek: pLast },
+    tonnage: {
+      currentLb: Math.round(tCur),
+      lastWeekLb: Math.round(tLast),
+    },
+  };
+}
+
+async function countSessions_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT COUNT(*) AS cnt FROM workout_sessions
+      WHERE completed_at >= ? AND completed_at < ?`,
+    [from, to],
+  );
+  return Number(r.rows.item(0).cnt ?? 0);
+}
+
+async function sumTonnageKg_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT SUM(ws.weight_kg * ws.reps) AS v
+       FROM workout_sets ws
+       JOIN workout_sessions s ON s.id = ws.session_id
+       JOIN exercises e ON e.id = ws.exercise_id
+      WHERE s.completed_at >= ? AND s.completed_at < ?
+        AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+        AND e.measurement_type != 'height_reps'`,
+    [from, to],
+  );
+  return Number(r.rows.item(0).v ?? 0);
+}
+
+async function countPRs_(database: SQLiteDatabase, from: string, to: string): Promise<number> {
+  const r = await executeSql(
+    database,
+    `SELECT COUNT(DISTINCT ws.exercise_id) AS pr_count
+     FROM workout_sets ws
+     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+     WHERE wss.completed_at >= ?
+       AND wss.completed_at < ?
+       AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       AND ws.weight_kg > (
+         SELECT COALESCE(MAX(ws2.weight_kg), 0)
+         FROM workout_sets ws2
+         INNER JOIN workout_sessions wss2 ON wss2.id = ws2.session_id
+         WHERE ws2.exercise_id = ws.exercise_id
+           AND wss2.completed_at < ?
+           AND (ws2.is_warmup IS NULL OR ws2.is_warmup = 0)
+       )`,
+    [from, to, from],
+  );
+  return Number(r.rows.item(0).pr_count ?? 0);
+}
+
 // ── getSessionSetDetail ──────────────────────────────────────────────
 
 /**
@@ -829,7 +715,7 @@ export async function getSessionSetDetail(
 
     details.push({
       setNumber: row.set_number as number,
-      weightLbs: (row.weight_kg as number) * 2.20462,
+      weightLbs: row.weight_kg as number,
       reps: row.reps as number,
       isWarmup: row.is_warmup === 1,
       restSeconds,
@@ -837,4 +723,399 @@ export async function getSessionSetDetail(
   }
 
   return details;
+}
+
+// ── getAllExercisesWithProgress ──────────────────────────────────────
+
+const SPARKLINE_MAX_POINTS = 8;
+const TOP_MOVERS_WINDOW_DAYS = 14;
+
+/**
+ * All exercises with progress data, optionally filtered/searched.
+ * One base query for exercise rows + 2 queries per exercise for sparkline & delta.
+ */
+export async function getAllExercisesWithProgress(
+  filter: string = 'all',
+  search: string = '',
+  sort: 'movers' | 'recent' | 'name' = 'recent',
+): Promise<ExerciseListItem[]> {
+  const database = await db;
+
+  const whereParts: string[] = [];
+  const params: unknown[] = [];
+  if (filter !== 'all') {
+    whereParts.push('e.category = ?');
+    params.push(filter);
+  }
+  if (search.length > 0) {
+    whereParts.push('LOWER(e.name) LIKE ?');
+    params.push(`%${search.toLowerCase()}%`);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+  const baseResult = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category, e.measurement_type,
+            MAX(wss.completed_at) AS last_trained_at,
+            COUNT(DISTINCT wss.id) AS session_count
+       FROM exercises e
+       LEFT JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       LEFT JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       ${whereSql}
+       GROUP BY e.id
+       ORDER BY last_trained_at DESC NULLS LAST`,
+    params as (string | number | null)[],
+  );
+
+  const items: ExerciseListItem[] = [];
+  for (let i = 0; i < baseResult.rows.length; i++) {
+    const row = baseResult.rows.item(i);
+
+    // Sparkline: last up-to-8 sessions, max(weight) per session
+    const sparkResult = await executeSql(
+      database,
+      `SELECT wss.completed_at AS date, MAX(ws.weight_kg) AS best
+         FROM workout_sets ws
+         INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+         WHERE ws.exercise_id = ? AND wss.completed_at IS NOT NULL
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         GROUP BY wss.id
+         ORDER BY wss.completed_at DESC
+         LIMIT ?`,
+      [row.id, SPARKLINE_MAX_POINTS],
+    );
+    const sparklinePoints: number[] = [];
+    for (let s = sparkResult.rows.length - 1; s >= 0; s--) {
+      const v = sparkResult.rows.item(s).best;
+      if (typeof v === 'number') { sparklinePoints.push(v); }
+    }
+
+    // Delta: best in 14d window vs first session in window
+    const cutoff = new Date(Date.now() - TOP_MOVERS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const deltaResult = await executeSql(
+      database,
+      `SELECT wss.completed_at AS date, MAX(ws.weight_kg) AS best
+         FROM workout_sets ws
+         INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+         WHERE ws.exercise_id = ? AND wss.completed_at >= ?
+           AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+         GROUP BY wss.id
+         ORDER BY wss.completed_at ASC`,
+      [row.id, cutoff],
+    );
+    let deltaPercent14d: number | null = null;
+    if (deltaResult.rows.length >= 2) {
+      const first = deltaResult.rows.item(0).best;
+      const last = deltaResult.rows.item(deltaResult.rows.length - 1).best;
+      if (first > 0) {
+        deltaPercent14d = ((last - first) / first) * 100;
+      }
+    }
+
+    items.push({
+      exerciseId: row.id,
+      exerciseName: row.name,
+      category: row.category,
+      measurementType: row.measurement_type ?? 'reps',
+      lastTrainedAt: row.last_trained_at ?? null,
+      sessionCount: row.session_count ?? 0,
+      sparklinePoints,
+      deltaPercent14d,
+    });
+  }
+
+  if (sort === 'movers') {
+    items.sort((a, b) => Math.abs(b.deltaPercent14d ?? 0) - Math.abs(a.deltaPercent14d ?? 0));
+  } else if (sort === 'name') {
+    items.sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
+  }
+  // sort='recent' uses base query order (last_trained_at DESC)
+
+  return items;
+}
+
+// ── getTopMovers ────────────────────────────────────────────────────
+
+const TOP_MOVERS_LIMIT = 3;
+
+/** Top N exercises by absolute % change in best weight over the window. */
+export async function getTopMovers(
+  windowDays: number = TOP_MOVERS_WINDOW_DAYS,
+  limit: number = TOP_MOVERS_LIMIT,
+): Promise<ExerciseListItem[]> {
+  const all = await getAllExercisesWithProgress('all', '', 'movers');
+  return all
+    .filter(e => e.deltaPercent14d !== null)
+    .slice(0, limit);
+}
+
+// ── getProgramDayWeeklyTonnage ───────────────────────────────────────
+
+/**
+ * Weekly tonnage for each day in a program, last 4 weeks.
+ * weekly bins: week_offset 0 = current week (Mon-now), 1 = prior, 2 = etc.
+ * Uses same-point-in-week comparison: "this week" = Mon → now.
+ */
+export async function getProgramDayWeeklyTonnage(
+  programId: number,
+): Promise<ProgramDayWeeklyTonnage[]> {
+  const database = await db;
+
+  // Day rows for this program
+  const daysResult = await executeSql(
+    database,
+    `SELECT pd.id, pd.name,
+            (SELECT COUNT(*) FROM program_day_exercises pde WHERE pde.program_day_id = pd.id) AS exercise_count,
+            (SELECT MAX(wss.completed_at)
+               FROM workout_sessions wss
+               WHERE wss.program_day_id = pd.id AND wss.completed_at IS NOT NULL) AS last_performed_at
+       FROM program_days pd
+       WHERE pd.program_id = ?
+       ORDER BY pd.sort_order ASC`,
+    [programId],
+  );
+
+  const days: ProgramDayWeeklyTonnage[] = [];
+  const now = new Date();
+  const thisWeekStart = getWeekStart(now);
+
+  for (let i = 0; i < daysResult.rows.length; i++) {
+    const row = daysResult.rows.item(i);
+
+    // Compute week boundaries for last 4 weeks
+    const weekBins: { weekOffset: number; startISO: string; endISO: string }[] = [];
+    for (let off = 0; off < 4; off++) {
+      const weekStart = new Date(new Date(thisWeekStart).getTime() - off * 7 * 24 * 60 * 60 * 1000);
+      const weekEndAdj = off === 0
+        ? now
+        : (() => {
+            const elapsedMs = now.getTime() - new Date(thisWeekStart).getTime();
+            return new Date(weekStart.getTime() + elapsedMs);
+          })();
+      weekBins.push({
+        weekOffset: off,
+        startISO: weekStart.toISOString(),
+        endISO: weekEndAdj.toISOString(),
+      });
+    }
+
+    // Build CASE expression with params: [start0, end0, start1, end1, start2, end2, start3, end3, dayId]
+    const params: unknown[] = [];
+    const caseExpr = weekBins.map((b, idx) => {
+      params.push(b.startISO, b.endISO);
+      return `WHEN wss.completed_at >= ? AND wss.completed_at < ? THEN ${idx}`;
+    }).join(' ');
+
+    const tonnageResult = await executeSql(
+      database,
+      `SELECT
+         CASE ${caseExpr} ELSE -1 END AS week_offset,
+         SUM(ws.weight_kg * ws.reps) AS tonnage
+       FROM workout_sets ws
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+       WHERE wss.program_day_id = ?
+         AND wss.completed_at IS NOT NULL
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       GROUP BY week_offset
+       HAVING week_offset >= 0`,
+      [...params, row.id] as (string | number | null)[],
+    );
+
+    const tonnageByOffset: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0 };
+    for (let r = 0; r < tonnageResult.rows.length; r++) {
+      const tr = tonnageResult.rows.item(r);
+      tonnageByOffset[tr.week_offset] = tr.tonnage ?? 0;
+    }
+
+    // Build [4wk-ago, 3wk-ago, 2wk-ago, this-wk] = [offset 3, 2, 1, 0]
+    const weeklyTonnageLb: [number, number, number, number] = [
+      tonnageByOffset[3], tonnageByOffset[2], tonnageByOffset[1], tonnageByOffset[0],
+    ];
+    const currentWeekTonnageLb = tonnageByOffset[0];
+
+    // deltaPercent2wk: last 2wk vs prior 2wk; null if either prior week has no data
+    const last2 = tonnageByOffset[0] + tonnageByOffset[1];
+    const prior2 = tonnageByOffset[2] + tonnageByOffset[3];
+    let deltaPercent2wk: number | null = null;
+    if (tonnageByOffset[3] > 0 || tonnageByOffset[2] > 0) {
+      // Has some prior-2wk data; require prior2 > 0 to avoid div-by-zero
+      if (prior2 > 0) {
+        deltaPercent2wk = ((last2 - prior2) / prior2) * 100;
+      }
+    }
+    // Require both weeks of prior data to be non-zero for a meaningful delta
+    if (tonnageByOffset[3] === 0 || tonnageByOffset[2] === 0) {
+      deltaPercent2wk = null;
+    }
+
+    days.push({
+      programDayId: row.id,
+      dayName: row.name,
+      exerciseCount: row.exercise_count ?? 0,
+      lastPerformedAt: row.last_performed_at ?? null,
+      weeklyTonnageLb,
+      currentWeekTonnageLb,
+      deltaPercent2wk,
+    });
+  }
+
+  return days;
+}
+
+// ── getPRWatch ───────────────────────────────────────────────────────
+
+const PR_WATCH_MAX_LB = 10;
+const PR_WATCH_INCREMENT_LB = 5;
+
+/** Closest exercise to its current PR — within `maxLb`, or null. */
+export async function getPRWatch(
+  maxLb: number = PR_WATCH_MAX_LB,
+): Promise<PRWatchCandidate | null> {
+  const database = await db;
+  const result = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category,
+            MAX(ws.weight_kg) AS current_best,
+            COUNT(DISTINCT wss.id) AS session_count,
+            MAX(wss.completed_at) AS last_trained_at
+       FROM exercises e
+       INNER JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       WHERE e.measurement_type = 'reps'
+       GROUP BY e.id
+       HAVING session_count >= 3 AND current_best > 0`,
+    [],
+  );
+
+  let bestCandidate: PRWatchCandidate | null = null;
+  let bestRecency: string = '';
+
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const currentBest = row.current_best;
+    const target = Math.ceil((currentBest + 1) / PR_WATCH_INCREMENT_LB) * PR_WATCH_INCREMENT_LB;
+    const distance = target - currentBest;
+    if (distance <= 0 || distance > maxLb) { continue; }
+
+    const candidate: PRWatchCandidate = {
+      exerciseId: row.id,
+      exerciseName: row.name,
+      currentBestLb: currentBest,
+      targetLb: target,
+      distanceLb: distance,
+    };
+
+    if (bestCandidate === null
+        || distance < bestCandidate.distanceLb
+        || (distance === bestCandidate.distanceLb && row.last_trained_at > bestRecency)) {
+      bestCandidate = candidate;
+      bestRecency = row.last_trained_at ?? '';
+    }
+  }
+
+  return bestCandidate;
+}
+
+// ── getStaleExercise ─────────────────────────────────────────────────
+
+const STALE_MIN_DAYS = 14;
+const STALE_MAX_DAYS = 90;
+
+/**
+ * Longest-untrained exercise that is part of a non-archived program,
+ * with min <= days <= max. Anything older than max is "unused", not "stale".
+ */
+export async function getStaleExercise(
+  minDays: number = STALE_MIN_DAYS,
+  maxDays: number = STALE_MAX_DAYS,
+): Promise<StaleExerciseCandidate | null> {
+  const database = await db;
+  const minCutoffISO = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000).toISOString();
+  const maxCutoffISO = new Date(Date.now() - maxDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const result = await executeSql(
+    database,
+    `SELECT e.id, e.name, e.category,
+            MAX(wss.completed_at) AS last_trained_at,
+            CAST((julianday('now') - julianday(MAX(wss.completed_at))) AS INTEGER) AS days_since
+       FROM exercises e
+       INNER JOIN program_day_exercises pde ON pde.exercise_id = e.id
+       INNER JOIN program_days pd ON pd.id = pde.program_day_id
+       INNER JOIN programs p ON p.id = pd.program_id
+       INNER JOIN workout_sets ws ON ws.exercise_id = e.id
+            AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+            AND wss.completed_at IS NOT NULL
+       WHERE p.archived_at IS NULL
+       GROUP BY e.id
+       HAVING MAX(wss.completed_at) <= ? AND MAX(wss.completed_at) >= ?
+       ORDER BY days_since DESC
+       LIMIT 1`,
+    [minCutoffISO, maxCutoffISO],
+  );
+
+  if (result.rows.length === 0) { return null; }
+  const row = result.rows.item(0);
+  return {
+    exerciseId: row.id,
+    exerciseName: row.name,
+    daysSinceLastTrained: row.days_since,
+    category: row.category,
+  };
+}
+
+// ── getExerciseChartData ─────────────────────────────────────────────
+
+/**
+ * Per-session strength + volume points for the dual-axis chart.
+ * Working sets only; warmups excluded. Chronological order.
+ * isPR = running-max best weight at the time of that session.
+ */
+export async function getExerciseChartData(
+  exerciseId: number,
+  range: '1M' | '3M' | '6M' | '1Y',
+): Promise<ChartPoint[]> {
+  const database = await db;
+  const months = range === '1M' ? 1 : range === '3M' ? 3 : range === '6M' ? 6 : 12;
+  const cutoffISO = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - months);
+    return d.toISOString();
+  })();
+
+  const result = await executeSql(
+    database,
+    `SELECT wss.id AS session_id, wss.completed_at AS date,
+            MAX(ws.weight_kg) AS best_weight,
+            SUM(ws.weight_kg * ws.reps) AS volume
+       FROM workout_sets ws
+       INNER JOIN workout_sessions wss ON wss.id = ws.session_id
+       WHERE ws.exercise_id = ?
+         AND wss.completed_at IS NOT NULL
+         AND wss.completed_at >= ?
+         AND (ws.is_warmup IS NULL OR ws.is_warmup = 0)
+       GROUP BY wss.id
+       ORDER BY wss.completed_at ASC`,
+    [exerciseId, cutoffISO],
+  );
+
+  const points: ChartPoint[] = [];
+  let runningMax = 0;
+  for (let i = 0; i < result.rows.length; i++) {
+    const row = result.rows.item(i);
+    const isPR = row.best_weight > runningMax;
+    if (isPR) { runningMax = row.best_weight; }
+    points.push({
+      sessionId: row.session_id,
+      date: row.date,
+      bestWeightLb: row.best_weight ?? 0,
+      volumeLb: row.volume ?? 0,
+      isPR,
+    });
+  }
+  return points;
 }

@@ -43,7 +43,6 @@ export {
   getSessionTimeSummary,
   exportAllData,
   getCategorySummaries,
-  getCategoryExerciseProgress,
 } from './dashboard';
 export {
   addMeal,

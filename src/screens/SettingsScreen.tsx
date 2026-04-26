@@ -16,6 +16,7 @@ import { exportAllData } from '../db/dashboard';
 import { saveFileToDevice } from '../native/FileSaver';
 import { scanDatabase, fixDatabaseIssues, type DiagnosticResult } from '../db/repair';
 import { getHRSettings, setAge, setMaxHrOverride } from '../services/HRSettingsService';
+import { getUserFirstName, setUserFirstName } from '../services/UserProfileService';
 import { DeviceScanSheet } from './DeviceScanSheet';
 import { useHeartRate } from '../context/HeartRateContext';
 import { colors } from '../theme/colors';
@@ -29,6 +30,20 @@ export function SettingsScreen() {
   const [healthCheckResult, setHealthCheckResult] = useState<DiagnosticResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+
+  // Your Name card state
+  const [nameValue, setNameValue] = useState<string>('');
+
+  useEffect(() => {
+    getUserFirstName().then((name) => {
+      if (name !== null) { setNameValue(name); }
+    });
+  }, []);
+
+  const handleNameBlur = useCallback(async () => {
+    const trimmed = nameValue.trim();
+    await setUserFirstName(trimmed.length === 0 ? null : trimmed);
+  }, [nameValue]);
 
   // HR Monitor card state
   const [ageValue, setAgeValue] = useState<string>('');
@@ -206,6 +221,23 @@ export function SettingsScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        {/* Your Name card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>YOUR NAME</Text>
+          <Text style={styles.cardDescription}>Used to personalize the dashboard greeting.</Text>
+          <TextInput
+            style={styles.nameInput}
+            testID="settings-name-input"
+            value={nameValue}
+            onChangeText={setNameValue}
+            onBlur={handleNameBlur}
+            placeholder="First name"
+            placeholderTextColor={colors.secondary}
+            autoCapitalize="words"
+            returnKeyType="done"
+          />
+        </View>
+
         {/* Heart Rate Monitor card — first card per D-12 */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Heart Rate Monitor</Text>
@@ -523,6 +555,16 @@ const styles = StyleSheet.create({
   aboutSubtitle: {
     fontSize: fontSize.sm,
     color: colors.secondary,
+  },
+  nameInput: {
+    fontSize: fontSize.base,
+    fontWeight: weightRegular,
+    color: colors.primary,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minHeight: 44,
   },
   // HR Monitor card styles
   settingRow: {

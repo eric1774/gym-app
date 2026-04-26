@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -13,22 +13,28 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getNextWorkoutDay } from '../db/dashboard';
 import { getProgramDayExercises } from '../db/programs';
 import { getExercises } from '../db/exercises';
+import { getWeightTrend, WeightTrendResult } from '../db/weightTrend';
+import { getVolumeTrend, VolumeTrendResult } from '../db/volumeTrend';
+import { getStatsStripData, StatsStripData } from '../db/progress';
+import { getHeroWorkoutContext, HeroWorkoutContext } from '../db/heroWorkoutContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize } from '../theme/typography';
 import { DashboardStackParamList, TabParamList } from '../navigation/TabNavigator';
 import { NextWorkoutInfo, Exercise } from '../types';
-import type { WeeklySnapshot } from '../types';
 import { useSession } from '../context/SessionContext';
-import { formatRelativeTime } from '../utils/formatRelativeTime';
-import { WeeklySnapshotCard } from '../components/WeeklySnapshotCard';
-import { NutritionRingsCard } from '../components/NutritionRingsCard';
-import { getWeeklySnapshot } from '../db/progress';
-import { DashboardWeightCard } from '../components/DashboardWeightCard';
-import { LogBodyMetricModal } from '../components/LogBodyMetricModal';
-import { getBodyMetricByDate, upsertBodyMetric } from '../db/bodyMetrics';
 import { useGamification } from '../context/GamificationContext';
-import { LevelBar } from '../components/LevelBar';
+import { greeting } from '../utils/greeting';
+import { getUserFirstName, setUserFirstName } from '../services/UserProfileService';
+import { NameSetupModal } from '../components/NameSetupModal';
+import { StreakChip } from '../components/StreakChip';
+import { HeroWorkoutCard } from '../components/HeroWorkoutCard';
+import { WeightTrendCard } from '../components/WeightTrendCard';
+import { VolumeTrendCard } from '../components/VolumeTrendCard';
+import { NutritionRingsCard } from '../components/NutritionRingsCard';
+import { StatsStrip } from '../components/StatsStrip';
+import { LogBodyMetricModal } from '../components/LogBodyMetricModal';
+import { upsertBodyMetric } from '../db/bodyMetrics';
 import { CelebrationModal } from '../components/CelebrationModal';
 import { HighlightReelModal } from '../components/HighlightReelModal';
 
@@ -57,44 +63,50 @@ function GearIcon({ color }: { color: string }) {
   );
 }
 
-function formatElapsed(s: number): string {
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
-
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { session, startSessionFromProgramDay } = useSession();
-  const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
-  const [activeElapsed, setActiveElapsed] = useState(0);
-  const [snapshot, setSnapshot] = useState<WeeklySnapshot>({ sessionsThisWeek: 0, prsThisWeek: 0, volumeChangePercent: null });
-  const { levelState, pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
+  const { pendingCelebrations, dismissCelebration, backfilledBadges, clearBackfill } = useGamification();
 
-  const [todayWeight, setTodayWeight] = useState<number | null>(null);
-  const [yesterdayWeight, setYesterdayWeight] = useState<number | null>(null);
+  // Name / modal
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [nameModalSkipped, setNameModalSkipped] = useState(false);
+
+  // Workout
+  const [nextWorkout, setNextWorkout] = useState<NextWorkoutInfo | null>(null);
+  const [heroExercises, setHeroExercises] = useState<Exercise[]>([]);
+  const [heroContext, setHeroContext] = useState<HeroWorkoutContext>({ headlineLift: null, addedSinceLast: null });
+
+  // Active session timer
+  const [activeElapsed, setActiveElapsed] = useState(0);
+
+  // Trend data
+  const [weightTrend, setWeightTrend] = useState<WeightTrendResult>({
+    today: null,
+    currentSevenDayMA: null,
+    previousSevenDayMA: null,
+    dailySeries: [],
+  });
+  const [volumeTrend, setVolumeTrend] = useState<VolumeTrendResult>({
+    deltaPercent: null,
+    weeklyBars: [],
+  });
+  const [statsStrip, setStatsStrip] = useState<StatsStripData>({
+    sessions: { current: 0, lastWeek: 0 },
+    prs: { current: 0, lastWeek: 0 },
+    tonnage: { currentLb: 0, lastWeekLb: 0 },
+  });
+
+  // Weight log modal (kept for LogBodyMetricModal)
+  const today = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [logModalInitialValue, setLogModalInitialValue] = useState<number | null>(null);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
-
-  const yesterday = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
-
-  const refreshWeights = useCallback(async () => {
-    const [t, y] = await Promise.all([
-      getBodyMetricByDate('weight', today),
-      getBodyMetricByDate('weight', yesterday),
-    ]);
-    setTodayWeight(t?.value ?? null);
-    setYesterdayWeight(y?.value ?? null);
-  }, [today, yesterday]);
-
-  // Elapsed timer for active session state
+  // Elapsed timer for active session
   useEffect(() => {
     if (!session) { setActiveElapsed(0); return; }
     const tick = () => {
@@ -110,28 +122,71 @@ export function DashboardScreen() {
       let cancelled = false;
       (async () => {
         try {
-          const [nextDay, snap] = await Promise.all([
+          const [nextDay, wt, vt, ss, savedName] = await Promise.all([
             getNextWorkoutDay(),
-            getWeeklySnapshot(),
+            getWeightTrend(),
+            getVolumeTrend(),
+            getStatsStripData(),
+            getUserFirstName(),
           ]);
-          if (!cancelled) {
-            setNextWorkout(nextDay);
-            setSnapshot(snap);
+
+          if (cancelled) { return; }
+
+          setNextWorkout(nextDay);
+          setWeightTrend(wt);
+          setVolumeTrend(vt);
+          setStatsStrip(ss);
+          setFirstName(savedName);
+
+          if (savedName === null && !nameModalSkipped) {
+            setShowNameModal(true);
           }
-          await refreshWeights();
+
+          // Follow-up: hero workout context depends on nextDay
+          if (nextDay !== null) {
+            try {
+              const [pdes, allExercises, ctx] = await Promise.all([
+                getProgramDayExercises(nextDay.dayId),
+                getExercises(),
+                getHeroWorkoutContext(nextDay.dayId),
+              ]);
+              if (!cancelled) {
+                const exerciseMap = new Map<number, Exercise>();
+                for (const ex of allExercises) { exerciseMap.set(ex.id, ex); }
+                const exerciseObjects = pdes
+                  .map(pde => exerciseMap.get(pde.exerciseId))
+                  .filter((ex): ex is Exercise => ex !== undefined);
+                setHeroExercises(exerciseObjects);
+                setHeroContext(ctx);
+              }
+            } catch {
+              // ignore hero context errors
+            }
+          }
         } catch (err) {
           console.warn('Dashboard data fetch failed:', err);
         }
       })();
       return () => { cancelled = true; };
-    }, [refreshWeights]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nameModalSkipped]),
   );
+
+  const handleNameSave = useCallback(async (name: string) => {
+    await setUserFirstName(name);
+    setFirstName(name);
+    setShowNameModal(false);
+  }, []);
+
+  const handleNameSkip = useCallback(() => {
+    setNameModalSkipped(true);
+    setShowNameModal(false);
+  }, []);
 
   const handleQuickStart = useCallback(async () => {
     try {
       const parent = navigation.getParent<NavigationProp<TabParamList>>();
       if (session) {
-        // Active session — navigate to WorkoutTab without creating a new session
         if (parent) { parent.navigate('WorkoutTab'); }
         return;
       }
@@ -141,9 +196,7 @@ export function DashboardScreen() {
         getExercises(),
       ]);
       const exerciseMap = new Map<number, Exercise>();
-      for (const ex of allExercises) {
-        exerciseMap.set(ex.id, ex);
-      }
+      for (const ex of allExercises) { exerciseMap.set(ex.id, ex); }
       const exerciseObjects = pdes
         .map(pde => exerciseMap.get(pde.exerciseId))
         .filter((ex): ex is Exercise => ex !== undefined);
@@ -155,11 +208,31 @@ export function DashboardScreen() {
     }
   }, [session, nextWorkout, startSessionFromProgramDay, navigation]);
 
+  const handleWeightPress = useCallback(() => {
+    const parent = navigation.getParent<NavigationProp<TabParamList>>();
+    if (parent) {
+      parent.navigate('ProteinTab', {
+        screen: 'ProteinHome',
+        params: { initialTab: 2 },
+      });
+    }
+  }, [navigation]);
+
+  const handleVolumePress = useCallback(() => {
+    navigation.navigate('ProgressHub');
+  }, [navigation]);
+
+  const handleStatsPress = useCallback(() => {
+    navigation.navigate('ProgressHub');
+  }, [navigation]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.greeting}>
+            {greeting(new Date(), firstName ?? undefined)}
+          </Text>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -171,76 +244,53 @@ export function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <LevelBar
-          level={levelState.level}
-          title={levelState.title}
-          progressToNext={levelState.progressToNext}
-        />
+        <StreakChip currentStreak={0} recentDays={[]} />
 
-      {/* Next Workout Card — only shown when an activated program exists */}
         {nextWorkout !== null && (
-          <View style={styles.nextWorkoutCard}>
-            {session ? (
-              /* Active state */
-              <>
-                <View style={styles.nextWorkoutActiveHeader}>
-                  <Text style={styles.nextWorkoutActiveLabel}>ACTIVE WORKOUT</Text>
-                  <Text style={styles.nextWorkoutElapsed}>{formatElapsed(activeElapsed)}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.nextWorkoutButton}
-                  activeOpacity={0.7}
-                  onPress={handleQuickStart}>
-                  <Text style={styles.nextWorkoutButtonText}>Continue</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              /* Idle state */
-              <>
-                <Text style={styles.nextWorkoutLabel}>NEXT WORKOUT</Text>
-                <Text style={styles.nextWorkoutDayName}>{nextWorkout.dayName}</Text>
-                <Text style={styles.nextWorkoutMeta}>
-                  {nextWorkout.exerciseCount} {nextWorkout.exerciseCount === 1 ? 'exercise' : 'exercises'} · {nextWorkout.programName}
-                </Text>
-                <TouchableOpacity
-                  style={styles.nextWorkoutButton}
-                  activeOpacity={0.7}
-                  onPress={handleQuickStart}>
-                  <Text style={styles.nextWorkoutButtonText}>Start</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          <HeroWorkoutCard
+            dayName={nextWorkout.dayName}
+            exerciseCount={nextWorkout.exerciseCount}
+            estimatedMinutes={null}
+            programLabel={nextWorkout.programName}
+            weekNumber={null}
+            dayNumber={null}
+            exerciseChips={heroExercises.map(e => e.name)}
+            context={heroContext.headlineLift ? {
+              exerciseName: heroContext.headlineLift.exerciseName,
+              weightLb: heroContext.headlineLift.weightLb,
+              reps: heroContext.headlineLift.reps,
+              addedSinceLastLb: heroContext.addedSinceLast,
+            } : null}
+            activeElapsedSeconds={session ? activeElapsed : null}
+            onPress={handleQuickStart}
+          />
         )}
 
-        <DashboardWeightCard
-          todayWeight={todayWeight}
-          yesterdayWeight={yesterdayWeight}
-          onPressLog={() => {
-            setLogModalInitialValue(null);
-            setLogModalVisible(true);
-          }}
-          onPressEdit={() => {
-            setLogModalInitialValue(todayWeight);
-            setLogModalVisible(true);
-          }}
-          onPressCard={() => {
-            const parent = navigation.getParent<NavigationProp<TabParamList>>();
-            if (parent) {
-              (parent as any).navigate('ProteinTab', {
-                screen: 'ProteinHome',
-                params: { initialTab: 2 },
-              });
-            }
-          }}
-        />
+        <View style={styles.trendRow}>
+          <WeightTrendCard
+            today={weightTrend.today}
+            currentSevenDayMA={weightTrend.currentSevenDayMA}
+            previousSevenDayMA={weightTrend.previousSevenDayMA}
+            dailySeries={weightTrend.dailySeries}
+            onPress={handleWeightPress}
+          />
+          <VolumeTrendCard
+            deltaPercent={volumeTrend.deltaPercent}
+            weeklyBars={volumeTrend.weeklyBars}
+            onPress={handleVolumePress}
+          />
+        </View>
 
-        <WeeklySnapshotCard
-          snapshot={snapshot}
-          onPress={() => navigation.navigate('ProgressHub')}
-        />
         <NutritionRingsCard />
+
+        <StatsStrip data={statsStrip} onPress={handleStatsPress} />
       </ScrollView>
+
+      <NameSetupModal
+        visible={showNameModal}
+        onSave={handleNameSave}
+        onSkip={handleNameSkip}
+      />
 
       <LogBodyMetricModal
         visible={logModalVisible}
@@ -256,7 +306,6 @@ export function DashboardScreen() {
             recordedDate: payload.recordedDate,
             note: payload.note,
           });
-          await refreshWeights();
         }}
       />
       <HighlightReelModal
@@ -287,68 +336,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  title: {
-    color: colors.primary,
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
-  },
-  /* ── Next Workout Card ───────────────────────────────────────────── */
-  nextWorkoutCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.base,
-    marginHorizontal: spacing.base,
-    marginBottom: spacing.md,
-  },
-  nextWorkoutLabel: {
+  greeting: {
     color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs,
-  },
-  nextWorkoutActiveLabel: {
-    color: colors.accent,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    letterSpacing: 1.2,
-  },
-  nextWorkoutActiveHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  nextWorkoutElapsed: {
-    color: colors.primary,
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    letterSpacing: 2,
-  },
-  nextWorkoutDayName: {
-    color: colors.primary,
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    marginBottom: spacing.xs,
-  },
-  nextWorkoutMeta: {
-    color: colors.secondary,
-    fontSize: fontSize.sm,
-    marginBottom: spacing.md,
-  },
-  nextWorkoutButton: {
-    backgroundColor: colors.accent,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  nextWorkoutButtonText: {
-    color: colors.onAccent,
     fontSize: fontSize.base,
-    fontWeight: weightBold,
+  },
+  trendRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.base,
+    marginBottom: spacing.sm,
   },
 });

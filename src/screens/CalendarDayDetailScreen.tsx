@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Svg, { Path } from 'react-native-svg';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { colors } from '../theme/colors';
-import { fontSize, weightBold, weightMedium, weightSemiBold } from '../theme/typography';
+import { fontSize, weightSemiBold } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { getDaySessionDetails } from '../db/calendar';
 import { deleteSession } from '../db/sessions';
@@ -26,6 +26,8 @@ import { getMacroTotalsByDate } from '../db/macros';
 import { computeCalories } from '../utils/macros';
 import { CalendarSessionDetail, MacroValues } from '../types';
 import { CalendarStackParamList } from '../navigation/TabNavigator';
+import { WaterDropIcon } from '../components/WaterDropIcon';
+import { MintRadial } from '../components/MintRadial';
 
 type Nav = NativeStackNavigationProp<CalendarStackParamList, 'CalendarDayDetail'>;
 type Route = RouteProp<CalendarStackParamList, 'CalendarDayDetail'>;
@@ -38,7 +40,7 @@ const DELETE_ZONE_WIDTH = 80;
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'long',
+    weekday: 'short',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -62,10 +64,6 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function formatVolume(volume: number): string {
-  return volume.toLocaleString('en-US') + ' lbs';
 }
 
 // ---------- Trash Icon ----------
@@ -110,16 +108,17 @@ function TrashIcon({ color, size = 20 }: { color: string; size?: number }) {
 interface StatItemProps {
   label: string;
   value: string;
-  valueColor?: string;
+  unit?: string;
 }
 
-function StatItem({ label, value, valueColor }: StatItemProps) {
+function StatItem({ label, value, unit }: StatItemProps) {
   return (
     <View style={styles.statItem}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, valueColor ? { color: valueColor } : null]}>
+      <Text style={styles.statValue}>
         {value}
+        {unit ? <Text style={styles.statValueUnit}> {unit}</Text> : null}
       </Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -237,61 +236,57 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Swipeable card content */}
+      {/* Swipeable card content (per-card swipe-hint dash removed — banner above is sufficient) */}
       <Animated.View
         style={[styles.card, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
-        {/* Swipe hint indicator */}
-        <View style={styles.swipeHint}>
-          <View style={styles.swipeHintDash} />
-        </View>
-
-        {/* Card header */}
+        {/* Card header — title left, PR badge chip right */}
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Text style={styles.cardTitle}>{cardTitle}</Text>
             <Text style={styles.cardSubtitle}>{startTime}</Text>
           </View>
-        </View>
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <StatItem label="Duration" value={formatDuration(session.durationSeconds)} />
-          <StatItem label="Sets" value={String(session.totalSets)} />
-          <StatItem label="Volume" value={formatVolume(session.totalVolume)} />
-          <StatItem label="Exercises" value={String(session.exerciseCount)} />
           {session.prCount > 0 && (
-            <StatItem
-              label={'\uD83C\uDFC6 PRs'}
-              value={String(session.prCount)}
-              valueColor={colors.prGold}
-            />
+            <View style={styles.prBadge}>
+              <Text style={styles.prBadgeText}>
+                {'★'} {session.prCount} PR{session.prCount > 1 ? 's' : ''}
+              </Text>
+            </View>
           )}
         </View>
 
-        {/* HR stats row — only rendered when HR data was recorded (D-08, D-04) */}
+        {/* Primary stats row (PR count is no longer here — it lives in the header chip) */}
+        <View style={styles.statsRow}>
+          <StatItem label="DURATION" value={formatDuration(session.durationSeconds)} />
+          <StatItem label="SETS" value={String(session.totalSets)} />
+          <StatItem label="LBS" value={session.totalVolume.toLocaleString('en-US')} />
+          <StatItem label="EXERCISES" value={String(session.exerciseCount)} />
+        </View>
+
+        {/* HR row — only when HR was recorded */}
         {session.avgHr != null && (
           <View style={styles.statsRow}>
-            <StatItem label="Avg HR" value={`${session.avgHr} bpm`} />
+            <StatItem label="AVG HR" value={String(session.avgHr)} unit="bpm" />
             {session.peakHr != null && (
-              <StatItem label="Peak HR" value={`${session.peakHr} bpm`} />
+              <StatItem label="PEAK HR" value={String(session.peakHr)} unit="bpm" />
             )}
           </View>
         )}
 
-        {/* PR highlights */}
+        {/* PR highlights callout — gold-tinted panel with internal gold radial */}
         {session.prCount > 0 && (
-          <View style={styles.prHighlightsSection}>
-            <Text style={styles.prHighlightsTitle}>{'\uD83C\uDFC6'} Personal Records</Text>
+          <View style={styles.prCallout}>
+            <MintRadial tint={colors.prGold} corner="tr" />
+            <Text style={styles.prCalloutTitle}>{'★'} PERSONAL RECORD{session.prCount > 1 ? 'S' : ''}</Text>
             {session.exercises.flatMap(exercise =>
               exercise.sets
                 .filter(set => set.isPR)
                 .map(set => (
-                  <View key={`${exercise.exerciseId}-${set.setNumber}`} style={styles.prHighlightRow}>
-                    <Text style={styles.prExerciseName}>{exercise.exerciseName}</Text>
-                    <Text style={styles.prDetails}>
-                      {set.weightLbs} lbs × {set.reps} reps
+                  <View key={`${exercise.exerciseId}-${set.setNumber}`} style={styles.prCalloutRow}>
+                    <Text style={styles.prCalloutExercise}>{exercise.exerciseName}</Text>
+                    <Text style={styles.prCalloutDetail}>
+                      {set.weightLbs} lbs × {set.reps}
                     </Text>
                   </View>
                 )),
@@ -306,13 +301,15 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
             <Text style={styles.exerciseName}>{exercise.exerciseName}</Text>
             {exercise.sets.map(set => {
               const warmupSuffix = set.isWarmup ? ' (warm-up)' : '';
-              const prPrefix = set.isPR ? '\uD83C\uDFC6 ' : '';
-              const label = `${prPrefix}Set ${set.setNumber}: ${set.weightLbs} x ${set.reps}${warmupSuffix}`;
+              const prefix = set.isPR ? '★ ' : '';
+              const label = `${prefix}Set ${set.setNumber}: ${set.weightLbs} × ${set.reps}${warmupSuffix}`;
+              const rowStyle = set.isPR
+                ? styles.setRowPR
+                : set.isWarmup
+                  ? styles.setRowWarmup
+                  : styles.setRowDefault;
               return (
-                <Text
-                  key={set.setNumber}
-                  style={[styles.setRow, set.isPR ? styles.setRowPR : styles.setRowDefault]}
-                >
+                <Text key={set.setNumber} style={[styles.setRow, rowStyle]}>
                   {label}
                 </Text>
               );
@@ -335,43 +332,40 @@ interface NutritionData {
 function DayNutritionCard({ data }: { data: NutritionData | null }) {
   if (!data) { return null; }
   const { waterOz, macros, calories } = data;
-  // Don't show card if nothing was logged
   if (waterOz === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0) {
     return null;
   }
 
   return (
     <View style={nutritionStyles.card}>
-      {/* Water row */}
       {waterOz > 0 && (
         <View style={nutritionStyles.waterRow}>
-          <Text style={nutritionStyles.waterEmoji}>{'\uD83D\uDCA7'}</Text>
+          <WaterDropIcon size={14} />
           <Text style={nutritionStyles.waterValue}>{parseFloat(waterOz.toFixed(2))}</Text>
           <Text style={nutritionStyles.waterUnit}>oz</Text>
         </View>
       )}
 
-      {/* Macro stats row */}
       {(macros.protein > 0 || macros.carbs > 0 || macros.fat > 0) && (
         <View style={nutritionStyles.macroRow}>
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(calories.toFixed(2))}</Text>
-            <Text style={nutritionStyles.macroLabel}>cal</Text>
+            <Text style={nutritionStyles.macroLabel}>CAL</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.protein.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>protein</Text>
+            <Text style={nutritionStyles.macroLabel}>PROTEIN</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.carbs.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>carbs</Text>
+            <Text style={nutritionStyles.macroLabel}>CARBS</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.fat.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>fat</Text>
+            <Text style={nutritionStyles.macroLabel}>FAT</Text>
           </View>
         </View>
       )}
@@ -382,52 +376,56 @@ function DayNutritionCard({ data }: { data: NutritionData | null }) {
 const nutritionStyles = StyleSheet.create({
   card: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.base,
+    padding: 14,
     marginBottom: spacing.md,
-    gap: spacing.sm,
   },
   waterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  waterEmoji: {
-    fontSize: fontSize.base,
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 10,
   },
   waterValue: {
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.water,
+    letterSpacing: -0.3,
+    marginLeft: 4,
   },
   waterUnit: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.secondary,
   },
   macroRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   macroItem: {
     flex: 1,
     alignItems: 'center',
   },
   macroValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
+    fontSize: 14,
+    fontWeight: '800',
     color: colors.primary,
+    letterSpacing: -0.3,
   },
   macroLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: weightMedium,
+    fontSize: 9.5,
+    fontWeight: '700',
     color: colors.secondary,
-    marginTop: 2,
+    letterSpacing: 0.6,
+    marginTop: 4,
   },
-  divider: {
+  macroDivider: {
     width: 1,
     height: 28,
     backgroundColor: colors.border,
@@ -490,20 +488,21 @@ export function CalendarDayDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <MintRadial />
+
       {/* Screen header */}
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backPill}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Text style={styles.backArrow}>{'<'}</Text>
+          <Text style={styles.backArrow}>{'‹'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerDate} numberOfLines={1} adjustsFontSizeToFit>
           {formattedDate}
         </Text>
-        {/* Spacer to center the date */}
-        <View style={styles.backButton} />
+        <View style={styles.backPill} />
       </View>
 
       {/* Swipe hint */}
@@ -559,23 +558,28 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  backButton: {
-    minWidth: 44,
-    minHeight: 44,
+  backPill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backArrow: {
-    fontSize: fontSize.lg,
-    color: colors.primary,
-    fontWeight: weightBold,
+    fontSize: 14,
+    color: colors.textSoft,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   headerDate: {
     flex: 1,
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 
   // Swipe hint banner
@@ -584,9 +588,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   swipeHintText: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
-    opacity: 0.6,
+    fontSize: 10.5,
+    color: colors.secondaryDim,
+    fontStyle: 'italic',
+    letterSpacing: 0.2,
   },
 
   // Loading / empty
@@ -643,132 +648,155 @@ const styles = StyleSheet.create({
   // Session card
   card: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.base,
+    padding: 14,
     overflow: 'hidden',
   },
   cardSpacing: {
     marginTop: spacing.md,
   },
 
-  // Swipe hint on card
-  swipeHint: {
-    position: 'absolute',
-    right: 6,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 4,
-  },
-  swipeHintDash: {
-    width: 3,
-    height: 24,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: 12,
   },
   cardHeaderLeft: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.primary,
+    letterSpacing: -0.2,
   },
   cardSubtitle: {
-    fontSize: fontSize.sm,
+    fontSize: 11.5,
+    fontWeight: '600',
     color: colors.secondary,
     marginTop: 2,
+    letterSpacing: 0.3,
   },
 
-  // Stats row
+  // PR badge chip in card header
+  prBadge: {
+    backgroundColor: colors.goldGlow,
+    borderColor: colors.goldBorder,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+  },
+  prBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.prGold,
+    letterSpacing: 0.5,
+  },
+
+  // Stats row (uppercase mini-labels, value above label)
   statsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
-    marginBottom: spacing.base,
-    paddingBottom: spacing.base,
+    gap: 12,
+    marginBottom: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   statItem: {
+    flex: 1,
     minWidth: 60,
   },
-  statLabel: {
-    fontSize: fontSize.xs,
-    color: colors.secondary,
-    fontWeight: weightSemiBold,
-    marginBottom: 2,
-  },
   statValue: {
-    fontSize: fontSize.sm,
+    fontSize: 15,
+    fontWeight: '800',
     color: colors.primary,
-    fontWeight: weightSemiBold,
+    letterSpacing: -0.3,
+  },
+  statValueUnit: {
+    fontSize: 10,
+    color: colors.secondary,
+    fontWeight: '600',
+  },
+  statLabel: {
+    fontSize: 9.5,
+    color: colors.secondary,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+
+  // PR callout
+  prCallout: {
+    backgroundColor: 'rgba(255,184,0,0.06)',
+    borderColor: colors.goldBorder,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  prCalloutTitle: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: colors.prGold,
+    letterSpacing: 0.7,
+    marginBottom: 6,
+  },
+  prCalloutRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  prCalloutExercise: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: colors.prGold,
+    flex: 1,
+  },
+  prCalloutDetail: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.prGold,
+    opacity: 0.9,
   },
 
   // Exercise breakdown
   exerciseName: {
-    fontSize: fontSize.base,
-    fontWeight: weightMedium,
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.primary,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+    marginTop: 8,
+    marginBottom: 4,
+    letterSpacing: -0.1,
   },
   setRow: {
-    fontSize: fontSize.sm,
+    fontSize: 12,
     marginBottom: 2,
   },
   setRowDefault: {
-    color: colors.secondary,
+    color: colors.textSoft,
+    fontWeight: '600',
+  },
+  setRowWarmup: {
+    color: colors.secondaryDim,
+    fontWeight: '600',
+    fontStyle: 'italic',
   },
   setRowPR: {
     color: colors.prGold,
+    fontWeight: '800',
   },
   divider: {
     height: 1,
     backgroundColor: colors.border,
-    marginTop: spacing.md,
-  },
-
-  // PR highlights
-  prHighlightsSection: {
-    backgroundColor: colors.prGoldDim,
-    borderRadius: 10,
-    padding: spacing.sm,
-    marginBottom: spacing.base,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 184, 0, 0.3)',
-  },
-  prHighlightsTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    color: colors.prGold,
-    marginBottom: spacing.xs,
-  },
-  prHighlightRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  prExerciseName: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.prGold,
-    flex: 1,
-  },
-  prDetails: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
-    color: colors.prGold,
+    marginTop: 10,
+    marginBottom: 8,
   },
 });

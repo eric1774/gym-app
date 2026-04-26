@@ -12,14 +12,12 @@ import { ProgramDetailScreen } from '../screens/ProgramDetailScreen';
 import { DayDetailScreen } from '../screens/DayDetailScreen';
 import { WorkoutScreen } from '../screens/WorkoutScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
-import { ExerciseProgressScreen } from '../screens/ExerciseProgressScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ProteinScreen } from '../screens/ProteinScreen';
 import { MealLibraryScreen } from '../screens/MealLibraryScreen';
 import { MealBuilderScreen } from '../screens/MealBuilderScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CalendarDayDetailScreen } from '../screens/CalendarDayDetailScreen';
-import { CategoryProgressScreen } from '../screens/CategoryProgressScreen';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
 import { ProgressHubScreen } from '../screens/ProgressHubScreen';
 import { ExerciseDetailScreen } from '../screens/ExerciseDetailScreen';
@@ -44,7 +42,6 @@ export type CalendarStackParamList = {
 
 export type WorkoutStackParamList = {
   WorkoutHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
   ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
   SessionBreakdown: { sessionId: number; exerciseId: number; exerciseName: string; sessionDate: string };
 };
@@ -59,9 +56,7 @@ export type ProgramsStackParamList = {
 
 export type DashboardStackParamList = {
   DashboardHome: undefined;
-  ExerciseProgress: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string; viewMode?: 'strength' | 'volume' };
   Settings: undefined;
-  CategoryProgress: { category: string; viewMode?: 'strength' | 'volume' };
   Achievements: undefined;
   ProgressHub: undefined;
   ExerciseDetail: { exerciseId: number; exerciseName: string; measurementType?: 'reps' | 'timed' | 'height_reps'; category?: string };
@@ -189,7 +184,6 @@ function WorkoutStackNavigator() {
   return (
     <WorkoutStack.Navigator screenOptions={{ headerShown: false }}>
       <WorkoutStack.Screen name="WorkoutHome" component={WorkoutScreen} />
-      <WorkoutStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
       <WorkoutStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />
       <WorkoutStack.Screen name="SessionBreakdown" component={SessionBreakdownScreen} />
     </WorkoutStack.Navigator>
@@ -200,9 +194,7 @@ function DashboardStackNavigator() {
   return (
     <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
       <DashboardStack.Screen name="DashboardHome" component={DashboardScreen} />
-      <DashboardStack.Screen name="ExerciseProgress" component={ExerciseProgressScreen} />
       <DashboardStack.Screen name="Settings" component={SettingsScreen} />
-      <DashboardStack.Screen name="CategoryProgress" component={CategoryProgressScreen} />
       <DashboardStack.Screen name="Achievements" component={AchievementsScreen} />
       <DashboardStack.Screen name="ProgressHub" component={ProgressHubScreen} />
       <DashboardStack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} />

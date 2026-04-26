@@ -16,7 +16,6 @@ import {
   ProgramDayExercise,
   NextWorkoutInfo,
   CategorySummary,
-  CategoryExerciseProgress,
 } from '../types';
 
 // ── Exercise Progress ───────────────────────────────────────────────
@@ -291,52 +290,52 @@ export async function getProgramTotalCompleted(programId: number): Promise<numbe
 export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
   const database = await db;
 
-  // Try to find the most recently used activated program via sessions
-  let programId: number | null = null;
-  let programName: string | null = null;
-
-  const recentResult = await executeSql(
+  // Pull every activated, non-archived program with the data needed to
+  // judge "still running" — same predicate ProgramsScreen uses for its
+  // "Active" tab: completed_count < day_count * weeks.
+  const progRes = await executeSql(
     database,
-    `SELECT DISTINCT p.id, p.name
-     FROM programs p
-     INNER JOIN program_days pd ON pd.program_id = p.id
-     INNER JOIN workout_sessions ws ON ws.program_day_id = pd.id
-     WHERE p.start_date IS NOT NULL
-     ORDER BY ws.started_at DESC
-     LIMIT 1`,
+    `SELECT p.id, p.name, p.weeks,
+            (SELECT COUNT(*) FROM program_days WHERE program_id = p.id) AS day_count,
+            (SELECT MAX(ws.started_at)
+               FROM workout_sessions ws
+               INNER JOIN program_days pd ON pd.id = ws.program_day_id
+              WHERE pd.program_id = p.id) AS last_used
+       FROM programs p
+      WHERE p.start_date IS NOT NULL
+        AND p.archived_at IS NULL
+      ORDER BY p.created_at DESC`,
   );
+  if (progRes.rows.length === 0) { return null; }
 
-  if (recentResult.rows.length > 0) {
-    const row = recentResult.rows.item(0);
-    programId = row.id;
-    programName = row.name;
-  } else {
-    // Fall back to most recently created activated program
-    const fallbackResult = await executeSql(
-      database,
-      'SELECT id, name FROM programs WHERE start_date IS NOT NULL ORDER BY created_at DESC LIMIT 1',
-    );
-    if (fallbackResult.rows.length === 0) {
-      return null;
-    }
-    const row = fallbackResult.rows.item(0);
-    programId = row.id;
-    programName = row.name;
-  }
+  type Candidate = { id: number; name: string; lastUsed: string };
+  const candidates: Candidate[] = [];
+  for (let i = 0; i < progRes.rows.length; i++) {
+    const r = progRes.rows.item(i);
+    const dayCount = Number(r.day_count ?? 0);
+    if (dayCount === 0) { continue; }
 
-  if (programId === null || programName === null) {
-    return null;
-  }
+    const completed = await getProgramTotalCompleted(r.id);
+    if (completed >= dayCount * Number(r.weeks)) { continue; }
 
-  const dayStatuses = await getProgramWeekCompletion(programId);
-  if (dayStatuses.length === 0) {
-    return null;
+    candidates.push({
+      id: r.id,
+      name: r.name,
+      lastUsed: (r.last_used as string | null) ?? '',
+    });
   }
+  if (candidates.length === 0) { return null; }
+
+  // Most recently used wins; created_at DESC is the natural tiebreak (stable sort).
+  candidates.sort((a, b) => b.lastUsed.localeCompare(a.lastUsed));
+  const winner = candidates[0];
+
+  const dayStatuses = await getProgramWeekCompletion(winner.id);
+  if (dayStatuses.length === 0) { return null; }
 
   // Find the first unfinished day; if all done, use first day
   const nextDay = dayStatuses.find(d => !d.isCompletedThisWeek) ?? dayStatuses[0];
 
-  // Count exercises for the selected day
   const countResult = await executeSql(
     database,
     'SELECT COUNT(*) AS cnt FROM program_day_exercises WHERE program_day_id = ?',
@@ -345,8 +344,8 @@ export async function getNextWorkoutDay(): Promise<NextWorkoutInfo | null> {
   const exerciseCount = countResult.rows.item(0).cnt as number;
 
   return {
-    programId,
-    programName,
+    programId: winner.id,
+    programName: winner.name,
     dayId: nextDay.dayId,
     dayName: nextDay.dayName,
     exerciseCount,
@@ -555,103 +554,6 @@ export async function getCategorySummaries(): Promise<CategorySummary[]> {
   return summaries;
 }
 
-// ── Category Exercise Progress ──────────────────────────────────────
-
-/**
- * For a single category, return per-exercise progress with sparkline,
- * current/previous bests, and last trained date. Supports optional time
- * range filtering. Uses a single SQL query with JS-side grouping.
- */
-export async function getCategoryExerciseProgress(
-  category: ExerciseCategory,
-  timeRange?: '1M' | '3M' | '6M' | 'All',
-): Promise<CategoryExerciseProgress[]> {
-  const database = await db;
-
-  let dateFilter = '';
-  const params: (string | number)[] = [category];
-
-  if (timeRange && timeRange !== 'All') {
-    const now = new Date();
-    const months = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : 6;
-    now.setMonth(now.getMonth() - months);
-    dateFilter = 'AND wss.completed_at >= ?';
-    params.push(now.toISOString());
-  }
-
-  const result = await executeSql(
-    database,
-    `SELECT e.id AS exercise_id, e.name AS exercise_name, e.measurement_type,
-            ws.session_id, wss.completed_at,
-            ws.weight_kg, ws.reps
-     FROM workout_sets ws
-     INNER JOIN exercises e ON e.id = ws.exercise_id
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     WHERE e.category = ?
-       AND wss.completed_at IS NOT NULL
-       ${dateFilter}
-       AND ws.id = (
-         SELECT ws2.id FROM workout_sets ws2
-         WHERE ws2.session_id = ws.session_id
-           AND ws2.exercise_id = ws.exercise_id
-         ORDER BY ws2.weight_kg DESC, ws2.reps DESC
-         LIMIT 1
-       )
-     GROUP BY ws.exercise_id, ws.session_id
-     ORDER BY wss.completed_at ASC`,
-    params,
-  );
-
-  // Group rows by exercise_id
-  const exerciseMap = new Map<number, {
-    exerciseName: string;
-    measurementType: ExerciseMeasurementType;
-    points: { completedAt: string; bestValue: number }[];
-  }>();
-
-  for (let i = 0; i < result.rows.length; i++) {
-    const row = result.rows.item(i);
-    const exerciseId: number = row.exercise_id;
-    const measurementType = (row.measurement_type ?? 'reps') as ExerciseMeasurementType;
-    const bestValue = measurementType === 'timed' ? row.reps : row.weight_kg;
-
-    if (!exerciseMap.has(exerciseId)) {
-      exerciseMap.set(exerciseId, {
-        exerciseName: row.exercise_name,
-        measurementType,
-        points: [],
-      });
-    }
-
-    exerciseMap.get(exerciseId)!.points.push({
-      completedAt: row.completed_at,
-      bestValue,
-    });
-  }
-
-  const progressList: CategoryExerciseProgress[] = [];
-  for (const [exerciseId, data] of exerciseMap) {
-    const sparklinePoints = data.points.map(p => p.bestValue);
-    const currentBest = sparklinePoints[sparklinePoints.length - 1];
-    const previousBest = sparklinePoints.length >= 2
-      ? sparklinePoints[sparklinePoints.length - 2]
-      : null;
-    const lastTrainedAt = data.points[data.points.length - 1].completedAt;
-
-    progressList.push({
-      exerciseId,
-      exerciseName: data.exerciseName,
-      measurementType: data.measurementType,
-      sparklinePoints,
-      currentBest,
-      previousBest,
-      lastTrainedAt,
-    });
-  }
-
-  return progressList;
-}
-
 // ── Volume Query Functions ──────────────────────────────────────────
 
 /**
@@ -763,101 +665,6 @@ export async function getCategoryVolumeSummaries(): Promise<CategorySummary[]> {
   }
 
   return summaries;
-}
-
-/**
- * For a single category, return per-exercise volume progress with sparkline,
- * current/previous bests (volume per session), and last trained date.
- * Supports optional time range filtering.
- */
-export async function getCategoryExerciseVolumeProgress(
-  category: ExerciseCategory,
-  timeRange?: '1M' | '3M' | '6M' | 'All',
-): Promise<CategoryExerciseProgress[]> {
-  const database = await db;
-
-  let dateFilter = '';
-  const params: (string | number)[] = [category];
-
-  if (timeRange && timeRange !== 'All') {
-    const now = new Date();
-    const months = timeRange === '1M' ? 1 : timeRange === '3M' ? 3 : 6;
-    now.setMonth(now.getMonth() - months);
-    dateFilter = 'AND wss.completed_at >= ?';
-    params.push(now.toISOString());
-  }
-
-  const result = await executeSql(
-    database,
-    `SELECT e.id AS exercise_id, e.name AS exercise_name, e.measurement_type,
-            ws.session_id, wss.completed_at,
-            SUM(ws.weight_kg * ws.reps) AS session_volume
-     FROM workout_sets ws
-     INNER JOIN exercises e ON e.id = ws.exercise_id
-     INNER JOIN workout_sessions wss ON wss.id = ws.session_id
-     WHERE e.category = ?
-       AND wss.completed_at IS NOT NULL
-       AND ws.is_warmup = 0
-       ${dateFilter}
-     GROUP BY e.id, ws.session_id
-     ORDER BY wss.completed_at ASC`,
-    params,
-  );
-
-  // Group by exercise_id, then by session_id
-  const exerciseMap = new Map<number, {
-    exerciseName: string;
-    measurementType: ExerciseMeasurementType;
-    sessions: Map<number, { completedAt: string; volumeSum: number }>;
-  }>();
-
-  for (let i = 0; i < result.rows.length; i++) {
-    const row = result.rows.item(i);
-    const exerciseId: number = row.exercise_id;
-    const sessionId: number = row.session_id;
-
-    if (!exerciseMap.has(exerciseId)) {
-      exerciseMap.set(exerciseId, {
-        exerciseName: row.exercise_name,
-        measurementType: (row.measurement_type ?? 'reps') as ExerciseMeasurementType,
-        sessions: new Map(),
-      });
-    }
-
-    const ex = exerciseMap.get(exerciseId)!;
-    const existing = ex.sessions.get(sessionId);
-    if (existing) {
-      existing.volumeSum += row.session_volume;  // should not happen with proper GROUP BY, but safe
-    } else {
-      ex.sessions.set(sessionId, {
-        completedAt: row.completed_at,
-        volumeSum: row.session_volume,
-      });
-    }
-  }
-
-  const progressList: CategoryExerciseProgress[] = [];
-  for (const [exerciseId, data] of exerciseMap) {
-    const points = Array.from(data.sessions.values());
-    const sparklinePoints = points.map(p => p.volumeSum);
-    const currentBest = sparklinePoints[sparklinePoints.length - 1];
-    const previousBest = sparklinePoints.length >= 2
-      ? sparklinePoints[sparklinePoints.length - 2]
-      : null;
-    const lastTrainedAt = points[points.length - 1].completedAt;
-
-    progressList.push({
-      exerciseId,
-      exerciseName: data.exerciseName,
-      measurementType: data.measurementType,
-      sparklinePoints,
-      currentBest,
-      previousBest,
-      lastTrainedAt,
-    });
-  }
-
-  return progressList;
 }
 
 // ── Full Data Export ────────────────────────────────────────────────
