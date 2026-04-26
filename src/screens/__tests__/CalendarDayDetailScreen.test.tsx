@@ -95,9 +95,9 @@ describe('CalendarDayDetailScreen', () => {
       expect(getByText('Push Day')).toBeTruthy();
     });
 
-    expect(getByText('Duration')).toBeTruthy();
-    expect(getByText('Sets')).toBeTruthy();
-    expect(getByText('Volume')).toBeTruthy();
+    expect(getByText('DURATION')).toBeTruthy();
+    expect(getByText('SETS')).toBeTruthy();
+    expect(getByText('LBS')).toBeTruthy();
     expect(getByText('Bench Press')).toBeTruthy();
   });
 
@@ -134,7 +134,7 @@ describe('CalendarDayDetailScreen', () => {
     const { getByText } = renderWithDate('2025-06-15');
 
     await waitFor(() => {
-      expect(getByText(/Personal Records/)).toBeTruthy();
+      expect(getByText(/PERSONAL RECORD/)).toBeTruthy();
     });
   });
 });
