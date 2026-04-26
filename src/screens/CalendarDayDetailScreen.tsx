@@ -277,13 +277,7 @@ function SwipeableSessionCard({ session, index, onDelete }: SwipeableSessionCard
         {/* PR highlights callout — gold-tinted panel with internal gold radial */}
         {session.prCount > 0 && (
           <View style={styles.prCallout}>
-            <MintRadial
-              tint={colors.prGold}
-              corner="tr"
-              size={100}
-              top={-30}
-              right={-30}
-            />
+            <MintRadial tint={colors.prGold} corner="tr" />
             <Text style={styles.prCalloutTitle}>{'★'} PERSONAL RECORD{session.prCount > 1 ? 'S' : ''}</Text>
             {session.exercises.flatMap(exercise =>
               exercise.sets

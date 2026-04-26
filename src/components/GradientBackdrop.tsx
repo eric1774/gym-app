@@ -78,8 +78,16 @@ export function GradientBackdrop({ borderRadius, base, overlays }: GradientBackd
                   gradientUnits="userSpaceOnUse"
                   x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
                 >
-                  <Stop offset="0%" stopColor={base.from} />
-                  <Stop offset="100%" stopColor={base.to} />
+                  <Stop
+                    offset="0%"
+                    stopColor={base.from}
+                    stopOpacity={base.from === 'transparent' ? 0 : 1}
+                  />
+                  <Stop
+                    offset="100%"
+                    stopColor={base.to}
+                    stopOpacity={base.to === 'transparent' ? 0 : 1}
+                  />
                 </LinearGradient>
               );
             })()}
