@@ -10,10 +10,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
-import { fontSize, weightBold, weightSemiBold } from '../theme/typography';
+import { fontSize } from '../theme/typography';
 import { spacing } from '../theme/spacing';
 import { getWorkoutDaysForMonth, getFirstSessionDate } from '../db/calendar';
 import { CalendarStackParamList } from '../navigation/TabNavigator';
+import { MintRadial } from '../components/MintRadial';
 
 type Nav = NativeStackNavigationProp<CalendarStackParamList, 'CalendarHome'>;
 
@@ -34,12 +35,11 @@ export function CalendarScreen() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth()); // 0-indexed
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [workoutDays, setWorkoutDays] = useState<Set<string>>(new Set());
   const [firstSessionDate, setFirstSessionDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load workout days when month changes and load firstSessionDate once
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -63,7 +63,6 @@ export function CalendarScreen() {
     }, [currentYear, currentMonth]),
   );
 
-  // Month navigation helpers
   function goToPrevMonth() {
     if (currentMonth === 0) {
       setCurrentYear(y => y - 1);
@@ -82,44 +81,38 @@ export function CalendarScreen() {
     }
   }
 
-  // Disable right arrow on current month
   const isCurrentMonth =
     currentYear === today.getFullYear() && currentMonth === today.getMonth();
 
-  // Disable left arrow when at or before the first session's month, or no sessions
   let isEarliestMonth = true;
   if (firstSessionDate) {
     const [fYear, fMonth] = firstSessionDate.split('-').map(Number);
-    // fMonth is 1-indexed; compare with currentMonth (0-indexed) + 1
     isEarliestMonth =
       currentYear < fYear ||
       (currentYear === fYear && currentMonth + 1 <= fMonth);
   }
 
-  // Calendar grid calculations
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0=Sunday
+  const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // Build grid cells: nulls for leading empty cells, then day numbers
   const cells: (number | null)[] = [
     ...Array(firstDayOfMonth).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-
-  // Pad to complete the last row
   const remainder = cells.length % 7;
   if (remainder !== 0) {
     cells.push(...Array(7 - remainder).fill(null));
   }
-
-  // Split into rows
   const rows: (number | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
     rows.push(cells.slice(i, i + 7));
   }
 
   const cellSize = getCellSize();
-  const monthLabel = new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long' });
+  const monthName = new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long' });
+  // Year is shown in the hero block, so the mini pill-row label is just the month
+  // (avoids duplicating "2026" in two Text nodes which would break a getByText regex).
+  const monthLabelUppercase = monthName.toUpperCase();
 
   function handleDayPress(day: number) {
     const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -139,43 +132,32 @@ export function CalendarScreen() {
     const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const isToday = dateStr === todayStr;
     const hasWorkout = workoutDays.has(dateStr);
-
-    // Future days in the current month (past today) get secondary color
     const isFuture = isCurrentMonth && day > today.getDate();
+    // PR detection lives in day-detail; the calendar grid only shows mint dots
+    // (PR rings would require additional per-day data — out of scope).
+    const isPR = false;
 
-    let cellBg: string | undefined;
-    let textColor: string;
-    let borderWidth = 0;
-    let borderColor: string | undefined;
+    const dotSize = Math.min(cellSize - 8, 38);
+    const dotStyle: any = {
+      width: dotSize,
+      height: dotSize,
+      borderRadius: dotSize / 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
 
-    if (hasWorkout && isToday) {
-      cellBg = colors.accent;
+    let textColor: string = colors.primary;
+    if (hasWorkout) {
+      dotStyle.backgroundColor = colors.accent;
       textColor = colors.onAccent;
-      borderWidth = 2;
-      borderColor = colors.accent;
-    } else if (hasWorkout) {
-      cellBg = colors.accent;
-      textColor = colors.onAccent;
-    } else if (isToday) {
-      textColor = colors.primary;
-      borderWidth = 2;
-      borderColor = colors.accent;
-    } else if (isFuture) {
-      textColor = colors.secondary;
-    } else {
-      textColor = colors.primary;
+    }
+    if (isFuture && !hasWorkout) {
+      textColor = colors.secondaryDim;
+      dotStyle.opacity = 0.55;
     }
 
-    const circleStyle = {
-      width: cellSize - 8,
-      height: cellSize - 8,
-      borderRadius: (cellSize - 8) / 2,
-      backgroundColor: cellBg,
-      borderWidth,
-      borderColor,
-      alignItems: 'center' as const,
-      justifyContent: 'center' as const,
-    };
+    const todayHaloStyle = isToday && hasWorkout ? styles.todayHalo : null;
+    const prRingStyle = isPR ? styles.prRing : null;
 
     if (hasWorkout) {
       return (
@@ -185,7 +167,15 @@ export function CalendarScreen() {
           onPress={() => handleDayPress(day)}
           activeOpacity={0.7}
         >
-          <View style={circleStyle}>
+          {todayHaloStyle && (
+            <View
+              style={[
+                todayHaloStyle,
+                { width: dotSize + 8, height: dotSize + 8, borderRadius: (dotSize + 8) / 2 },
+              ]}
+            />
+          )}
+          <View style={[dotStyle, prRingStyle]}>
             <Text style={[styles.dayText, { color: textColor }]}>{day}</Text>
           </View>
         </TouchableOpacity>
@@ -197,7 +187,7 @@ export function CalendarScreen() {
         key={dateStr}
         style={[styles.cell, { width: cellSize, height: cellSize }]}
       >
-        <View style={circleStyle}>
+        <View style={dotStyle}>
           <Text style={[styles.dayText, { color: textColor }]}>{day}</Text>
         </View>
       </View>
@@ -206,36 +196,37 @@ export function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Month navigation header */}
-      <View style={styles.header}>
+      <MintRadial />
+
+      {/* Hero block — "April" + "2026" stacked, left-aligned */}
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>{monthName}</Text>
+        <Text style={styles.heroYear}>{currentYear}</Text>
+      </View>
+
+      {/* Pill-arrow nav row */}
+      <View style={styles.navRow}>
         <TouchableOpacity
-          style={styles.arrowButton}
+          style={[styles.pillArrow, isEarliestMonth && styles.pillArrowDisabled]}
           onPress={goToPrevMonth}
           disabled={isEarliestMonth}
           activeOpacity={0.7}
         >
-          <Text style={[styles.arrowText, isEarliestMonth && styles.arrowDisabled]}>
-            {'<'}
-          </Text>
+          <Text style={styles.pillArrowText}>{'‹'}</Text>
         </TouchableOpacity>
 
-        <Text style={styles.monthTitle}>
-          {monthLabel} {currentYear}
-        </Text>
+        <Text style={styles.monthMini}>{monthLabelUppercase}</Text>
 
         <TouchableOpacity
-          style={styles.arrowButton}
+          style={[styles.pillArrow, isCurrentMonth && styles.pillArrowDisabled]}
           onPress={goToNextMonth}
           disabled={isCurrentMonth}
           activeOpacity={0.7}
         >
-          <Text style={[styles.arrowText, isCurrentMonth && styles.arrowDisabled]}>
-            {'>'}
-          </Text>
+          <Text style={styles.pillArrowText}>{'›'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Weekday labels */}
       <View style={styles.weekdayRow}>
         {WEEKDAY_LABELS.map((label, idx) => (
           <View
@@ -247,7 +238,6 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      {/* Calendar grid */}
       <View style={styles.grid}>
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -271,44 +261,65 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md,
   },
-  header: {
+  hero: {
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: -0.6,
+    lineHeight: 32,
+  },
+  heroYear: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.secondary,
+    letterSpacing: 0.6,
+    marginTop: 4,
+  },
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    paddingTop: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  arrowButton: {
-    padding: spacing.sm,
-    minWidth: 44,
-    minHeight: 44,
+  pillArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowText: {
-    fontSize: fontSize.lg,
-    color: colors.primary,
-    fontWeight: weightBold,
-  },
-  arrowDisabled: {
+  pillArrowDisabled: {
     opacity: 0.3,
-    color: colors.secondary,
   },
-  monthTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: weightBold,
-    color: colors.primary,
-    letterSpacing: 0.5,
+  pillArrowText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSoft,
+    lineHeight: 13,
+  },
+  monthMini: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSoft,
+    letterSpacing: 1.2,
   },
   weekdayRow: {
     flexDirection: 'row',
     marginBottom: 4,
   },
   weekdayLabel: {
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.secondary,
-    fontWeight: weightSemiBold,
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   grid: {
     flex: 1,
@@ -319,11 +330,20 @@ const styles = StyleSheet.create({
   cell: {
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
   },
   dayText: {
     fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
+    fontWeight: '600',
     textAlign: 'center',
+  },
+  todayHalo: {
+    position: 'absolute',
+    backgroundColor: colors.accentGlow,
+  },
+  prRing: {
+    borderWidth: 2,
+    borderColor: colors.prGold,
   },
   loadingContainer: {
     flex: 1,
