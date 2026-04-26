@@ -26,6 +26,7 @@ import { getMacroTotalsByDate } from '../db/macros';
 import { computeCalories } from '../utils/macros';
 import { CalendarSessionDetail, MacroValues } from '../types';
 import { CalendarStackParamList } from '../navigation/TabNavigator';
+import { WaterDropIcon } from '../components/WaterDropIcon';
 
 type Nav = NativeStackNavigationProp<CalendarStackParamList, 'CalendarDayDetail'>;
 type Route = RouteProp<CalendarStackParamList, 'CalendarDayDetail'>;
@@ -335,43 +336,40 @@ interface NutritionData {
 function DayNutritionCard({ data }: { data: NutritionData | null }) {
   if (!data) { return null; }
   const { waterOz, macros, calories } = data;
-  // Don't show card if nothing was logged
   if (waterOz === 0 && macros.protein === 0 && macros.carbs === 0 && macros.fat === 0) {
     return null;
   }
 
   return (
     <View style={nutritionStyles.card}>
-      {/* Water row */}
       {waterOz > 0 && (
         <View style={nutritionStyles.waterRow}>
-          <Text style={nutritionStyles.waterEmoji}>{'\uD83D\uDCA7'}</Text>
+          <WaterDropIcon size={14} />
           <Text style={nutritionStyles.waterValue}>{parseFloat(waterOz.toFixed(2))}</Text>
           <Text style={nutritionStyles.waterUnit}>oz</Text>
         </View>
       )}
 
-      {/* Macro stats row */}
       {(macros.protein > 0 || macros.carbs > 0 || macros.fat > 0) && (
         <View style={nutritionStyles.macroRow}>
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(calories.toFixed(2))}</Text>
-            <Text style={nutritionStyles.macroLabel}>cal</Text>
+            <Text style={nutritionStyles.macroLabel}>CAL</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.protein.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>protein</Text>
+            <Text style={nutritionStyles.macroLabel}>PROTEIN</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.carbs.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>carbs</Text>
+            <Text style={nutritionStyles.macroLabel}>CARBS</Text>
           </View>
-          <View style={nutritionStyles.divider} />
+          <View style={nutritionStyles.macroDivider} />
           <View style={nutritionStyles.macroItem}>
             <Text style={nutritionStyles.macroValue}>{parseFloat(macros.fat.toFixed(2))}g</Text>
-            <Text style={nutritionStyles.macroLabel}>fat</Text>
+            <Text style={nutritionStyles.macroLabel}>FAT</Text>
           </View>
         </View>
       )}
@@ -382,52 +380,56 @@ function DayNutritionCard({ data }: { data: NutritionData | null }) {
 const nutritionStyles = StyleSheet.create({
   card: {
     backgroundColor: colors.surfaceElevated,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.base,
+    padding: 14,
     marginBottom: spacing.md,
-    gap: spacing.sm,
   },
   waterRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  waterEmoji: {
-    fontSize: fontSize.base,
+    alignItems: 'baseline',
+    gap: 6,
+    marginBottom: 10,
   },
   waterValue: {
-    fontSize: fontSize.md,
-    fontWeight: weightBold,
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.water,
+    letterSpacing: -0.3,
+    marginLeft: 4,
   },
   waterUnit: {
-    fontSize: fontSize.sm,
-    fontWeight: weightMedium,
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.secondary,
   },
   macroRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   macroItem: {
     flex: 1,
     alignItems: 'center',
   },
   macroValue: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
+    fontSize: 14,
+    fontWeight: '800',
     color: colors.primary,
+    letterSpacing: -0.3,
   },
   macroLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: weightMedium,
+    fontSize: 9.5,
+    fontWeight: '700',
     color: colors.secondary,
-    marginTop: 2,
+    letterSpacing: 0.6,
+    marginTop: 4,
   },
-  divider: {
+  macroDivider: {
     width: 1,
     height: 28,
     backgroundColor: colors.border,
