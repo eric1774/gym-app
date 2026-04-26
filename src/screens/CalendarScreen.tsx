@@ -110,9 +110,7 @@ export function CalendarScreen() {
 
   const cellSize = getCellSize();
   const monthName = new Date(currentYear, currentMonth, 1).toLocaleString('default', { month: 'long' });
-  // Year is shown in the hero block, so the mini pill-row label is just the month
-  // (avoids duplicating "2026" in two Text nodes which would break a getByText regex).
-  const monthLabelUppercase = monthName.toUpperCase();
+  const monthLabelUppercase = `${monthName.toUpperCase()} · ${currentYear}`;
 
   function handleDayPress(day: number) {
     const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

@@ -18,7 +18,7 @@ describe('CalendarScreen', () => {
   });
 
   it('renders month and year in header', async () => {
-    const { getByText } = renderWithProviders(<CalendarScreen />, {
+    const { getByText, getAllByText } = renderWithProviders(<CalendarScreen />, {
       withSession: false,
       withTimer: false,
     });
@@ -28,7 +28,7 @@ describe('CalendarScreen', () => {
 
     // Month label appears in the header
     expect(getByText(new RegExp(expected))).toBeTruthy();
-    expect(getByText(new RegExp(year))).toBeTruthy();
+    expect(getAllByText(new RegExp(year)).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders weekday labels S M T W T F S', async () => {
