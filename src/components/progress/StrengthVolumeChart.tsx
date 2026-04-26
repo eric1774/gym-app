@@ -14,9 +14,16 @@ const VIEW_W = 220;
 const VIEW_H = 130;
 const PAD_TOP = 8;
 const PAD_BOTTOM = 14;
+const TICK_LH = 11; // tick label line-height — used to vertically center each label on its SVG y-coord
 
 const niceMin = (v: number) => v * 0.95;
 const niceMax = (v: number) => v * 1.05;
+
+// SVG y-coord for tick i (0 = top = max value, 3 = bottom = min value).
+// Mirrors the formula used by yWeight()/yVolume() so the label sits at the
+// exact same vertical position that the SVG plots that value.
+const tickSvgY = (i: number) => PAD_TOP + (i / 3) * (VIEW_H - PAD_TOP - PAD_BOTTOM);
+const tickTop = (i: number) => tickSvgY(i) - TICK_LH / 2;
 
 export const StrengthVolumeChart: React.FC<Props> = ({ points, onPointTap }) => {
   if (points.length < 2) {
@@ -35,13 +42,20 @@ export const StrengthVolumeChart: React.FC<Props> = ({ points, onPointTap }) => 
   const vMax = niceMax(Math.max(...volumes));
 
   const xFor = (i: number) => (i / (points.length - 1)) * VIEW_W;
+  const usableH = VIEW_H - PAD_TOP - PAD_BOTTOM;
+  // Center the series vertically when the data is flat (e.g. bodyweight exercises
+  // where every bestWeightLb is 0, or someone who always lifts the same weight).
+  // Without these guards, (w - wMin) / 0 → NaN → the SVG path parser throws and
+  // crashes the app at the native layer.
   const yWeight = (w: number) => {
-    const usable = VIEW_H - PAD_TOP - PAD_BOTTOM;
-    return PAD_TOP + (1 - (w - wMin) / (wMax - wMin)) * usable;
+    const range = wMax - wMin;
+    if (range <= 0) { return PAD_TOP + usableH / 2; }
+    return PAD_TOP + (1 - (w - wMin) / range) * usableH;
   };
   const yVolume = (v: number) => {
-    const usable = VIEW_H - PAD_TOP - PAD_BOTTOM;
-    return PAD_TOP + (1 - (v - vMin) / (vMax - vMin)) * usable;
+    const range = vMax - vMin;
+    if (range <= 0) { return PAD_TOP + usableH / 2; }
+    return PAD_TOP + (1 - (v - vMin) / range) * usableH;
   };
 
   const linePath = points
@@ -55,11 +69,19 @@ export const StrengthVolumeChart: React.FC<Props> = ({ points, onPointTap }) => 
 
   return (
     <View style={styles.container}>
+      <View style={styles.legendRow}>
+        <Text style={[styles.axisHeader, { color: colors.accent }]}>━ lb</Text>
+        <Text style={[styles.axisHeader, { color: colors.slate }]}>▮ k lb</Text>
+      </View>
       <View style={styles.dualAxis}>
         <View style={styles.yAxis}>
-          <Text style={[styles.axisHeader, { color: colors.accent }]}>━ lb</Text>
           {wTicks.map((t, i) => (
-            <Text key={i} testID={`y-tick-mint-${i}`} style={styles.tickMint}>{Math.round(t)}</Text>
+            <Text
+              key={i}
+              testID={`y-tick-mint-${i}`}
+              style={[styles.tickMint, { position: 'absolute', top: tickTop(i), right: 0, left: 0 }]}>
+              {Math.round(t)}
+            </Text>
           ))}
         </View>
         <View style={{ flex: 1 }}>
@@ -109,9 +131,11 @@ export const StrengthVolumeChart: React.FC<Props> = ({ points, onPointTap }) => 
           </View>
         </View>
         <View style={styles.yAxis}>
-          <Text style={[styles.axisHeader, { color: colors.slate }]}>▮ k lb</Text>
           {vTicks.map((t, i) => (
-            <Text key={i} testID={`y-tick-slate-${i}`} style={styles.tickSlate}>
+            <Text
+              key={i}
+              testID={`y-tick-slate-${i}`}
+              style={[styles.tickSlate, { position: 'absolute', top: tickTop(i), right: 0, left: 0 }]}>
               {Math.round(t / 1000)}
             </Text>
           ))}
@@ -129,11 +153,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 11,
   },
+  legendRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   dualAxis: { flexDirection: 'row', gap: 5 },
-  yAxis: { width: 30, justifyContent: 'space-between', paddingVertical: 6 },
-  axisHeader: { fontSize: 8, fontWeight: weightBold, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 },
-  tickMint: { color: colors.accent, fontSize: 9, fontWeight: weightSemiBold, textAlign: 'right' },
-  tickSlate: { color: colors.slate, fontSize: 9, fontWeight: weightSemiBold, textAlign: 'left' },
+  // Fixed height matches the SVG so absolute-positioned ticks share its coord system.
+  yAxis: { width: 30, height: VIEW_H, position: 'relative' },
+  axisHeader: { fontSize: 8, fontWeight: weightBold, letterSpacing: 1, textTransform: 'uppercase' },
+  tickMint: { color: colors.accent, fontSize: 9, lineHeight: TICK_LH, fontWeight: weightSemiBold, textAlign: 'right' },
+  tickSlate: { color: colors.slate, fontSize: 9, lineHeight: TICK_LH, fontWeight: weightSemiBold, textAlign: 'left' },
   empty: {
     height: 130,
     justifyContent: 'center',
