@@ -20,6 +20,7 @@ import {
   getWarmupTemplatePreview,
   getWarmupTemplates,
 } from '../db/warmups';
+import { Dumbbell } from '../components/icons/Dumbbell';
 import { LibraryStackParamList } from '../navigation/LibraryStackNavigator';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -172,6 +173,9 @@ export function WarmupTemplateListScreen({
       </View>
       {!isLoading && templates.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Dumbbell size={40} color={colors.secondary} />
+          </View>
           <Text style={styles.emptyText}>No warmup templates yet</Text>
           <Text style={styles.emptyHint}>Tap + to create one</Text>
         </View>
@@ -309,6 +313,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
+  },
+  emptyIcon: {
+    opacity: 0.16,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: fontSize.base,
