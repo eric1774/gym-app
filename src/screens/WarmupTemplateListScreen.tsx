@@ -166,6 +166,10 @@ export function WarmupTemplateListScreen({
 
   return (
     <View style={styles.container}>
+      <View style={styles.eyebrow}>
+        <Text style={styles.eyebrowText}>YOUR TEMPLATES</Text>
+        <Text style={styles.eyebrowCount}>{templates.length}</Text>
+      </View>
       {!isLoading && templates.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No warmup templates yet</Text>
@@ -233,6 +237,25 @@ export function WarmupTemplateListScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  eyebrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base + 2,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  eyebrowText: {
+    color: colors.warmupAmber,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+  },
+  eyebrowCount: {
+    color: colors.secondary,
+    fontSize: 10,
+    fontWeight: '700',
   },
   list: {
     paddingHorizontal: spacing.base,
