@@ -20,7 +20,7 @@ import { deleteExercise, searchExercises } from '../db/exercises';
 import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize } from '../theme/typography';
 import { Exercise, ExerciseCategory } from '../types';
 import { AddExerciseModal } from './AddExerciseModal';
 
