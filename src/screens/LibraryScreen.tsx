@@ -24,10 +24,6 @@ import { fontSize } from '../theme/typography';
 import { Exercise, ExerciseCategory } from '../types';
 import { AddExerciseModal } from './AddExerciseModal';
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export function LibraryScreen() {
   const [activeSubTab, setActiveSubTab] = useState<'exercises' | 'warmups'>('exercises');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
