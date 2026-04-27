@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightBold } from '../theme/typography';
 import { ExerciseCategory, EXERCISE_CATEGORIES } from '../types';
@@ -14,6 +14,12 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/** Append a hex alpha suffix to a 6-digit hex color. 0.14 → '24'. */
+function withHexAlpha(hex: string, alpha: number): string {
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255).toString(16).padStart(2, '0');
+  return `${hex}${a}`;
+}
+
 export function ExerciseCategoryTabs({ selected, onSelect }: ExerciseCategoryTabsProps) {
   return (
     <ScrollView
@@ -23,18 +29,17 @@ export function ExerciseCategoryTabs({ selected, onSelect }: ExerciseCategoryTab
       contentContainerStyle={styles.content}>
       {EXERCISE_CATEGORIES.map(category => {
         const isSelected = category === selected;
+        const tint = getCategoryColor(category);
+        const pillStyle = isSelected
+          ? { backgroundColor: tint }
+          : { backgroundColor: withHexAlpha(tint, 0.14) };
+        const textStyle = isSelected ? { color: colors.onAccent } : { color: tint };
         return (
           <TouchableOpacity
             key={category}
             onPress={() => onSelect(category)}
-            style={[styles.pill, isSelected ? styles.pillSelected : styles.pillUnselected]}>
-            <Text
-              style={[
-                styles.pillText,
-                isSelected ? styles.pillTextSelected : styles.pillTextUnselected,
-              ]}>
-              {capitalize(category)}
-            </Text>
+            style={[styles.pill, pillStyle]}>
+            <Text style={[styles.pillText, textStyle]}>{capitalize(category)}</Text>
           </TouchableOpacity>
         );
       })}
@@ -56,20 +61,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 2,
     borderRadius: 20,
   },
-  pillSelected: {
-    backgroundColor: colors.accent,
-  },
-  pillUnselected: {
-    backgroundColor: '#33373D',
-  },
   pillText: {
     fontSize: fontSize.sm,
     fontWeight: weightBold,
-  },
-  pillTextSelected: {
-    color: colors.onAccent,
-  },
-  pillTextUnselected: {
-    color: colors.secondary,
   },
 });
