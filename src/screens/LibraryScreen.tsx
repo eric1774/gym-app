@@ -32,6 +32,7 @@ export function LibraryScreen() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [newTemplateModalVisible, setNewTemplateModalVisible] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -179,7 +180,10 @@ export function LibraryScreen() {
       </View>
 
       {activeSubTab === 'warmups' ? (
-        <WarmupTemplateListScreen />
+        <WarmupTemplateListScreen
+          newNameModalVisible={newTemplateModalVisible}
+          onCloseNewNameModal={() => setNewTemplateModalVisible(false)}
+        />
       ) : (
         <>
       <View style={styles.searchContainer}>

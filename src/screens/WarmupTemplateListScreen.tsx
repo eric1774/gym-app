@@ -34,17 +34,32 @@ interface TemplateWithPreview {
   previewNames: string[];
 }
 
-export function WarmupTemplateListScreen() {
+interface WarmupTemplateListScreenProps {
+  /** Parent-owned visibility of the new-template name modal. */
+  newNameModalVisible: boolean;
+  /** Called when the modal should close (cancel, submit success, or backdrop tap). */
+  onCloseNewNameModal: () => void;
+}
+
+export function WarmupTemplateListScreen({
+  newNameModalVisible,
+  onCloseNewNameModal,
+}: WarmupTemplateListScreenProps) {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
 
   const [templates, setTemplates] = useState<TemplateWithPreview[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // New template modal state
-  const [newNameModalVisible, setNewNameModalVisible] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  // Reset the new-template name input each time the parent opens the modal.
+  useEffect(() => {
+    if (newNameModalVisible) {
+      setNewTemplateName('');
+    }
+  }, [newNameModalVisible]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -71,18 +86,13 @@ export function WarmupTemplateListScreen() {
     }
   }, [isFocused, load]);
 
-  const handleOpenNewModal = () => {
-    setNewTemplateName('');
-    setNewNameModalVisible(true);
-  };
-
   const handleCreateTemplate = async () => {
     const name = newTemplateName.trim();
     if (!name || isCreating) { return; }
     setIsCreating(true);
     try {
       const template = await createWarmupTemplate(name);
-      setNewNameModalVisible(false);
+      onCloseNewNameModal();
       setNewTemplateName('');
       // Navigate immediately to detail screen
       navigation.navigate('WarmupTemplateDetail', {
@@ -156,18 +166,10 @@ export function WarmupTemplateListScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Section header row */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Warmup Templates</Text>
-        <TouchableOpacity style={styles.newButton} onPress={handleOpenNewModal}>
-          <Text style={styles.newButtonText}>+ New Template</Text>
-        </TouchableOpacity>
-      </View>
-
       {!isLoading && templates.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No warmup templates yet</Text>
-          <Text style={styles.emptyHint}>Tap "+ New Template" to create one</Text>
+          <Text style={styles.emptyHint}>Tap + to create one</Text>
         </View>
       ) : (
         <FlatList
@@ -184,13 +186,13 @@ export function WarmupTemplateListScreen() {
         visible={newNameModalVisible}
         animationType="fade"
         transparent
-        onRequestClose={() => setNewNameModalVisible(false)}>
+        onRequestClose={onCloseNewNameModal}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalKeyboard}>
           <Pressable
             style={styles.modalOverlay}
-            onPress={() => setNewNameModalVisible(false)}
+            onPress={onCloseNewNameModal}
           />
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>New Template</Text>
@@ -208,7 +210,7 @@ export function WarmupTemplateListScreen() {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => setNewNameModalVisible(false)}>
+                onPress={onCloseNewNameModal}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -231,29 +233,6 @@ export function WarmupTemplateListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.primary,
-  },
-  newButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-  },
-  newButtonText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.background,
   },
   list: {
     paddingHorizontal: spacing.base,
