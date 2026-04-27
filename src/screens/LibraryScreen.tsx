@@ -165,6 +165,9 @@ export function LibraryScreen() {
     }
   }, [activeSubTab]);
 
+  const subTabActiveColor =
+    activeSubTab === 'warmups' ? colors.warmupAmber : colors.accent;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <MintRadial corner="tl" />
@@ -187,16 +190,22 @@ export function LibraryScreen() {
 
       <View style={styles.subTabBar}>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === 'exercises' && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            activeSubTab === 'exercises' && { borderBottomWidth: 2, borderBottomColor: subTabActiveColor, marginBottom: -2 },
+          ]}
           onPress={() => setActiveSubTab('exercises')}>
-          <Text style={[styles.subTabText, activeSubTab === 'exercises' && styles.subTabTextActive]}>
+          <Text style={[styles.subTabText, activeSubTab === 'exercises' && { color: subTabActiveColor }]}>
             Exercises
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === 'warmups' && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            activeSubTab === 'warmups' && { borderBottomWidth: 2, borderBottomColor: subTabActiveColor, marginBottom: -2 },
+          ]}
           onPress={() => setActiveSubTab('warmups')}>
-          <Text style={[styles.subTabText, activeSubTab === 'warmups' && styles.subTabTextActive]}>
+          <Text style={[styles.subTabText, activeSubTab === 'warmups' && { color: subTabActiveColor }]}>
             Warmups
           </Text>
         </TouchableOpacity>
@@ -381,18 +390,11 @@ const styles = StyleSheet.create({
   subTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  subTabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.accent,
+    paddingVertical: spacing.sm + 2,
   },
   subTabText: {
     color: colors.secondary,
     fontSize: fontSize.sm,
     fontWeight: '600',
-  },
-  subTabTextActive: {
-    color: colors.accent,
   },
 });
