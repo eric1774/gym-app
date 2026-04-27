@@ -185,7 +185,7 @@ describe('LibraryScreen', () => {
   it('switches category tab when a different category is tapped', async () => {
     exercisesModule.getExercisesByCategory.mockResolvedValue([]);
     const { getByText } = renderLibrary();
-    await waitFor(() => getByText('Exercise Library'));
+    await waitFor(() => getByText('Library'));
     fireEvent.press(getByText('Back'));
     await waitFor(() => expect(exercisesModule.getExercisesByCategory).toHaveBeenCalledWith('back'));
   });
