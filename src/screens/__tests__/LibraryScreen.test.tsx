@@ -47,10 +47,10 @@ describe('LibraryScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('renders Exercise Library title', async () => {
+  it('renders Library title', async () => {
     const { getByText } = renderLibrary();
 
-    expect(getByText('Exercise Library')).toBeTruthy();
+    expect(getByText('Library')).toBeTruthy();
   });
 
   it('renders category tabs', async () => {
@@ -119,16 +119,24 @@ describe('LibraryScreen', () => {
     expect(queryByText('Chest')).toBeNull();
   });
 
-  it('shows + FAB button', async () => {
-    const { getByText } = renderLibrary();
-    expect(getByText('+')).toBeTruthy();
+  it('shows add button', async () => {
+    const { getByLabelText } = renderLibrary();
+    expect(getByLabelText('Add')).toBeTruthy();
   });
 
-  it('opens AddExerciseModal when + FAB is pressed', async () => {
-    const { getByText, getAllByText } = renderLibrary();
-    fireEvent.press(getByText('+'));
+  it('opens AddExerciseModal when add button is pressed on Exercises tab', async () => {
+    const { getByLabelText, getAllByText } = renderLibrary();
+    fireEvent.press(getByLabelText('Add'));
     // AddExerciseModal opens — it renders "Add Exercise" text (title + button)
     await waitFor(() => expect(getAllByText('Add Exercise').length).toBeGreaterThanOrEqual(1));
+  });
+
+  it('opens new template modal when add button is pressed on Warmups tab', async () => {
+    const { getByLabelText, getByText } = renderLibrary();
+    fireEvent.press(getByText('Warmups'));
+    fireEvent.press(getByLabelText('Add'));
+    // New-template modal renders the heading "New Template"
+    await waitFor(() => expect(getByText('New Template')).toBeTruthy());
   });
 
   it('shows SEARCH section label when searching', async () => {
@@ -177,7 +185,7 @@ describe('LibraryScreen', () => {
   it('switches category tab when a different category is tapped', async () => {
     exercisesModule.getExercisesByCategory.mockResolvedValue([]);
     const { getByText } = renderLibrary();
-    await waitFor(() => getByText('Exercise Library'));
+    await waitFor(() => getByText('Library'));
     fireEvent.press(getByText('Back'));
     await waitFor(() => expect(exercisesModule.getExercisesByCategory).toHaveBeenCalledWith('back'));
   });

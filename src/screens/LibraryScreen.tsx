@@ -9,29 +9,29 @@ import {
   View,
 } from 'react-native';
 import { WarmupTemplateListScreen } from './WarmupTemplateListScreen';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
+import { MintRadial } from '../components/MintRadial';
+import { Dumbbell } from '../components/icons/Dumbbell';
+import { Plus } from '../components/icons/Plus';
+import { SearchIcon } from '../components/icons/SearchIcon';
 import { deleteExercise, searchExercises } from '../db/exercises';
 import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-import { fontSize, weightBold } from '../theme/typography';
+import { fontSize } from '../theme/typography';
 import { Exercise, ExerciseCategory } from '../types';
 import { AddExerciseModal } from './AddExerciseModal';
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 export function LibraryScreen() {
-  const insets = useSafeAreaInsets();
   const [activeSubTab, setActiveSubTab] = useState<'exercises' | 'warmups'>('exercises');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
   const [searchQuery, setSearchQuery] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [newTemplateModalVisible, setNewTemplateModalVisible] = useState(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -152,34 +152,68 @@ export function LibraryScreen() {
 
   const isSearching = searchQuery.trim() !== '';
   const sectionLabel = isSearching
-    ? `SEARCH: "${searchQuery.trim().toUpperCase()}"`
-    : `FILTERED: ${selectedCategory.toUpperCase()}`;
+    ? `SEARCH · "${searchQuery.trim().toUpperCase()}"`
+    : `FILTERED · ${selectedCategory.toUpperCase()}`;
+
+  const handleAddPress = useCallback(() => {
+    if (activeSubTab === 'warmups') {
+      setNewTemplateModalVisible(true);
+    } else {
+      setModalVisible(true);
+    }
+  }, [activeSubTab]);
+
+  const subTabActiveColor =
+    activeSubTab === 'warmups' ? colors.warmupAmber : colors.accent;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <MintRadial corner="tl" />
       <View style={styles.header}>
-        <Text style={styles.title}>Exercise Library</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.eyebrow}>TRAINING</Text>
+            <Text style={styles.title}>Library</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddPress}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityLabel="Add"
+            accessibilityRole="button">
+            <Plus size={20} color={colors.onAccent} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.subTabBar}>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === 'exercises' && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            activeSubTab === 'exercises' && { borderBottomWidth: 2, borderBottomColor: subTabActiveColor, marginBottom: -2 },
+          ]}
           onPress={() => setActiveSubTab('exercises')}>
-          <Text style={[styles.subTabText, activeSubTab === 'exercises' && styles.subTabTextActive]}>
+          <Text style={[styles.subTabText, activeSubTab === 'exercises' && { color: subTabActiveColor }]}>
             Exercises
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.subTab, activeSubTab === 'warmups' && styles.subTabActive]}
+          style={[
+            styles.subTab,
+            activeSubTab === 'warmups' && { borderBottomWidth: 2, borderBottomColor: subTabActiveColor, marginBottom: -2 },
+          ]}
           onPress={() => setActiveSubTab('warmups')}>
-          <Text style={[styles.subTabText, activeSubTab === 'warmups' && styles.subTabTextActive]}>
+          <Text style={[styles.subTabText, activeSubTab === 'warmups' && { color: subTabActiveColor }]}>
             Warmups
           </Text>
         </TouchableOpacity>
       </View>
 
       {activeSubTab === 'warmups' ? (
-        <WarmupTemplateListScreen />
+        <WarmupTemplateListScreen
+          newNameModalVisible={newTemplateModalVisible}
+          onCloseNewNameModal={() => setNewTemplateModalVisible(false)}
+        />
       ) : (
         <>
       <View style={styles.searchContainer}>
@@ -195,7 +229,9 @@ export function LibraryScreen() {
             autoCorrect={false}
             clearButtonMode="while-editing"
           />
-          <Text style={styles.searchIcon}>🔍</Text>
+          <View style={styles.searchIcon} pointerEvents="none">
+            <SearchIcon size={16} color={colors.secondary} />
+          </View>
         </View>
       </View>
 
@@ -203,15 +239,18 @@ export function LibraryScreen() {
         <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
       )}
 
-      {/* Section header */}
-      <View style={styles.sectionHeaderStrip}>
-        <Text style={styles.sectionHeader}>{sectionLabel}</Text>
+      <View style={styles.sectionEyebrow}>
+        <Text style={styles.sectionEyebrowText}>{sectionLabel}</Text>
+        <Text style={styles.sectionEyebrowCount}>{exercises.length}</Text>
       </View>
 
       {isLoading ? (
         <ActivityIndicator style={styles.loader} color={colors.accent} />
       ) : exercises.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Dumbbell size={40} color={colors.secondary} />
+          </View>
           <Text style={styles.emptyText}>No exercises in this category</Text>
           <Text style={styles.emptyHint}>Tap + to add a custom exercise</Text>
         </View>
@@ -224,12 +263,6 @@ export function LibraryScreen() {
           style={styles.list}
         />
       )}
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: spacing.xl + insets.bottom }]}
-        onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
 
       <AddExerciseModal
         visible={modalVisible}
@@ -256,10 +289,33 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  eyebrow: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    marginBottom: 4,
+  },
   title: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    lineHeight: 30,
     color: colors.primary,
+  },
+  addButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchContainer: {
     paddingHorizontal: spacing.base,
@@ -284,22 +340,26 @@ const styles = StyleSheet.create({
   searchIcon: {
     position: 'absolute',
     right: spacing.md,
-    fontSize: fontSize.base,
-    opacity: 0.5,
+    opacity: 0.6,
   },
-  sectionHeaderStrip: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.base,
-    borderRadius: 10,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+  sectionEyebrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base + 2,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
-  sectionHeader: {
+  sectionEyebrowText: {
+    color: colors.secondaryDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+  },
+  sectionEyebrowCount: {
     color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    letterSpacing: 1.2,
+    fontSize: 10,
+    fontWeight: '700',
   },
   list: {
     flex: 1,
@@ -318,6 +378,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  emptyIcon: {
+    opacity: 0.16,
+    marginBottom: spacing.md,
+  },
   emptyText: {
     fontSize: fontSize.base,
     color: colors.secondary,
@@ -329,23 +393,6 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     textAlign: 'center',
   },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  fabText: {
-    fontSize: fontSize.xl,
-    color: colors.onAccent,
-    fontWeight: weightBold,
-    lineHeight: 28,
-  },
   subTabBar: {
     flexDirection: 'row',
     borderBottomWidth: 2,
@@ -354,18 +401,11 @@ const styles = StyleSheet.create({
   subTab: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  subTabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.accent,
+    paddingVertical: spacing.sm + 2,
   },
   subTabText: {
     color: colors.secondary,
     fontSize: fontSize.sm,
     fontWeight: '600',
-  },
-  subTabTextActive: {
-    color: colors.accent,
   },
 });

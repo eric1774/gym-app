@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors, getCategoryColor } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fontSize, weightMedium, weightSemiBold } from '../theme/typography';
 import { Exercise } from '../types';
@@ -100,7 +100,12 @@ export function ExerciseListItem({ exercise, onDelete, onSelect, onLongPress }: 
 
   const rowContent = (
     <View style={styles.row}>
-      <View style={styles.accentBar} />
+      <View
+        style={[
+          styles.accentBar,
+          { backgroundColor: getCategoryColor(exercise.category) },
+        ]}
+      />
       <View style={styles.nameContainer}>
         <Text style={styles.name}>{exercise.name}</Text>
         {exercise.measurementType === 'timed' && (
@@ -204,7 +209,6 @@ const styles = StyleSheet.create({
   accentBar: {
     width: 3,
     alignSelf: 'stretch',
-    backgroundColor: colors.accent,
     borderRadius: 2,
     marginRight: spacing.md,
     marginLeft: spacing.md,

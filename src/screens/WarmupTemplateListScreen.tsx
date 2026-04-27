@@ -20,6 +20,7 @@ import {
   getWarmupTemplatePreview,
   getWarmupTemplates,
 } from '../db/warmups';
+import { Dumbbell } from '../components/icons/Dumbbell';
 import { LibraryStackParamList } from '../navigation/LibraryStackNavigator';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
@@ -34,17 +35,32 @@ interface TemplateWithPreview {
   previewNames: string[];
 }
 
-export function WarmupTemplateListScreen() {
+interface WarmupTemplateListScreenProps {
+  /** Parent-owned visibility of the new-template name modal. */
+  newNameModalVisible: boolean;
+  /** Called when the modal should close (cancel, submit success, or backdrop tap). */
+  onCloseNewNameModal: () => void;
+}
+
+export function WarmupTemplateListScreen({
+  newNameModalVisible,
+  onCloseNewNameModal,
+}: WarmupTemplateListScreenProps) {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
 
   const [templates, setTemplates] = useState<TemplateWithPreview[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // New template modal state
-  const [newNameModalVisible, setNewNameModalVisible] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  // Reset the new-template name input each time the parent opens the modal.
+  useEffect(() => {
+    if (newNameModalVisible) {
+      setNewTemplateName('');
+    }
+  }, [newNameModalVisible]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -71,18 +87,13 @@ export function WarmupTemplateListScreen() {
     }
   }, [isFocused, load]);
 
-  const handleOpenNewModal = () => {
-    setNewTemplateName('');
-    setNewNameModalVisible(true);
-  };
-
   const handleCreateTemplate = async () => {
     const name = newTemplateName.trim();
     if (!name || isCreating) { return; }
     setIsCreating(true);
     try {
       const template = await createWarmupTemplate(name);
-      setNewNameModalVisible(false);
+      onCloseNewNameModal();
       setNewTemplateName('');
       // Navigate immediately to detail screen
       navigation.navigate('WarmupTemplateDetail', {
@@ -130,20 +141,20 @@ export function WarmupTemplateListScreen() {
         }
         onLongPress={() => handleLongPress(item)}
         activeOpacity={0.7}>
-        <View style={styles.cardHeader}>
+        <View style={styles.numberChip}>
+          <Text style={styles.numberChipText}>{item.itemCount}</Text>
+        </View>
+        <View style={styles.cardBody}>
           <Text style={styles.cardName} numberOfLines={1}>
             {item.template.name}
           </Text>
-          <Text style={styles.cardCount}>
-            {item.itemCount} {item.itemCount === 1 ? 'item' : 'items'}
-          </Text>
+          {item.previewNames.length > 0 && (
+            <Text style={styles.cardPreview} numberOfLines={2}>
+              {item.previewNames.join(' · ')}
+              {item.itemCount > item.previewNames.length ? ' · …' : ''}
+            </Text>
+          )}
         </View>
-        {item.previewNames.length > 0 && (
-          <Text style={styles.cardPreview} numberOfLines={2}>
-            {item.previewNames.join(' · ')}
-            {item.itemCount > item.previewNames.length ? ' · ...' : ''}
-          </Text>
-        )}
       </TouchableOpacity>
     ),
     [navigation, handleLongPress],
@@ -156,18 +167,17 @@ export function WarmupTemplateListScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Section header row */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Your Warmup Templates</Text>
-        <TouchableOpacity style={styles.newButton} onPress={handleOpenNewModal}>
-          <Text style={styles.newButtonText}>+ New Template</Text>
-        </TouchableOpacity>
+      <View style={styles.eyebrow}>
+        <Text style={styles.eyebrowText}>YOUR TEMPLATES</Text>
+        <Text style={styles.eyebrowCount}>{templates.length}</Text>
       </View>
-
       {!isLoading && templates.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Dumbbell size={40} color={colors.secondary} />
+          </View>
           <Text style={styles.emptyText}>No warmup templates yet</Text>
-          <Text style={styles.emptyHint}>Tap "+ New Template" to create one</Text>
+          <Text style={styles.emptyHint}>Tap + to create one</Text>
         </View>
       ) : (
         <FlatList
@@ -184,13 +194,13 @@ export function WarmupTemplateListScreen() {
         visible={newNameModalVisible}
         animationType="fade"
         transparent
-        onRequestClose={() => setNewNameModalVisible(false)}>
+        onRequestClose={onCloseNewNameModal}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalKeyboard}>
           <Pressable
             style={styles.modalOverlay}
-            onPress={() => setNewNameModalVisible(false)}
+            onPress={onCloseNewNameModal}
           />
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>New Template</Text>
@@ -208,7 +218,7 @@ export function WarmupTemplateListScreen() {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => setNewNameModalVisible(false)}>
+                onPress={onCloseNewNameModal}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -232,57 +242,65 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  sectionHeader: {
+  eyebrow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.base + 2,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
-  sectionTitle: {
-    fontSize: fontSize.base,
-    fontWeight: weightBold,
-    color: colors.primary,
+  eyebrowText: {
+    color: colors.warmupAmber,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
   },
-  newButton: {
-    backgroundColor: colors.accent,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 8,
-  },
-  newButtonText: {
-    fontSize: fontSize.sm,
-    fontWeight: weightSemiBold,
-    color: colors.background,
+  eyebrowCount: {
+    color: colors.secondary,
+    fontSize: 10,
+    fontWeight: '700',
   },
   list: {
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 12,
-    padding: spacing.base,
+    padding: spacing.base - 2,
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  cardHeader: {
     flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 11,
+  },
+  numberChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(240,184,48,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,184,48,0.18)',
+  },
+  numberChipText: {
+    color: colors.warmupAmber,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardBody: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
   },
   cardName: {
     fontSize: fontSize.base,
     fontWeight: weightSemiBold,
     color: colors.primary,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  cardCount: {
-    fontSize: fontSize.sm,
-    color: colors.secondary,
+    marginBottom: 3,
   },
   cardPreview: {
     fontSize: fontSize.sm,
@@ -295,6 +313,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxl,
+  },
+  emptyIcon: {
+    opacity: 0.16,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: fontSize.base,
