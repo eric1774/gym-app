@@ -155,8 +155,8 @@ export function LibraryScreen() {
 
   const isSearching = searchQuery.trim() !== '';
   const sectionLabel = isSearching
-    ? `SEARCH: "${searchQuery.trim().toUpperCase()}"`
-    : `FILTERED: ${selectedCategory.toUpperCase()}`;
+    ? `SEARCH · "${searchQuery.trim().toUpperCase()}"`
+    : `FILTERED · ${selectedCategory.toUpperCase()}`;
 
   const handleAddPress = useCallback(() => {
     if (activeSubTab === 'warmups') {
@@ -242,9 +242,9 @@ export function LibraryScreen() {
         <ExerciseCategoryTabs selected={selectedCategory} onSelect={setSelectedCategory} />
       )}
 
-      {/* Section header */}
-      <View style={styles.sectionHeaderStrip}>
-        <Text style={styles.sectionHeader}>{sectionLabel}</Text>
+      <View style={styles.sectionEyebrow}>
+        <Text style={styles.sectionEyebrowText}>{sectionLabel}</Text>
+        <Text style={styles.sectionEyebrowCount}>{exercises.length}</Text>
       </View>
 
       {isLoading ? (
@@ -342,19 +342,24 @@ const styles = StyleSheet.create({
     right: spacing.md,
     opacity: 0.6,
   },
-  sectionHeaderStrip: {
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.base,
-    borderRadius: 10,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+  sectionEyebrow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base + 2,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
   },
-  sectionHeader: {
+  sectionEyebrowText: {
+    color: colors.secondaryDim,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+  },
+  sectionEyebrowCount: {
     color: colors.secondary,
-    fontSize: fontSize.sm,
-    fontWeight: weightBold,
-    letterSpacing: 1.2,
+    fontSize: 10,
+    fontWeight: '700',
   },
   list: {
     flex: 1,
