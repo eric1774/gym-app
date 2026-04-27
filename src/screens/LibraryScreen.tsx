@@ -177,6 +177,7 @@ export function LibraryScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={handleAddPress}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             accessibilityLabel="Add"
             accessibilityRole="button">
             <Plus size={20} color={colors.onAccent} />
