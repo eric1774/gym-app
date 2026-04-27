@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { MintRadial } from '../components/MintRadial';
+import { Dumbbell } from '../components/icons/Dumbbell';
 import { Plus } from '../components/icons/Plus';
 import { SearchIcon } from '../components/icons/SearchIcon';
 import { deleteExercise, searchExercises } from '../db/exercises';
@@ -251,6 +252,9 @@ export function LibraryScreen() {
         <ActivityIndicator style={styles.loader} color={colors.accent} />
       ) : exercises.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <View style={styles.emptyIcon}>
+            <Dumbbell size={40} color={colors.secondary} />
+          </View>
           <Text style={styles.emptyText}>No exercises in this category</Text>
           <Text style={styles.emptyHint}>Tap + to add a custom exercise</Text>
         </View>
@@ -377,6 +381,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+  },
+  emptyIcon: {
+    opacity: 0.16,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: fontSize.base,
