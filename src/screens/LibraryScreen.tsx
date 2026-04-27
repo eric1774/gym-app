@@ -9,9 +9,11 @@ import {
   View,
 } from 'react-native';
 import { WarmupTemplateListScreen } from './WarmupTemplateListScreen';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
+import { MintRadial } from '../components/MintRadial';
+import { Plus } from '../components/icons/Plus';
 import { deleteExercise, searchExercises } from '../db/exercises';
 import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
@@ -25,7 +27,6 @@ function capitalize(s: string): string {
 }
 
 export function LibraryScreen() {
-  const insets = useSafeAreaInsets();
   const [activeSubTab, setActiveSubTab] = useState<'exercises' | 'warmups'>('exercises');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory>('chest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,10 +157,31 @@ export function LibraryScreen() {
     ? `SEARCH: "${searchQuery.trim().toUpperCase()}"`
     : `FILTERED: ${selectedCategory.toUpperCase()}`;
 
+  const handleAddPress = useCallback(() => {
+    if (activeSubTab === 'warmups') {
+      setNewTemplateModalVisible(true);
+    } else {
+      setModalVisible(true);
+    }
+  }, [activeSubTab]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <MintRadial corner="tl" />
       <View style={styles.header}>
-        <Text style={styles.title}>Exercise Library</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.eyebrow}>TRAINING</Text>
+            <Text style={styles.title}>Library</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={handleAddPress}
+            accessibilityLabel="Add"
+            accessibilityRole="button">
+            <Plus size={20} color={colors.onAccent} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.subTabBar}>
@@ -229,12 +251,6 @@ export function LibraryScreen() {
         />
       )}
 
-      <TouchableOpacity
-        style={[styles.fab, { bottom: spacing.xl + insets.bottom }]}
-        onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-
       <AddExerciseModal
         visible={modalVisible}
         onClose={() => {
@@ -260,10 +276,33 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  eyebrow: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 2.2,
+    marginBottom: 4,
+  },
   title: {
-    fontSize: fontSize.xl,
-    fontWeight: weightBold,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+    lineHeight: 30,
     color: colors.primary,
+  },
+  addButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchContainer: {
     paddingHorizontal: spacing.base,
@@ -332,23 +371,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.secondary,
     textAlign: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing.lg,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
-  },
-  fabText: {
-    fontSize: fontSize.xl,
-    color: colors.onAccent,
-    fontWeight: weightBold,
-    lineHeight: 28,
   },
   subTabBar: {
     flexDirection: 'row',
