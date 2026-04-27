@@ -14,6 +14,7 @@ import { ExerciseCategoryTabs } from '../components/ExerciseCategoryTabs';
 import { ExerciseListItem } from '../components/ExerciseListItem';
 import { MintRadial } from '../components/MintRadial';
 import { Plus } from '../components/icons/Plus';
+import { SearchIcon } from '../components/icons/SearchIcon';
 import { deleteExercise, searchExercises } from '../db/exercises';
 import { getExercisesByCategoryViaGroups } from '../db/muscleGroups';
 import { colors } from '../theme/colors';
@@ -231,7 +232,9 @@ export function LibraryScreen() {
             autoCorrect={false}
             clearButtonMode="while-editing"
           />
-          <Text style={styles.searchIcon}>🔍</Text>
+          <View style={styles.searchIcon} pointerEvents="none">
+            <SearchIcon size={16} color={colors.secondary} />
+          </View>
         </View>
       </View>
 
@@ -337,8 +340,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     position: 'absolute',
     right: spacing.md,
-    fontSize: fontSize.base,
-    opacity: 0.5,
+    opacity: 0.6,
   },
   sectionHeaderStrip: {
     backgroundColor: colors.surface,
